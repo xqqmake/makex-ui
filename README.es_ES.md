@@ -1,13 +1,13 @@
 [English](/README.md) | [Chinese](/README.zh.md) | [Español](/README.es_ES.md)
 
-<p align="center"><a href="#"><img src="./media/X-Panel.png" alt="Image"></a></p>
+<p align="center"><a href="#"><img src="./media/makemakex-ui.png" alt="Image"></a></p>
 
 **Un Panel Web Avanzado • Construido sobre Xray Core**
 
-[![](https://img.shields.io/github/v/release/xeefei/x-panel.svg)](https://github.com/xeefei/x-panel/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xeefei/x-panel/release.yml.svg)](#)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xeefei/x-panel.svg)](#)
-[![Downloads](https://img.shields.io/github/downloads/xeefei/x-panel/total.svg)](#)
+[![](https://img.shields.io/github/v/release/xqqmake/makemakex-ui.svg)](https://github.com/xqqmake/makemakex-ui/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makemakex-ui/release.yml.svg)](#)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makemakex-ui.svg)](#)
+[![Downloads](https://img.shields.io/github/downloads/xqqmake/makemakex-ui/total.svg)](#)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 > **Descargo de responsabilidad:** Este proyecto es solo para aprendizaje personal y comunicación, por favor no lo uses con fines ilegales, por favor no lo uses en un entorno de producción
@@ -15,7 +15,7 @@
 **Si este proyecto te es útil, podrías considerar darle una**:star2:
 
 <p align="left">
-  <a href="https://buymeacoffee.com/xeefeiz" target="_blank">
+  <a href="https://buymeacoffee.com/xqqmakez" target="_blank">
     <img src="./media/buymeacoffe.png" alt="Image">
   </a>
 </p>
@@ -29,7 +29,7 @@
 ## Instalar y Actualizar
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh)
 ```
 
 ## Instalar una Versión Personalizada
@@ -37,7 +37,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.
 Para instalar la versión deseada, agrega la versión al final del comando de instalación. Por ejemplo, ver `v2.4.1`:
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh) v2.4.1
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh) v2.4.1
 ```
 
 ## Certificado SSL
@@ -53,7 +53,7 @@ El script de gestión tiene una aplicación de certificado SSL incorporada para 
 - Clave Global de API de Cloudflare
 - El nombre de dominio se ha resuelto en el servidor actual a través de Cloudflare
 
-**1:** Ejecuta el comando`x-ui`en la terminal, luego elige `Certificado SSL de Cloudflare`.
+**1:** Ejecuta el comando`makex-ui`en la terminal, luego elige `Certificado SSL de Cloudflare`.
 
 
 ### Certbot
@@ -63,7 +63,7 @@ certbot certonly --standalone --agree-tos --register-unsafely-without-email -d y
 certbot renew --dry-run
 ```
 
-***Consejo:*** *Certbot también está integrado en el script de gestión. Puedes ejecutar el comando `x-ui` , luego elegir `Gestión de Certificados SSL`.*
+***Consejo:*** *Certbot también está integrado en el script de gestión. Puedes ejecutar el comando `makex-ui` , luego elegir `Gestión de Certificados SSL`.*
 
 </details>
 
@@ -89,10 +89,10 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xeefei/x-panel/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/xqqmake/makemakex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
-2. Una vez que se haya descargado el paquete comprimido, ejecuta los siguientes comandos para instalar o actualizar x-ui:
+2. Una vez que se haya descargado el paquete comprimido, ejecuta los siguientes comandos para instalar o actualizar makex-ui:
 
 ```sh
 ARCH=$(uname -m)
@@ -107,15 +107,15 @@ case "${ARCH}" in
 esac
 
 cd /root/
-rm -rf x-ui/ /usr/local/x-ui/ /usr/bin/x-ui
-tar zxvf x-ui-linux-${XUI_ARCH}.tar.gz
-chmod +x x-ui/x-ui x-ui/bin/xray-linux-* x-ui/x-ui.sh
-cp x-ui/x-ui.sh /usr/bin/x-ui
-cp -f x-ui/x-ui.service /etc/systemd/system/
-mv x-ui/ /usr/local/
+rm -rf makex-ui/ /usr/local/makex-ui/ /usr/bin/makex-ui
+tar zxvf makex-ui-linux-${XUI_ARCH}.tar.gz
+chmod +x makex-ui/makex-ui makex-ui/bin/xray-linux-* makex-ui/makex-ui.sh
+cp makex-ui/makex-ui.sh /usr/bin/makex-ui
+cp -f makex-ui/makex-ui.service /etc/systemd/system/
+mv makex-ui/ /usr/local/
 systemctl daemon-reload
-systemctl enable x-ui
-systemctl restart x-ui
+systemctl enable makex-ui
+systemctl restart makex-ui
 ```
 
 </details>
@@ -136,8 +136,8 @@ systemctl restart x-ui
 2. Clona el Repositorio del Proyecto:
 
    ```sh
-   git clone https://github.com/xeefei/x-panel.git
-   cd 3x-ui
+   git clone https://github.com/xqqmake/makemakex-ui.git
+   cd 3makex-ui
    ```
 
 3. Inicia el Servicio
@@ -151,30 +151,30 @@ systemctl restart x-ui
    ```sh
    docker run -itd \
       -e XRAY_VMESS_AEAD_FORCED=false \
-      -v $PWD/db/:/etc/x-ui/ \
+      -v $PWD/db/:/etc/makex-ui/ \
       -v $PWD/cert/:/root/cert/ \
       --network=host \
       --restart=unless-stopped \
-      --name 3x-ui \
-      ghcr.io/xeefei/x-panel:latest
+      --name 3makex-ui \
+      ghcr.io/xqqmake/makemakex-ui:latest
    ```
 
 actualizar a la última versión
 
    ```sh
-    cd 3x-ui
+    cd 3makex-ui
     docker compose down
-    docker compose pull 3x-ui
+    docker compose pull 3makex-ui
     docker compose up -d
    ```
 
-eliminar 3x-ui de docker
+eliminar 3makex-ui de docker
 
    ```sh
-    docker stop 3x-ui
-    docker rm 3x-ui
+    docker stop 3makex-ui
+    docker rm 3makex-ui
     cd --
-    rm -r 3x-ui
+    rm -r 3makex-ui
    ```
 
 </details>
@@ -259,9 +259,9 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
   Puedes realizar copias de seguridad y restauraciones de la base de datos directamente desde el panel.
 
 ### Ruta Base Web
-  - /etc/x-ui/x-ui.db
+  - /etc/makex-ui/makex-ui.db
 - **Ruta de Configuración de Xray:**
-  - /usr/local/x-ui/bin/config.json
+  - /usr/local/makex-ui/bin/config.json
 - **Ruta del Panel Web sin Implementar SSL:**
   - http://ip:2053/panel
   - http://domain:2053/panel
@@ -272,14 +272,14 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
 
 1. **Restablecer la Ruta Base Web:**
    - Abre tu terminal.
-   - Ejecuta el comando `x-ui`.
+   - Ejecuta el comando `makex-ui`.
    - Selecciona la opción `Restablecer la Ruta Base Web`.
 
 2. **Generar o Personalizar la Ruta:**
    - La ruta se generará aleatoriamente, o puedes ingresar una ruta personalizada.
 
 3. **Ver Configuración Actual:**
-   - Para ver tu configuración actual, utiliza el comando `x-ui settings` en el terminal o selecciona `Ver Configuración Actual` en `x-ui`.
+   - Para ver tu configuración actual, utiliza el comando `makex-ui settings` en el terminal o selecciona `Ver Configuración Actual` en `makex-ui`.
 
 ### Recomendación de Seguridad:
 - Para mayor seguridad, utiliza una palabra larga y aleatoria en la estructura de tu URL.
@@ -319,7 +319,7 @@ WARP está integrado, no se requiere instalación adicional. Simplemente habilit
 
 Para habilitar la funcionalidad de límite de IP, necesitas instalar `fail2ban` y los archivos requeridos siguiendo estos pasos:
 
-1. Ejecuta el comando `x-ui` en el terminal, luego elige `Gestión de Límite de IP`.
+1. Ejecuta el comando `makex-ui` en el terminal, luego elige `Gestión de Límite de IP`.
 2. Verás las siguientes opciones:
 
    - **Cambiar la Duración del Bloqueo:** Ajustar la duración de los bloqueos.
@@ -465,13 +465,13 @@ Ingresa el ID de chat de usuario en el campo de entrada número 4. Las cuentas d
 | XUI_LOG_LEVEL  | `"debug"` \| `"info"` \| `"warn"` \| `"error"` | `"info"`       |
 | XUI_DEBUG      |                   `boolean`                    | `false`        |
 | XUI_BIN_FOLDER |                    `string`                    | `"bin"`        |
-| XUI_DB_FOLDER  |                    `string`                    | `"/etc/x-ui"`  |
+| XUI_DB_FOLDER  |                    `string`                    | `"/etc/makex-ui"`  |
 | XUI_LOG_FOLDER |                    `string`                    | `"/var/log"`   |
 
 Ejemplo:
 
 ```sh
-XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
+XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/makex-ui" go build main.go
 ```
 
 </details>
@@ -499,4 +499,4 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 
 ## Estrellas a lo largo del tiempo
 
-[![Stargazers over time](https://starchart.cc/xeefei/x-panel.svg)](https://starchart.cc/xeefei/x-panel)
+[![Stargazers over time](https://starchart.cc/xqqmake/makemakex-ui.svg)](https://starchart.cc/xqqmake/makemakex-ui)

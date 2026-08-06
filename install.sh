@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ==========================================================
-# X-Panel 统一安装脚本 (付费/免费二合一)
-# 作者: X-Panel
+# makex-ui 统一安装脚本 (付费/免费二合一)
+# 作者: makex-ui
 # ==========================================================
 
 red='\033[0;31m'
@@ -46,7 +46,7 @@ get_hwid() {
 #
 install_paid_version() {
     echo ""
-    echo -e "${green}您正在安装/升级/更新 【X-Panel 付费Pro版】${plain}"
+    echo -e "${green}您正在安装/升级/更新 【makex-ui 付费Pro版】${plain}"
     echo ""
     echo -e "${yellow}------------------------------------------------------${plain}"
     echo ""
@@ -78,7 +78,7 @@ install_paid_version() {
     echo ""
     
     # 4. 设置您的授权服务器地址
-    AUTH_SERVER_URL="https://auth.x-panel.vip/install_pro.php"
+    AUTH_SERVER_URL="https://auth.makex-ui.vip/install_pro.php"
     
     echo -e "${green}正在连接〔远程授权服务器〕进行验证......${plain}"
     echo ""
@@ -114,7 +114,7 @@ install_paid_version() {
 # ----------------------------------------------------------
 install_free_version() {
     echo ""
-    echo -e "${green}您选择了安装 【X-Panel 免费基础版】${plain}"
+    echo -e "${green}您选择了安装 【makex-ui 免费基础版】${plain}"
     echo ""
     echo -e "${green}即将开始执行标准安装流程...${plain}"
     sleep 2
@@ -166,28 +166,28 @@ install_free_version() {
     # echo ""
     echo -e "${yellow}---------->>>>>当前系统的架构为: $(arch)${plain}"
     echo ""
-    last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    # 获取 x-ui 版本
-    xui_version=$(/usr/local/x-ui/x-ui -v)
+    last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    # 获取 makex-ui 版本
+    xui_version=$(/usr/local/makex-ui/makex-ui -v)
 
     # 检查 xui_version 是否为空
     if [[ -z "$xui_version" ]]; then
         echo ""
-        echo -e "${red}------>>>当前服务器没有安装任何 x-ui 系列代理面板${plain}"
+        echo -e "${red}------>>>当前服务器没有安装任何 makex-ui 系列代理面板${plain}"
         echo ""
-        echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔X-Panel面板〕${plain}"
+        echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔makex-ui面板〕${plain}"
     else
         # 检查版本号中是否包含冒号
         if [[ "$xui_version" == *:* ]]; then
-            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}其他 x-ui 分支版本${plain}"
+            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}其他 makex-ui 分支版本${plain}"
             echo ""
-            echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔X-Panel面板〕${plain}"
+            echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔makex-ui面板〕${plain}"
         else
-            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
+            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}〔makex-ui面板〕v${xui_version}${plain}"
         fi
     fi
     echo ""
-    echo -e "${yellow}---------------------->>>>>〔X-Panel面板〕最新版为：${last_version}${plain}"
+    echo -e "${yellow}---------------------->>>>>〔makex-ui面板〕最新版为：${last_version}${plain}"
     sleep 4
 
     os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
@@ -281,7 +281,7 @@ install_free_version() {
         echo "$random_string"
     }
 
-    # This function will be called when user installed x-ui out of security
+    # This function will be called when user installed makex-ui out of security
     config_after_install() {
         echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
         echo ""
@@ -296,11 +296,11 @@ install_free_version() {
             read -p "请设置面板登录访问路径: " config_webBasePath
             echo -e "${yellow}您的面板访问路径为: ${config_webBasePath}${plain}"
             echo -e "${yellow}正在初始化，请稍候...${plain}"
-            /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password}
+            /usr/local/makex-ui/makex-ui setting -username ${config_account} -password ${config_password}
             echo -e "${yellow}用户名和密码设置成功!${plain}"
-            /usr/local/x-ui/x-ui setting -port ${config_port}
+            /usr/local/makex-ui/makex-ui setting -port ${config_port}
             echo -e "${yellow}面板端口号设置成功!${plain}"
-            /usr/local/x-ui/x-ui setting -webBasePath ${config_webBasePath}
+            /usr/local/makex-ui/makex-ui setting -webBasePath ${config_webBasePath}
             echo -e "${yellow}面板登录访问路径设置成功!${plain}"
             echo ""
         else
@@ -308,11 +308,11 @@ install_free_version() {
             sleep 1
             echo -e "${red}--------------->>>>Cancel...--------------->>>>>>>取消修改...${plain}"
             echo ""
-            if [[ ! -f "/etc/x-ui/x-ui.db" ]]; then
+            if [[ ! -f "/etc/makex-ui/makex-ui.db" ]]; then
                 local usernameTemp=$(head -c 10 /dev/urandom | base64)
                 local passwordTemp=$(head -c 10 /dev/urandom | base64)
                 local webBasePathTemp=$(gen_random_string 15)
-                /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
+                /usr/local/makex-ui/makex-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
                 echo ""
                 echo -e "${yellow}检测到为全新安装，出于安全考虑将生成随机登录信息:${plain}"
                 echo -e "###############################################"
@@ -320,11 +320,11 @@ install_free_version() {
                 echo -e "${green}密  码: ${passwordTemp}${plain}"
                 echo -e "${green}访问路径: ${webBasePathTemp}${plain}"
                 echo -e "###############################################"
-                echo -e "${green}如果您忘记了登录信息，可以在安装后通过 x-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
+                echo -e "${green}如果您忘记了登录信息，可以在安装后通过 makex-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
             else
                 echo -e "${green}此次操作属于版本升级，保留之前旧设置项，登录方式保持不变${plain}"
                 echo ""
-                echo -e "${green}如果您忘记了登录信息，您可以通过 x-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
+                echo -e "${green}如果您忘记了登录信息，您可以通过 makex-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
                 echo ""
                 echo ""
             fi
@@ -332,23 +332,23 @@ install_free_version() {
         sleep 1
         echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         echo ""
-        /usr/local/x-ui/x-ui migrate
+        /usr/local/makex-ui/makex-ui migrate
     }
 
     echo ""
-    install_x-ui() {
+    install_makex-ui() {
         cd /usr/local/
 
         # Download resources
         if [ $# == 0 ]; then
-            last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+            last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
             if [[ ! -n "$last_version" ]]; then
-                echo -e "${red}获取 X-Panel 版本失败，可能是 Github API 限制，请稍后再试${plain}"
+                echo -e "${red}获取 makex-ui 版本失败，可能是 Github API 限制，请稍后再试${plain}"
                 exit 1
             fi
             echo ""
             echo -e "-----------------------------------------------------"
-            echo -e "${green}--------->>获取 X-Panel 最新版本：${yellow}${last_version}${plain}${green}，开始安装...${plain}"
+            echo -e "${green}--------->>获取 makex-ui 最新版本：${yellow}${last_version}${plain}${green}，开始安装...${plain}"
             echo -e "-----------------------------------------------------"
             echo ""
             sleep 2
@@ -358,17 +358,17 @@ install_free_version() {
             echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
             echo ""
             sleep 2
-            wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/xeefei/x-panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz
+            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(arch).tar.gz https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(arch).tar.gz
             if [[ $? -ne 0 ]]; then
-                echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
+                echo -e "${red}下载 makex-ui 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
                 exit 1
             fi
         else
             last_version=$1
-            url="https://github.com/xeefei/x-panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz"
+            url="https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(arch).tar.gz"
             echo ""
             echo -e "--------------------------------------------"
-            echo -e "${green}---------------->>>>开始安装 X-Panel 免费基础版$1${plain}"
+            echo -e "${green}---------------->>>>开始安装 makex-ui 免费基础版$1${plain}"
             echo -e "--------------------------------------------"
             echo ""
             sleep 2
@@ -378,40 +378,40 @@ install_free_version() {
             echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
             echo ""
             sleep 2
-            wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz ${url}
+            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(arch).tar.gz ${url}
             if [[ $? -ne 0 ]]; then
-                echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
+                echo -e "${red}下载 makex-ui $1 失败, 请检查此版本是否存在 ${plain}"
                 exit 1
             fi
         fi
-        wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
+        wget -O /usr/bin/makex-ui-temp https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh
 
-        # Stop x-ui service and remove old resources
-        if [[ -e /usr/local/x-ui/ ]]; then
-            systemctl stop x-ui
-            rm /usr/local/x-ui/ -rf
+        # Stop makex-ui.service and remove old resources
+        if [[ -e /usr/local/makex-ui/ ]]; then
+            systemctl stop makex-ui
+            rm /usr/local/makex-ui/ -rf
         fi
         
         sleep 3
         echo -e "${green}------->>>>>>>>>>>检查并保存安装目录${plain}"
         echo ""
-        tar zxvf x-ui-linux-$(arch).tar.gz
-        rm x-ui-linux-$(arch).tar.gz -f
+        tar zxvf makex-ui-linux-$(arch).tar.gz
+        rm makex-ui-linux-$(arch).tar.gz -f
         
-        cd x-ui
-        chmod +x x-ui
-        chmod +x x-ui.sh
+        cd makex-ui
+        chmod +x makex-ui
+        chmod +x makex-ui.sh
 
         # Check the system's architecture and rename the file accordingly
         if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
             mv bin/xray-linux-$(arch) bin/xray-linux-arm
             chmod +x bin/xray-linux-arm
         fi
-        chmod +x x-ui bin/xray-linux-$(arch)
+        chmod +x makex-ui bin/xray-linux-$(arch)
 
-        # Update x-ui cli and se set permission
-        mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
-        chmod +x /usr/bin/x-ui
+        # Update makex-ui cli and se set permission
+        mv -f /usr/bin/makex-ui-temp /usr/bin/makex-ui
+        chmod +x /usr/bin/makex-ui
         sleep 2
         echo -e "${green}------->>>>>>>>>>>保存成功${plain}"
         sleep 2
@@ -422,15 +422,15 @@ install_free_version() {
         # 获取 IPv4 和 IPv6 地址
         v4=$(curl -s4m8 http://ip.sb -k)
         v6=$(curl -s6m8 http://ip.sb -k)
-        local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-        local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-        local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+        local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+        local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+        local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_key=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
         if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
             echo -e "${green}面板已安装证书采用SSL保护${plain}"
             echo ""
-            local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+            local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
             domain=$(basename "$(dirname "$existing_cert")")
             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
         fi
@@ -449,9 +449,9 @@ install_free_version() {
                 echo ""
                 echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
                 echo ""
-                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
                 echo ""
-                echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+                echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
             elif [[ -n $v4 && -n $v6 ]]; then
                 echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port}${blue} root@[$v6]${plain}"
                 echo ""
@@ -459,9 +459,9 @@ install_free_version() {
                 echo ""
                 echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
                 echo ""
-                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
                 echo ""
-                echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+                echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
             else
                 echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain}"
                 echo ""
@@ -469,9 +469,9 @@ install_free_version() {
                 echo ""
                 echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
                 echo ""
-                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
                 echo ""
-                echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+                echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
                 echo ""
             fi
         fi
@@ -479,10 +479,10 @@ install_free_version() {
     # 执行ssh端口转发
     ssh_forwarding
 
-        cp -f x-ui.service /etc/systemd/system/
+        cp -f makex-ui.service /etc/systemd/system/
         systemctl daemon-reload
-        systemctl enable x-ui
-        systemctl start x-ui
+        systemctl enable makex-ui
+        systemctl start makex-ui
         systemctl stop warp-go >/dev/null 2>&1
         wg-quick down wgcf >/dev/null 2>&1
         ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
@@ -491,28 +491,28 @@ install_free_version() {
         wg-quick up wgcf >/dev/null 2A>&1
 
         echo ""
-        echo -e "------->>>>${green}X-Panel 免费基础版 ${last_version}${plain}<<<<安装成功，正在启动..."
+        echo -e "------->>>>${green}makex-ui 免费基础版 ${last_version}${plain}<<<<安装成功，正在启动..."
         sleep 1
         echo ""
         echo -e "         ---------------------"
-        echo -e "         |${green}X-Panel 控制菜单用法 ${plain}|${plain}"
+        echo -e "         |${green}makex-ui 控制菜单用法 ${plain}|${plain}"
         echo -e "         |  ${yellow}一个更好的面板   ${plain}|${plain}"   
         echo -e "         | ${yellow}基于Xray Core构建 ${plain}|${plain}"  
         echo -e "--------------------------------------------"
-        echo -e "x-ui              - 进入管理脚本"
-        echo -e "x-ui start        - 启动 X-Panel 面板"
-        echo -e "x-ui stop         - 关闭 X-Panel 面板"
-        echo -e "x-ui restart      - 重启 X-Panel 面板"
-        echo -e "x-ui status       - 查看 X-Panel 状态"
-        echo -e "x-ui settings     - 查看当前设置信息"
-        echo -e "x-ui enable       - 启用 X-Panel 开机启动"
-        echo -e "x-ui disable      - 禁用 X-Panel 开机启动"
-        echo -e "x-ui log          - 查看 X-Panel 运行日志"
-        echo -e "x-ui banlog       - 检查 Fail2ban 禁止日志"
-        echo -e "x-ui update       - 更新 X-Panel 面板"
-        echo -e "x-ui custom       - 自定义 X-Panel 版本"
-        echo -e "x-ui install      - 安装 X-Panel 面板"
-        echo -e "x-ui uninstall    - 卸载 X-Panel 面板"
+        echo -e "makex-ui              - 进入管理脚本"
+        echo -e "makex-ui start        - 启动 makex-ui 面板"
+        echo -e "makex-ui stop         - 关闭 makex-ui 面板"
+        echo -e "makex-ui restart      - 重启 makex-ui 面板"
+        echo -e "makex-ui status       - 查看 makex-ui 状态"
+        echo -e "makex-ui settings     - 查看当前设置信息"
+        echo -e "makex-ui enable       - 启用 makex-ui 开机启动"
+        echo -e "makex-ui disable      - 禁用 makex-ui 开机启动"
+        echo -e "makex-ui log          - 查看 makex-ui 运行日志"
+        echo -e "makex-ui banlog       - 检查 Fail2ban 禁止日志"
+        echo -e "makex-ui update       - 更新 makex-ui 面板"
+        echo -e "makex-ui custom       - 自定义 makex-ui 版本"
+        echo -e "makex-ui install      - 安装 makex-ui 面板"
+        echo -e "makex-ui uninstall    - 卸载 makex-ui 面板"
         echo -e "--------------------------------------------"
         echo ""
         # if [[ -n $ipv4 ]]; then
@@ -525,34 +525,34 @@ install_free_version() {
         sleep 3
         echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         echo ""
-        echo -e "${yellow}----->>>X-Panel面板和Xray启动成功<<<-----${plain}"
+        echo -e "${yellow}----->>>makex-ui面板和Xray启动成功<<<-----${plain}"
     }
 
     # 设置VPS中的时区/时间为【上海时间】
     sudo timedatectl set-timezone Asia/Shanghai
 
     install_base
-    install_x-ui $1
+    install_makex-ui $1
     echo ""
     echo -e "----------------------------------------------"
     sleep 4
-    info=$(/usr/local/x-ui/x-ui setting -show true)
+    info=$(/usr/local/makex-ui/makex-ui setting -show true)
     echo -e "${info}${plain}"
     echo ""
-    echo -e "若您忘记了上述面板信息，后期可通过x-ui命令进入脚本${red}输入数字〔10〕选项获取${plain}"
+    echo -e "若您忘记了上述面板信息，后期可通过makex-ui命令进入脚本${red}输入数字〔10〕选项获取${plain}"
     echo ""
     echo -e "----------------------------------------------"
     echo ""
     sleep 2
     echo -e "${green}安装/更新完成，若在使用过程中有任何问题${plain}"
-    echo -e "${yellow}请先描述清楚所遇问题加〔X-Panel面板〕交流群${plain}"
-    echo -e "${yellow}在TG群中${red} https://t.me/XUI_CN ${yellow}截图进行反馈${plain}"
+    echo -e "${yellow}请先描述清楚所遇问题加〔makex-ui面板〕交流群${plain}"
+    echo -e "${yellow}在TG群中${red} https://t.me/makex_ui ${yellow}截图进行反馈${plain}"
     echo ""
     echo -e "----------------------------------------------"
     echo ""
-    echo -e "${green}〔X-Panel面板〕项目地址：${yellow}https://github.com/xeefei/x-panel${plain}" 
+    echo -e "${green}〔makex-ui面板〕项目地址：${yellow}https://github.com/xqqmake/makex-ui${plain}" 
     echo ""
-    echo -e "${green} 详细安装教程：${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}"
+    echo -e "${green} 详细安装教程：${yellow}https://xqqmake.blogspot.com/2025/09/x-panel.html${plain}"
     echo ""
     echo -e "----------------------------------------------"
     echo ""
@@ -587,14 +587,14 @@ install_free_version() {
 # ----------------------------------------------------------
 main_menu() {
     echo -e "${green}======================================================${plain}"
-    echo -e " 欢迎使用 ${yellow}〔X-Panel 面板〕${plain} 一键安装脚本"
+    echo -e " 欢迎使用 ${yellow}〔makex-ui 面板〕${plain} 一键安装脚本"
     echo -e "${green}======================================================${plain}"
     echo ""
     echo -e "请选择您要安装的版本:"
     echo ""
-    echo -e "  ${green}1)${plain} 安装 ${yellow}〔X-Panel 面板〕免费基础版${plain} (GitHub 开源项目)"
+    echo -e "  ${green}1)${plain} 安装 ${yellow}〔makex-ui 面板〕免费基础版${plain} (GitHub 开源项目)"
     echo ""
-    echo -e "  ${green}2)${plain} 安装 ${yellow}〔X-Panel 面板〕付费Pro版${plain} (需要购买授权码)"
+    echo -e "  ${green}2)${plain} 安装 ${yellow}〔makex-ui 面板〕付费Pro版${plain} (需要购买授权码)"
     echo ""
     read -p "请输入您的选择 (1 或 2): " version_choice
     echo ""

@@ -37,11 +37,11 @@ fi
 echo -e "——————————————————————"
 echo -e "当前服务器的操作系统为:${red} $release${plain}"
 echo ""
-xui_version=$(/usr/local/x-ui/x-ui -v)
-last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-echo -e "${green}当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
+xui_version=$(/usr/local/makex-ui/makex-ui -v)
+last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+echo -e "${green}当前代理面板的版本为: ${red}〔makex-ui面板〕v${xui_version}${plain}"
 echo ""
-echo -e "${yellow}〔X-Panel面板〕最新版为---------->>> ${last_version}${plain}"
+echo -e "${yellow}〔makex-ui面板〕最新版为---------->>> ${last_version}${plain}"
 
 os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
 
@@ -143,7 +143,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -162,7 +162,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.sh)
     if [[ $? == 0 ]]; then
         LOGI "更新完成，面板已自动重启"
         exit 0
@@ -180,9 +180,9 @@ update_menu() {
         return 0
     fi
     
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
-    chmod +x /usr/local/x-ui/x-ui.sh
-    chmod +x /usr/bin/x-ui
+    wget --no-check-certificate -O /usr/bin/makex-ui https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh
+    chmod +x /usr/local/makex-ui/makex-ui.sh
+    chmod +x /usr/bin/makex-ui
     
      if [[ $? == 0 ]]; then
         echo -e "${green}更新成功，面板已自动重启${plain}"
@@ -202,7 +202,7 @@ custom_version() {
         exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh"
+    download_link="https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh"
 
     # Use the entered panel version in the download link
     install_command="bash <(curl -Ls $download_link) v$panel_version"
@@ -225,18 +225,18 @@ uninstall() {
         fi
         return 0
     fi
-    systemctl stop x-ui
-    systemctl disable x-ui
-    rm /etc/systemd/system/x-ui.service -f
+    systemctl stop makex-ui
+    systemctl disable makex-ui
+    rm /etc/systemd/system/makex-ui.service -f
     systemctl daemon-reload
     systemctl reset-failed
-    rm /etc/x-ui/ -rf
-    rm /usr/local/x-ui/ -rf
+    rm /etc/makex-ui/ -rf
+    rm /usr/local/makex-ui/ -rf
 
     echo ""
     echo -e "卸载成功\n"
     echo "如果您需要再次安装此面板，可以使用以下命令:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -255,12 +255,12 @@ reset_user() {
     [[ -z $config_account ]] && config_account=$(date +%s%N | md5sum | cut -c 1-8)
     read -rp "请设置密码 [默认为随机密码]: " config_password
     [[ -z $config_password ]] && config_password=$(date +%s%N | md5sum | cut -c 1-8)
-    /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password} >/dev/null 2>&1
-    /usr/local/x-ui/x-ui setting -remove_secret >/dev/null 2>&1
+    /usr/local/makex-ui/makex-ui setting -username ${config_account} -password ${config_password} >/dev/null 2>&1
+    /usr/local/makex-ui/makex-ui setting -remove_secret >/dev/null 2>&1
     echo -e "面板登录用户名已重置为：${green} ${config_account} ${plain}"
     echo -e "面板登录密码已重置为：${green} ${config_password} ${plain}"
     echo -e "${yellow} 面板 Secret Token 已禁用 ${plain}"
-    echo -e "${green} 请使用新的登录用户名和密码访问 X-Panel 面板。也请记住它们！${plain}"
+    echo -e "${green} 请使用新的登录用户名和密码访问 makex-ui 面板。也请记住它们！${plain}"
     confirm_restart
 }
 
@@ -281,8 +281,8 @@ reset_webbasepath() {
     fi
     
     # Apply the new web base path setting
-    /usr/local/x-ui/x-ui setting -webBasePath "${config_webBasePath}" >/dev/null 2>&1
-    systemctl restart x-ui
+    /usr/local/makex-ui/makex-ui setting -webBasePath "${config_webBasePath}" >/dev/null 2>&1
+    systemctl restart makex-ui
     
     # Display confirmation message
     echo -e "面板访问路径已重置为: ${green}${config_webBasePath}${plain}"
@@ -297,13 +297,13 @@ reset_config() {
         fi
         return 0
     fi
-    /usr/local/x-ui/x-ui setting -reset
+    /usr/local/makex-ui/makex-ui setting -reset
     echo -e "所有面板设置已重置为默认，请立即重新启动面板，并使用默认的${green}13688${plain}端口访问网页面板"
     confirm_restart
 }
 
 check_config() {
-    info=$(/usr/local/x-ui/x-ui setting -show true)
+    info=$(/usr/local/makex-ui/makex-ui setting -show true)
     if [[ $? != 0 ]]; then
         LOGE "获取当前设置错误，请检查日志"
         show_menu
@@ -314,15 +314,15 @@ check_config() {
     # 获取 IPv4 和 IPv6 地址
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
         domain=$(basename "$(dirname "$existing_cert")")
         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
     fi
@@ -341,9 +341,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
         elif [[ -n $v4 && -n $v6 ]]; then
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port}${blue} root@[$v6]${plain}"
             echo ""
@@ -351,9 +351,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
         else
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain}"
             echo ""
@@ -361,9 +361,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
             echo ""
         fi
     fi
@@ -375,7 +375,7 @@ set_port() {
         LOGD "Cancelled"
         before_show_menu
     else
-        /usr/local/x-ui/x-ui setting -port ${port}
+        /usr/local/makex-ui/makex-ui setting -port ${port}
         echo -e "端口已设置，请立即重启面板，并使用新端口 ${green}${port}${plain} 以访问面板"
         confirm_restart
     fi
@@ -387,11 +387,11 @@ start() {
         echo ""
         LOGI "面板正在运行，无需再次启动，如需重新启动，请选择重新启动"
     else
-        systemctl start x-ui
+        systemctl start makex-ui
         sleep 2
         check_status
         if [[ $? == 0 ]]; then
-            LOGI "X-Panel 已成功启动"
+            LOGI "makex-ui 已成功启动"
         else
             LOGE "面板启动失败，可能是启动时间超过两秒，请稍后查看日志信息"
         fi
@@ -408,11 +408,11 @@ stop() {
         echo ""
         LOGI "面板已关闭，无需再次关闭！"
     else
-        systemctl stop x-ui
+        systemctl stop makex-ui
         sleep 2
         check_status
         if [[ $? == 1 ]]; then
-            LOGI "X-Panel 和 Xray 已成功关闭"
+            LOGI "makex-ui 和 Xray 已成功关闭"
         else
             LOGE "面板关闭失败，可能是停止时间超过两秒，请稍后查看日志信息"
         fi
@@ -424,11 +424,11 @@ stop() {
 }
 
 restart() {
-    systemctl restart x-ui
+    systemctl restart makex-ui
     sleep 2
     check_status
     if [[ $? == 0 ]]; then
-        LOGI "X-Panel 和 Xray 已成功重启"
+        LOGI "makex-ui 和 Xray 已成功重启"
     else
         LOGE "面板重启失败，可能是启动时间超过两秒，请稍后查看日志信息"
     fi
@@ -438,18 +438,18 @@ restart() {
 }
 
 status() {
-    systemctl status x-ui -l
+    systemctl status makex-ui -l
     if [[ $# == 0 ]]; then
         before_show_menu
     fi
 }
 
 enable() {
-    systemctl enable x-ui
+    systemctl enable makex-ui
     if [[ $? == 0 ]]; then
-        LOGI "x-ui 已成功设置开机启动"
+        LOGI "makex-ui 已成功设置开机启动"
     else
-        LOGE "x-ui 设置开机启动失败"
+        LOGE "makex-ui 设置开机启动失败"
     fi
 
     if [[ $# == 0 ]]; then
@@ -458,11 +458,11 @@ enable() {
 }
 
 disable() {
-    systemctl disable x-ui
+    systemctl disable makex-ui
     if [[ $? == 0 ]]; then
-        LOGI "x-ui 已成功取消开机启动"
+        LOGI "makex-ui 已成功取消开机启动"
     else
-        LOGE "x-ui 取消开机启动失败"
+        LOGE "makex-ui 取消开机启动失败"
     fi
 
     if [[ $# == 0 ]]; then
@@ -471,7 +471,7 @@ disable() {
 }
 
 show_log() {
-    journalctl -u x-ui.service -e --no-pager -f
+    journalctl -u makex-ui.service -e --no-pager -f
     if [[ $# == 0 ]]; then
         before_show_menu
     fi
@@ -559,23 +559,23 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xeefei/x-panel/raw/main/x-ui.sh
+    wget -O /usr/bin/makex-ui -N --no-check-certificate https://github.com/xqqmake/makex-ui/raw/main/makex-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
         before_show_menu
     else
-        chmod +x /usr/bin/x-ui
+        chmod +x /usr/bin/makex-ui
         LOGI "升级脚本成功，请重新运行脚本" && exit 0
     fi
 }
 
 # 0: running, 1: not running, 2: not installed
 check_status() {
-    if [[ ! -f /etc/systemd/system/x-ui.service ]]; then
+    if [[ ! -f /etc/systemd/system/makex-ui.service ]]; then
         return 2
     fi
-    temp=$(systemctl status x-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+    temp=$(systemctl status makex-ui | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
     if [[ "${temp}" == "running" ]]; then
         return 0
     else
@@ -584,7 +584,7 @@ check_status() {
 }
 
 check_enabled() {
-    temp=$(systemctl is-enabled x-ui)
+    temp=$(systemctl is-enabled makex-ui)
     if [[ "${temp}" == "enabled" ]]; then
         return 0
     else
@@ -776,8 +776,8 @@ delete_ports() {
 }
 
 update_geo() {
-    local defaultBinFolder="/usr/local/x-ui/bin"
-    read -p "请输入 x-ui bin 文件夹路径，默认留空。（默认值：'${defaultBinFolder}')" binFolder
+    local defaultBinFolder="/usr/local/makex-ui/bin"
+    read -p "请输入 makex-ui bin 文件夹路径，默认留空。（默认值：'${defaultBinFolder}')" binFolder
     binFolder=${binFolder:-${defaultBinFolder}}
     if [[ ! -d ${binFolder} ]]; then
         LOGE "文件夹 ${binFolder} 不存在！"
@@ -785,7 +785,7 @@ update_geo() {
         mkdir -p ${binFolder}
     fi
 
-    systemctl stop x-ui
+    systemctl stop makex-ui
     cd ${binFolder}
     rm -f geoip.dat geosite.dat geoip_IR.dat geosite_IR.dat geoip_VN.dat geosite_VN.dat
     wget -N https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
@@ -794,7 +794,7 @@ update_geo() {
     wget -O geosite_IR.dat -N https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat
     wget -O geoip_VN.dat https://github.com/vuong2023/vn-v2ray-rules/releases/latest/download/geoip.dat
     wget -O geosite_VN.dat https://github.com/vuong2023/vn-v2ray-rules/releases/latest/download/geosite.dat
-    systemctl start x-ui
+    systemctl start makex-ui
     echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binfolder}' 中已经更新成功 !${plain}"
     before_show_menu
 }
@@ -822,8 +822,8 @@ install_acme() {
 
 # 【中文注释】：“备用方式申请证书”函数
 ssl_cert_issue_standalone_embedded() {
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
     echo ""
     echo -e "${yellow}=== 备用方式申请 SSL 证书 (Standalone 模式) ===${plain}"
     echo ""
@@ -943,20 +943,20 @@ ssl_cert_issue_standalone_embedded() {
 
     # --- 6. 申请证书 (Standalone 模式) ---
     LOGI "正在使用 Standalone 模式申请证书 (占用 80 端口)..."
-    # 如果 80 端口被 nginx 或 x-ui 占用，先尝试停止它们
+    # 如果 80 端口被 nginx 或 makex-ui 占用，先尝试停止它们
     systemctl stop nginx >/dev/null 2>&1
-    systemctl stop x-ui >/dev/null 2>&1
+    systemctl stop makex-ui >/dev/null 2>&1
     
     if ! ~/.acme.sh/acme.sh --issue --standalone -d $DOMAIN --server $CA_SERVER --force; then
         LOGE "❌ 证书申请失败！"
         LOGE "请检查：1、域名解析是否正确指向本机 IP。2、80 端口是否开放且未被占用。"
-        # 失败尝试重启 x-ui
-        systemctl start x-ui >/dev/null 2>&1
+        # 失败尝试重启 makex-ui
+        systemctl start makex-ui >/dev/null 2>&1
         return 1
     fi
 
 # --- 7. 安装证书到标准路径 ---
-# 直接创建 x-ui 标准目录结构，
+# 直接创建 makex-ui 标准目录结构，
     local certPath="/root/cert/${DOMAIN}"
     if [ ! -d "$certPath" ]; then
         mkdir -p "$certPath"
@@ -964,8 +964,8 @@ ssl_cert_issue_standalone_embedded() {
     
     LOGI "申请成功！正在安装证书到: $certPath"
     
-    # x-ui 是系统服务，用 systemctl restart x-ui 更稳妥
-    local reloadCmd="systemctl restart x-ui" 
+    # makex-ui 是系统服务，用 systemctl restart makex-ui 更稳妥
+    local reloadCmd="systemctl restart makex-ui" 
     
     ~/.acme.sh/acme.sh --installcert -d $DOMAIN \
         --key-file       "${certPath}/privkey.pem" \
@@ -984,8 +984,8 @@ ssl_cert_issue_standalone_embedded() {
         # === 文件检查判断 ===
         if [[ -f "${webCertFile}" && -f "${webKeyFile}" && -s "${webCertFile}" && -s "${webKeyFile}" ]]; then
             
-            LOGI "检测到证书文件存在且有效，正在应用到 X-Panel 面板..."
-            /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+            LOGI "检测到证书文件存在且有效，正在应用到 makex-ui 面板..."
+            /usr/local/makex-ui/makex-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
             
             echo -e "${green}恭喜！备用方式证书申请并配置成功！${plain}"
             echo ""
@@ -1004,18 +1004,18 @@ ssl_cert_issue_standalone_embedded() {
             if command -v restart >/dev/null 2>&1; then
                 restart
             else
-                systemctl restart x-ui
+                systemctl restart makex-ui
             fi
         else
             LOGE "❌ 严重错误：证书安装显示成功，但未找到证书文件或文件为空！"
             LOGE "请检查目录权限或磁盘空间：$certPath"
-            # 恢复 x-ui 运行，避免断联
-            systemctl start x-ui >/dev/null 2>&1
+            # 恢复 makex-ui 运行，避免断联
+            systemctl start makex-ui >/dev/null 2>&1
             return 1
         fi
     else
         LOGE "证书安装步骤失败，请检查日志。"
-        systemctl start x-ui >/dev/null 2>&1
+        systemctl start makex-ui >/dev/null 2>&1
     fi
 }
 
@@ -1075,8 +1075,8 @@ ssl_cert_issue_main() {
         ;; 
     4) 
         # 【功能：自定义证书路径】
-        local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-        local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+        local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+        local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
         echo ""
         echo -e "${yellow}您选择了“手动上传证书”去自定义路径${plain}"
         echo ""
@@ -1097,7 +1097,7 @@ ssl_cert_issue_main() {
                 mkdir -p "$certPath"
             fi
             
-            # 复制文件到 X-Panel 标准目录，统一命名
+            # 复制文件到 makex-ui 标准目录，统一命名
             # 使用 \cp -f 强制覆盖，不提示
             \cp -f "$user_cert" "${certPath}/fullchain.pem"
             \cp -f "$user_key" "${certPath}/privkey.pem"
@@ -1109,7 +1109,7 @@ ssl_cert_issue_main() {
             if [[ -f "${webCertFile}" && -f "${webKeyFile}" && -s "${webCertFile}" && -s "${webKeyFile}" ]]; then
                 
                 # 应用到面板设置
-                /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+                /usr/local/makex-ui/makex-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
                 
                 echo -e "${green}已成功导入证书并设置应用到面板路径！${plain}"
                 echo ""
@@ -1183,7 +1183,7 @@ ssl_cert_issue_main() {
                 local webKeyFile="/root/cert/${domain}/privkey.pem" 
  
                 if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then 
-                    /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+                    /usr/local/makex-ui/makex-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
                     echo "已为域名设置面板证书路径：$domain"
                     echo "" 
                     echo "  - 证书文件：$webCertFile"
@@ -1208,8 +1208,8 @@ ssl_cert_issue_main() {
 }
 
 ssl_cert_issue() {
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
     # 首先检查 acme.sh
     echo ""
     if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then
@@ -1347,8 +1347,8 @@ ssl_cert_issue() {
 
     # --- 自动设置 reloadCmd ---
     echo ""
-    reloadCmd="systemctl restart x-ui"
-    LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}systemctl restart x-ui"
+    reloadCmd="systemctl restart makex-ui"
+    LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}systemctl restart makex-ui"
     
     # 安装证书
     echo ""
@@ -1386,7 +1386,7 @@ ssl_cert_issue() {
     local webKeyFile="/root/cert/${domain}/privkey.pem"
 
     if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-        /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+        /usr/local/makex-ui/makex-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
         LOGI "已为域名自动设置面板证书路径: $domain"
         echo ""
         LOGI "  - 证书文件: $webCertFile"
@@ -1404,8 +1404,8 @@ ssl_cert_issue() {
 }
 
 ssl_cert_issue_CF() {
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
     LOGI "****** 使用说明 ******"
     echo ""
     LOGI "请按照以下步骤完成操作："
@@ -1489,8 +1489,8 @@ ssl_cert_issue_CF() {
 
         # --- 自动设置 reloadCmd ---
         echo ""
-        reloadCmd="systemctl restart x-ui"
-        LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}systemctl restart x-ui"
+        reloadCmd="systemctl restart makex-ui"
+        LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}systemctl restart makex-ui"
         echo ""
 
         # 执行“安装证书”流程
@@ -1526,7 +1526,7 @@ ssl_cert_issue_CF() {
         local webKeyFile="${certPath}/privkey.pem"
 
         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-            /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+            /usr/local/makex-ui/makex-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
             echo ""
             LOGI "已为域名自动设置面板证书路径: $CF_Domain"
             echo ""
@@ -1560,7 +1560,7 @@ warp_cloudflare() {
         show_menu
         ;;
     1)
-        bash <(curl -sSL https://raw.githubusercontent.com/hamid-gh98/x-ui-scripts/main/install_warp_proxy.sh)
+        bash <(curl -sSL https://raw.githubusercontent.com/hamid-gh98/makex-ui-scripts/main/install_warp_proxy.sh)
         ;;
     2)
         warp a
@@ -1585,11 +1585,11 @@ echo -e "2. 自动调用面板的证书"
 echo -e "3. 自动部署 Sublink 服务"
 echo -e "4. 自动配置 Nginx 反向代理"
 echo -e "5. 可直观在前端页面配置订阅"
-echo -e "作者：〔X-Panel 面板〕专属定制"
+echo -e "作者：〔makex-ui 面板〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
     echo -e "${green}面板已安装证书采用SSL保护${plain}"
@@ -1609,7 +1609,7 @@ fi
 
 # --------- 安装/部署sublink服务 ----------
 
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/sublink/main/install.sh)
 
 
 # --------- 安装 Nginx ----------
@@ -1622,7 +1622,7 @@ else
     echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
 fi
 
-# --------- 拷贝X-Panel已有证书到 Nginx ----------
+# --------- 拷贝makex-ui已有证书到 Nginx ----------
 mkdir -p /etc/nginx/ssl
 acme_path="/root/.acme.sh/${domain}_ecc"
 
@@ -1683,7 +1683,7 @@ echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
 echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制以上地址${plain}"
 echo ""
-echo -e "${green}接下来流程会进入〔X-Panel面板〕x-ui 菜单项${plain}"
+echo -e "${green}接下来流程会进入〔makex-ui面板〕makex-ui 菜单项${plain}"
 sleep 8
 echo ""
 # --------- 返回菜单 ----------
@@ -2029,31 +2029,31 @@ iplimit_remove_conflicts() {
 
 show_usage() {
     echo -e "         ---------------------"
-    echo -e "         |${green}X-Panel 控制菜单用法 ${plain}|${plain}"
+    echo -e "         |${green}makex-ui 控制菜单用法 ${plain}|${plain}"
     echo -e "         |  ${yellow}一个更好的面板   ${plain}|${plain}"   
     echo -e "         | ${yellow}基于Xray Core构建 ${plain}|${plain}"  
     echo -e "--------------------------------------------"
-    echo -e "x-ui              - 进入管理脚本"
-    echo -e "x-ui start        - 启动 X-Panel 面板"
-    echo -e "x-ui stop         - 关闭 X-Panel 面板"
-    echo -e "x-ui restart      - 重启 X-Panel 面板"
-    echo -e "x-ui status       - 查看 X-Panel 状态"
-    echo -e "x-ui settings     - 查看当前设置信息"
-    echo -e "x-ui enable       - 启用 X-Panel 开机启动"
-    echo -e "x-ui disable      - 禁用 X-Panel 开机启动"
-    echo -e "x-ui log          - 查看 X-Panel 运行日志"
-    echo -e "x-ui banlog       - 检查 Fail2ban 禁止日志"
-    echo -e "x-ui update       - 更新 X-Panel 面板"
-    echo -e "x-ui custom       - 自定义 X-Panel 版本"
-    echo -e "x-ui install      - 安装 X-Panel 面板"
-    echo -e "x-ui uninstall    - 卸载 X-Panel 面板"
+    echo -e "makex-ui              - 进入管理脚本"
+    echo -e "makex-ui start        - 启动 makex-ui 面板"
+    echo -e "makex-ui stop         - 关闭 makex-ui 面板"
+    echo -e "makex-ui restart      - 重启 makex-ui 面板"
+    echo -e "makex-ui status       - 查看 makex-ui 状态"
+    echo -e "makex-ui settings     - 查看当前设置信息"
+    echo -e "makex-ui enable       - 启用 makex-ui 开机启动"
+    echo -e "makex-ui disable      - 禁用 makex-ui 开机启动"
+    echo -e "makex-ui log          - 查看 makex-ui 运行日志"
+    echo -e "makex-ui banlog       - 检查 Fail2ban 禁止日志"
+    echo -e "makex-ui update       - 更新 makex-ui 面板"
+    echo -e "makex-ui custom       - 自定义 makex-ui 版本"
+    echo -e "makex-ui install      - 安装 makex-ui 面板"
+    echo -e "makex-ui uninstall    - 卸载 makex-ui 面板"
     echo -e "--------------------------------------------"
 }
 
 show_menu() {
     echo -e "
 ——————————————————————
-  ${green}X-Panel 面板管理脚本${plain}
+  ${green}makex-ui 面板管理脚本${plain}
   ${yellow}  一个更好的面板${plain}
   ${yellow} 基于Xray Core构建${plain}
 ——————————————————————
@@ -2090,12 +2090,12 @@ show_menu() {
   ${green}25.${plain} 安装订阅转换 
 ——————————————————————
   ${green}若在使用过程中有任何问题${plain}
-  ${yellow}请加入〔X-Panel面板〕交流群${plain}
+  ${yellow}请加入〔makex-ui面板〕交流群${plain}
   ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
-  ${green}〔X-Panel面板〕项目地址${plain}
-  ${yellow}https://github.com/xeefei/x-panel${plain}
+  ${green}〔makex-ui面板〕项目地址${plain}
+  ${yellow}https://github.com/xqqmake/makex-ui${plain}
   ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}
+  ${yellow}https://xqqmake.blogspot.com/2025/09/x-panel.html${plain}
 ——————————————————————
 
 -------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------

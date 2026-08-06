@@ -15,11 +15,11 @@ COPY . .
 
 ENV CGO_ENABLED=1
 ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
-RUN go build -ldflags "-w -s" -o build/x-ui main.go
+RUN go build -ldflags "-w -s" -o build/makex-ui main.go
 RUN ./DockerInit.sh "$TARGETARCH"
 
 # ========================================================
-# ----->> Stage: Final Image of X-Panel
+# ----->> Stage: Final Image of makemakex-ui
 # ========================================================
 FROM alpine
 ENV TZ=Asia/Tehran
@@ -33,7 +33,7 @@ RUN apk add --no-cache --update \
 
 COPY --from=builder /app/build/ /app/
 COPY --from=builder /app/DockerEntrypoint.sh /app/
-COPY --from=builder /app/x-ui.sh /usr/bin/x-ui
+COPY --from=builder /app/makex-ui.sh /usr/bin/makex-ui
 
 
 # Configure fail2ban
@@ -45,10 +45,10 @@ RUN rm -f /etc/fail2ban/jail.d/alpine-ssh.conf \
 
 RUN chmod +x \
   /app/DockerEntrypoint.sh \
-  /app/x-ui \
-  /usr/bin/x-ui
+  /app/makex-ui \
+  /usr/bin/makex-ui
 
 ENV XUI_ENABLE_FAIL2BAN="true"
-VOLUME [ "/etc/x-ui" ]
-CMD [ "./x-ui" ]
+VOLUME [ "/etc/makex-ui" ]
+CMD [ "./makex-ui" ]
 ENTRYPOINT [ "/app/DockerEntrypoint.sh" ]

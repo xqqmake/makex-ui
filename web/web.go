@@ -14,15 +14,15 @@ import (
 	"strings"
 	"time"
 
-	"x-ui/config"
-	"x-ui/logger"
-	"x-ui/util/common"
-	"x-ui/web/controller"
-	"x-ui/web/job"
-	"x-ui/web/locale"
-	"x-ui/web/middleware"
-	"x-ui/web/network"
-	"x-ui/web/service"
+	"makex-ui/config"
+	"makex-ui/logger"
+	"makex-ui/util/common"
+	"makex-ui/web/controller"
+	"makex-ui/web/job"
+	"makex-ui/web/locale"
+	"makex-ui/web/middleware"
+	"makex-ui/web/network"
+	"makex-ui/web/service"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
@@ -232,7 +232,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	assetsBasePath := basePath + "assets/"
 
 	store := cookie.NewStore(secret)
-	engine.Use(sessions.Sessions("3x-ui", store))
+	engine.Use(sessions.Sessions("makex-ui", store))
 	engine.Use(func(c *gin.Context) {
 		c.Set("base_path", basePath)
 	})

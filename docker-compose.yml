@@ -6,7 +6,7 @@ services:
     container_name: x-panel_app
     # hostname: yourhostname <<--- optional
     volumes:
-      - $PWD/db/:/etc/x-ui/
+      - $PWD/db/:/etc/makex-ui/
       - $PWD/cert/:/root/cert/
     environment:
       XRAY_VMESS_AEAD_FORCED: "false"
