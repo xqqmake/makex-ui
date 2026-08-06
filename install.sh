@@ -493,3 +493,144 @@ install_makex_ui() {
 
 # 免费版安装逻辑函数 (install_makex_ui) 结束
 install_makex_ui
+# =============================================================
+# 临时证书申请插件
+# ==========================================================
+
+# 安装 acme.sh
+install_acme_sh() {
+    echo -e "${green}正在安装 acme.sh...${plain}"
+    if [[ -f ~/.acme.sh/acme.sh ]]; then
+        echo -e "${green}acme.sh 已安装${plain}"
+        ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+        return 0
+    fi
+    curl -sL https://get.acme.sh | sh -s email=$(whoami)@$(hostname)
+    if [[ $? -ne 0 ]]; then
+        echo -e "${red}acme.sh 安装失败${plain}"
+        return 1
+    fi
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+    echo -e "${green}acme.sh 安装成功${plain}"
+}
+
+# 申请证书 (HTTP-01 验证，需 80 端口)
+issue_cert_http() {
+    local domain=$1
+    local email=$2
+    if [[ -z "$domain" ]]; then
+        echo -e "${red}域名不能为空${plain}"
+        return 1
+    fi
+    if [[ -z "$email" ]]; then
+        email="admin@$domain"
+    fi
+    echo -e "${green}正在申请证书 (HTTP-01)...${plain}"
+    echo -e "${yellow}注意：需开放 80 端口用于验证${plain}"
+    ~/.acme.sh/acme.sh --issue -d "$domain" --standalone -k ec-256 --server letsencrypt --accountemail "$email" --force
+    if [[ $? -eq 0 ]]; then
+        local cert_path=~/.acme.sh/${domain}_ecc/${domain}.cer
+        local key_path=~/.acme.sh/${domain}_ecc/${domain}.key
+        echo -e "${green}证书申请成功！${plain}"
+        echo -e "证书路径: $cert_path"
+        echo -e "私钥路径: $key_path"
+        # 配置到面板
+        /usr/local/makex-ui/makex-ui setting -webCert "$cert_path" -webKey "$key_path"
+        systemctl restart makex-ui
+        echo -e "${green}面板已配置证书并重启${plain}"
+    else
+        echo -e "${red}证书申请失败${plain}"
+        return 1
+    fi
+}
+
+# 申请证书 (DNS-01 验证，需 DNS API)
+issue_cert_dns() {
+    local domain=$1
+    local dns_provider=$2
+    if [[ -z "$domain" || -z "$dns_provider" ]]; then
+        echo -e "${red}域名和 DNS 提供商不能为空${plain}"
+        echo -e "支持的提供商: cf (Cloudflare), dp (Dnspod), alidns (阿里云), aws (Route53), 等"
+        return 1
+    fi
+    echo -e "${green}正在申请证书 (DNS-01, $dns_provider)...${plain}"
+    ~/.acme.sh/acme.sh --issue -d "$domain" --dns "$dns_provider" -k ec-256 --server letsencrypt --force
+    if [[ $? -eq 0 ]]; then
+        local cert_path=~/.acme.sh/${domain}_ecc/${domain}.cer
+        local key_path=~/.acme.sh/${domain}_ecc/${domain}.key
+        echo -e "${green}证书申请成功！${plain}"
+        /usr/local/makex-ui/makex-ui setting -webCert "$cert_path" -webKey "$key_path"
+        systemctl restart makex-ui
+        echo -e "${green}面板已配置证书并重启${plain}"
+    else
+        echo -e "${red}证书申请失败${plain}"
+        return 1
+    fi
+}
+
+# 证书自动续期
+auto_renew_cert() {
+    echo -e "${green}设置证书自动续期...${plain}"
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+    echo -e "${green}自动续期已配置 (每天检查)${plain}"
+}
+
+# 临时证书菜单
+cert_menu() {
+    while true; do
+        echo -e "${green}=========================================================${plaine"
+        echo -e " ${yellow}临时证书管理 (Let's Encrypt via acme.sh)${plain}"
+        echo -e "${green}==================================================================${plain}"
+        echo ""
+        echo -e "  ${green}1)${plain} 安装/更新 acme.sh"
+        echo -e "  ${green}2)${plain} 申请证书 (HTTP-01，需开放 80 端口)"
+        echo -e "  ${green}3)${plaine 申请证书 (DNS-01，需 DNS API Key)"
+        echo -e " ${green}4${plain} 查看已有证书"
+        echo -e "  ${green}4${plain} 查看已有证书"
+        echo -e "  ${green}4${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 查看已有证书"
+        echo -e "  ${red}无效选择${plain}" ;;
+        case $cert_choice in
+            1) install_acme_sh ;;
+            2) read -p "域名: " d; read -p "邮箱 [admin $d]: " e; issue_cert_http "$d" "$e" ;;
+            3) read -p "域名: " d; read -p "DNS 提供商 (cf/dp/alidns/aws/...): " dp; issue_cert_dns "$d" "$dp" ;;
+            4) auto_renew_cert ;;
+            5) ~/.acme.sh/acme.sh --list ;;
+            0) break ;;
+            *) echo -e "${red}无效选择${plain}" ;;
+        esac
+        echo ""
+    done
+}# ==========================================================
+# 主菜单
+# ==========================================================
+main_menu() {
+    while true; do
+        echo -e "${green}===================================================================================${plain}"
+        echo -e "":$��．使用 ${yellow}〔makex-ui 面板〕${plain} 管理脚本"
+        echo -e "${green}===============================================================${plain}"
+        echo ""
+        echo -e "  ${green}1)${plain} 安装/更新 makex-ui 面板"
+        echo -e "  ${green}2)${plain} 临时证书管理 (Let's Encrypt""�        echo -e "  ${green}3)${plain} 查看面板信息"
+        echo -e "  ${green}0)${plain} 退出"
+        echo ""
+        read -p "请输入您的选择: " menu_choice
+        echo ""
+        case "$menu_choice" in
+            1) install_makex_ui ;;
+            2) cert_menu ;;
+            3) /usr/local/makex-ui/makex-ui setting -show true ;;
+            0) exit 0 ;;
+            *) echo -e "${red}无效选择, 请重新输入${plain}" ;;
+        esac
+    done
+}
+
+clear
+main_menu
