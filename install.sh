@@ -15,14 +15,6 @@ plain='\033[0m'
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
 
 # ----------------------------------------------------------
-# 获取机器唯一硬件标识 (HWID)
-# ----------------------------------------------------------
-    # 取 MD5 作为唯一指纹，确保格式统一
-    echo -n "$machine_id" | md5sum | awk '{print $1}'
-}
-
-# ----------------------------------------------------------
-# ----------------------------------------------------------
 install_makex_ui() {
     echo ""
     echo -e "${green}您选择了安装 【makex-ui 免费基础版】${plain}"
@@ -496,8 +488,39 @@ install_makex_ui() {
 # ----------------------------------------------------------
 # 脚本主菜单
 # ----------------------------------------------------------
-install_makex_ui
-# =============================================================
+
+IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiMg5Li05pe26K+B5Lmm55Sz6K+35o+S5Lu2CiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKIyDlronoo4UgYWNtZS5zaAppbnN0YWxsX2FjbWVfc2goKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOWuieijhSBhY21lLnNoLi4uJHtwbGFpbn0iCiAgICBpZiBbWyAtZiB+Ly5hY21lLnNoL2FjbWUuc2ggXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke2dyZWVufWFjbWUuc2gg5bey5a6J6KOFJHtwbGFpbn0iCiAgICAgICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgICAgIHJldHVybiAwCiAgICBmaQogICAgY3VybCAtc0wgaHR0cHM6Ly9nZXQuYWNtZS5zaCB8IHNoIC1zIGVtYWlsPSQod2hvYW1pKUAkKGhvc3RuYW1lKQogICAgaWYgW1sgJD8gLW5lIDAgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH1hY21lLnNoIOWuieijheWksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgZWNobyAtZSAiJHtncmVlbn1hY21lLnNoIOWuieijheaIkOWKnyR7cGxhaW59Igp9CgojIOeUs+ivt+ivgeS5piAoSFRUUC0wMSDpqozor4HvvIzpnIAgODAg56uv5Y+jKQppc3N1ZV9jZXJ0X2h0dHAoKSB7CiAgICBsb2NhbCBkb21haW49JDEKICAgIGxvY2FsIGVtYWlsPSQyCiAgICBpZiBbWyAteiAiJGRvbWFpbiIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3kuI3og73kuLrnqboke3BsYWlufSIKICAgICAgICByZXR1cm4gMQogICAgZmkKICAgIGlmIFtbIC16ICIkZW1haWwiIF1dOyB0aGVuCiAgICAgICAgZW1haWw9ImFkbWluQCRkb21haW4iCiAgICBmaQogICAgZWNobyAtZSAiJHtncmVlbn3mraPlnKjnlLPor7for4HkuaYgKEhUVFAtMDEpLi4uJHtwbGFpbn0iCiAgICBlY2hvIC1lICIke3llbGxvd33ms6jmhI/vvJrpnIDlvIDmlL4gODAg56uv5Y+j55So5LqO6aqM6K+BJHtwbGFpbn0iCiAgICB+Ly5hY21lLnNoL2FjbWUuc2ggLS1pc3N1ZSAtZCAiJGRvbWFpbiIgLS1zdGFuZGFsb25lIC1rIGVjLTI1NiAtLXNlcnZlciBsZXRzZW5jcnlwdCAtLWFjY291bnRlbWFpbCAiJGVtYWlsIiAtLWZvcmNlCiAgICBpZiBbWyAkPyAtZXEgMCBdXTsgdGhlbgogICAgICAgIGxvY2FsIGNlcnRfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmNlcgogICAgICAgIGxvY2FsIGtleV9wYXRoPX4vLmFjbWUuc2gvJHtkb21haW59X2VjYy8ke2RvbWFpbn0ua2V5CiAgICAgICAgZWNobyAtZSAiJHtncmVlbn3or4HkuabnlLPor7fmiJDlip/vvIEke3BsYWlufSIKICAgICAgICBlY2hvIC1lICLor4Hkuabot6/lvoQ6ICRjZXJ0X3BhdGgiCiAgICAgICAgZWNobyAtZSAi56eB6ZKl6Lev5b6EOiAka2V5X3BhdGgiCiAgICAgICAgIyDphY3nva7liLDpnaLmnb8KICAgICAgICAvdXNyL2xvY2FsL21ha2V4LXVpL21ha2V4LXVpIHNldHRpbmcgLXdlYkNlcnQgIiRjZXJ0X3BhdGgiIC13ZWJLZXkgIiRrZXlfcGF0aCIKICAgICAgICBzeXN0ZW1jdGwgcmVzdGFydCBtYWtleC11aQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596Z2i5p2/5bey6YWN572u6K+B5Lmm5bm26YeN5ZCvJHtwbGFpbn0iCiAgICBlbHNlCiAgICAgICAgZWNobyAtZSAiJHtyZWR96K+B5Lmm55Sz6K+35aSx6LSlJHtwbGFpbn0iCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCn0KCiMg55Sz6K+36K+B5LmmIChETlMtMDEg6aqM6K+B77yM6ZyAIEROUyBBUEkpCmlzc3VlX2NlcnRfZG5zKCkgewogICAgbG9jYWwgZG9tYWluPSQxCiAgICBsb2NhbCBkbnNfcHJvdmlkZXI9JDIKICAgIGlmIFtbIC16ICIkZG9tYWluIiB8fCAteiAiJGRuc19wcm92aWRlciIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3lkowgRE5TIOaPkOS+m+WVhuS4jeiDveS4uuepuiR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIuaUr+aMgeeahOaPkOS+m+WVhjogY2YgKENsb3VkZmxhcmUpLCBkcCAoRG5zcG9kKSwgYWxpZG5zICjpmL/ph4zkupEpLCBhd3MgKFJvdXRlNTMpLCDnrYkiCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOeUs+ivt+ivgeS5piAoRE5TLTAxLCAkZG5zX3Byb3ZpZGVyKS4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0taXNzdWUgLWQgIiRkb21haW4iIC0tZG5zICIkZG5zX3Byb3ZpZGVyIiAtayBlYy0yNTYgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQgLS1mb3JjZQogICAgaWYgW1sgJD8gLWVxIDAgXV07IHRoZW4KICAgICAgICBsb2NhbCBjZXJ0X3BhdGg9fi8uYWNtZS5zaC8ke2RvbWFpbn1fZWNjLyR7ZG9tYWlufS5jZXIKICAgICAgICBsb2NhbCBrZXlfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmtleQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596K+B5Lmm55Sz6K+35oiQ5Yqf77yBJHtwbGFpbn0iCiAgICAgICAgL3Vzci9sb2NhbC9tYWtleC11aS9tYWtleC11aSBzZXR0aW5nIC13ZWJDZXJ0ICIkY2VydF9wYXRoIiAtd2ViS2V5ICIka2V5X3BhdGgiCiAgICAgICAgc3lzdGVtY3RsIHJlc3RhcnQgbWFrZXgtdWkKICAgICAgICBlY2hvIC1lICIke2dyZWVufemdouadv+W3sumFjee9ruivgeS5puW5tumHjeWQryR7cGxhaW59IgogICAgZWxzZQogICAgICAgIGVjaG8gLWUgIiR7cmVkfeivgeS5pueUs+ivt+Wksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQp9CgojIOivgeS5puiHquWKqOe7reacnwphdXRvX3JlbmV3X2NlcnQoKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeiuvue9ruivgeS5puiHquWKqOe7reacny4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tc2V0LWRlZmF1bHQtY2EgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQKICAgIGVjaG8gLWUgIiR7Z3JlZW596Ieq5Yqo57ut5pyf5bey6YWN572uICjmr4/lpKnmo4Dmn6UpJHtwbGFpbn0iCn0KCiMg5Li05pe26K+B5Lmm6I+c5Y2VCmNlcnRfbWVudSgpIHsKICAgIHdoaWxlIHRydWU7IGRvCiAgICAgICAgZWNobyAtZSAiJHtncmVlbn09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvIC1lICIgJHt5ZWxsb3d95Li05pe26K+B5Lmm566h55CGIChMZXQncyBFbmNyeXB0IHZpYSBhY21lLnNoKSR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW59PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvICIiCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTEpJHtwbGFpbn0g5a6J6KOFL+abtOaWsCBhY21lLnNoIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0yKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoSFRUUC0wMe+8jOmcgOW8gOaUviA4MCDnq6/lj6MpIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0zKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoRE5TLTAx77yM6ZyAIEROUyBBUEkgS2V5KSIKICAgICAgICBlY2hvIC1lICIgICR7Z3JlZW59NCkke3BsYWlufSDphY3nva7oh6rliqjnu63mnJ8iCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTUpJHtwbGFpbn0g5p+l55yL5bey5pyJ6K+B5LmmIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0wKSR7cGxhaW59IOi/lOWbnuS4u+iPnOWNlSIKICAgICAgICBlY2hvICIiCiAgICAgICAgcmVhZCAtcCAi6K+36L6T5YWl5oKo55qE6YCJ5oupOiAiIGNlcnRfY2hvaWNlCiAgICAgICAgY2FzZSAkY2VydF9jaG9pY2UgaW4KICAgICAgICAgICAgMSkgaW5zdGFsbF9hY21lX3NoIDs7CiAgICAgICAgICAgIDIpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICLpgq7nrrEgW2FkbWluQCRkXTogIiBlOyBpc3N1ZV9jZXJ0X2h0dHAgIiRkIiAiJGUiIDs7CiAgICAgICAgICAgIDMpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICJETlMg5o+Q5L6b5ZWGIChjZi9kcC9hbGlkbnMvYXdzLy4uLik6ICIgZHA7IGlzc3VlX2NlcnRfZG5zICIkZCIgIiRkcCIgOzsKICAgICAgICAgICAgNCkgYXV0b19yZW5ld19jZXJ0IDs7CiAgICAgICAgICAgIDUpIH4vLmFjbWUuc2gvYWNtZS5zaCAtLWxpc3QgOzsKICAgICAgICAgICAgMCkgYnJlYWsgOzsKICAgICAgICAgICAgKikgZWNobyAtZSAiJHtyZWR95peg5pWI6YCJ5oupJHtwbGFpbn0iIDs7CiAgICAgICAgZXNhYwogICAgICAgIGVjaG8gIiIKICAgIGRvbmUKfQo=
+
+# =======================================================
+# 主菜单
+# =======================================================
+main_menu() {
+    while true; do
+        echo -e "${green}======================================================${plain}"
+        echo -e " 欢迎使用 ${yellow}[makex-ui 面板]${plain} 管理脚本"
+        echo -e "${green}======================================================${plain}"
+        echo ""
+        echo -e "  ${green}1)${plain} 安装/更新 makex-ui 面板"
+        echo -e "  ${green}2)${plain} 临时证书管理 (Let's Encrypt)"
+        echo -e "  ${green}3)${plain} 查看面板信息"
+        echo -e "  ${green}0)${plain} 退出"
+        echo ""
+        read -p "请输入您的选择: " menu_choice
+        echo ""
+        case "$menu_choice" in
+            1) install_makex_ui ;;
+            2) cert_menu ;;
+            3) /usr/local/makex-ui/makex-ui setting -show true ;;
+            0) exit 0 ;;
+            *) echo -e "${red}无效选择, 请重新输入${plain}" ;;
+        esac
+    done
+}
+
+clear
+main_menu
+IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiMg5Li05pe26K+B5Lmm55Sz6K+35o+S5Lu2CiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKIyDlronoo4UgYWNtZS5zaAppbnN0YWxsX2FjbWVfc2goKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOWuieijhSBhY21lLnNoLi4uJHtwbGFpbn0iCiAgICBpZiBbWyAtZiB+Ly5hY21lLnNoL2FjbWUuc2ggXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke2dyZWVufWFjbWUuc2gg5bey5a6J6KOFJHtwbGFpbn0iCiAgICAgICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgICAgIHJldHVybiAwCiAgICBmaQogICAgY3VybCAtc0wgaHR0cHM6Ly9nZXQuYWNtZS5zaCB8IHNoIC1zIGVtYWlsPSQod2hvYW1pKUAkKGhvc3RuYW1lKQogICAgaWYgW1sgJD8gLW5lIDAgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH1hY21lLnNoIOWuieijheWksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgZWNobyAtZSAiJHtncmVlbn1hY21lLnNoIOWuieijheaIkOWKnyR7cGxhaW59Igp9CgojIOeUs+ivt+ivgeS5piAoSFRUUC0wMSDpqozor4HvvIzpnIAgODAg56uv5Y+jKQppc3N1ZV9jZXJ0X2h0dHAoKSB7CiAgICBsb2NhbCBkb21haW49JDEKICAgIGxvY2FsIGVtYWlsPSQyCiAgICBpZiBbWyAteiAiJGRvbWFpbiIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3kuI3og73kuLrnqboke3BsYWlufSIKICAgICAgICByZXR1cm4gMQogICAgZmkKICAgIGlmIFtbIC16ICIkZW1haWwiIF1dOyB0aGVuCiAgICAgICAgZW1haWw9ImFkbWluQCRkb21haW4iCiAgICBmaQogICAgZWNobyAtZSAiJHtncmVlbn3mraPlnKjnlLPor7for4HkuaYgKEhUVFAtMDEpLi4uJHtwbGFpbn0iCiAgICBlY2hvIC1lICIke3llbGxvd33ms6jmhI/vvJrpnIDlvIDmlL4gODAg56uv5Y+j55So5LqO6aqM6K+BJHtwbGFpbn0iCiAgICB+Ly5hY21lLnNoL2FjbWUuc2ggLS1pc3N1ZSAtZCAiJGRvbWFpbiIgLS1zdGFuZGFsb25lIC1rIGVjLTI1NiAtLXNlcnZlciBsZXRzZW5jcnlwdCAtLWFjY291bnRlbWFpbCAiJGVtYWlsIiAtLWZvcmNlCiAgICBpZiBbWyAkPyAtZXEgMCBdXTsgdGhlbgogICAgICAgIGxvY2FsIGNlcnRfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmNlcgogICAgICAgIGxvY2FsIGtleV9wYXRoPX4vLmFjbWUuc2gvJHtkb21haW59X2VjYy8ke2RvbWFpbn0ua2V5CiAgICAgICAgZWNobyAtZSAiJHtncmVlbn3or4HkuabnlLPor7fmiJDlip/vvIEke3BsYWlufSIKICAgICAgICBlY2hvIC1lICLor4Hkuabot6/lvoQ6ICRjZXJ0X3BhdGgiCiAgICAgICAgZWNobyAtZSAi56eB6ZKl6Lev5b6EOiAka2V5X3BhdGgiCiAgICAgICAgIyDphY3nva7liLDpnaLmnb8KICAgICAgICAvdXNyL2xvY2FsL21ha2V4LXVpL21ha2V4LXVpIHNldHRpbmcgLXdlYkNlcnQgIiRjZXJ0X3BhdGgiIC13ZWJLZXkgIiRrZXlfcGF0aCIKICAgICAgICBzeXN0ZW1jdGwgcmVzdGFydCBtYWtleC11aQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596Z2i5p2/5bey6YWN572u6K+B5Lmm5bm26YeN5ZCvJHtwbGFpbn0iCiAgICBlbHNlCiAgICAgICAgZWNobyAtZSAiJHtyZWR96K+B5Lmm55Sz6K+35aSx6LSlJHtwbGFpbn0iCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCn0KCiMg55Sz6K+36K+B5LmmIChETlMtMDEg6aqM6K+B77yM6ZyAIEROUyBBUEkpCmlzc3VlX2NlcnRfZG5zKCkgewogICAgbG9jYWwgZG9tYWluPSQxCiAgICBsb2NhbCBkbnNfcHJvdmlkZXI9JDIKICAgIGlmIFtbIC16ICIkZG9tYWluIiB8fCAteiAiJGRuc19wcm92aWRlciIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3lkowgRE5TIOaPkOS+m+WVhuS4jeiDveS4uuepuiR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIuaUr+aMgeeahOaPkOS+m+WVhjogY2YgKENsb3VkZmxhcmUpLCBkcCAoRG5zcG9kKSwgYWxpZG5zICjpmL/ph4zkupEpLCBhd3MgKFJvdXRlNTMpLCDnrYkiCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOeUs+ivt+ivgeS5piAoRE5TLTAxLCAkZG5zX3Byb3ZpZGVyKS4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0taXNzdWUgLWQgIiRkb21haW4iIC0tZG5zICIkZG5zX3Byb3ZpZGVyIiAtayBlYy0yNTYgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQgLS1mb3JjZQogICAgaWYgW1sgJD8gLWVxIDAgXV07IHRoZW4KICAgICAgICBsb2NhbCBjZXJ0X3BhdGg9fi8uYWNtZS5zaC8ke2RvbWFpbn1fZWNjLyR7ZG9tYWlufS5jZXIKICAgICAgICBsb2NhbCBrZXlfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmtleQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596K+B5Lmm55Sz6K+35oiQ5Yqf77yBJHtwbGFpbn0iCiAgICAgICAgL3Vzci9sb2NhbC9tYWtleC11aS9tYWtleC11aSBzZXR0aW5nIC13ZWJDZXJ0ICIkY2VydF9wYXRoIiAtd2ViS2V5ICIka2V5X3BhdGgiCiAgICAgICAgc3lzdGVtY3RsIHJlc3RhcnQgbWFrZXgtdWkKICAgICAgICBlY2hvIC1lICIke2dyZWVufemdouadv+W3sumFjee9ruivgeS5puW5tumHjeWQryR7cGxhaW59IgogICAgZWxzZQogICAgICAgIGVjaG8gLWUgIiR7cmVkfeivgeS5pueUs+ivt+Wksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQp9CgojIOivgeS5puiHquWKqOe7reacnwphdXRvX3JlbmV3X2NlcnQoKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeiuvue9ruivgeS5puiHquWKqOe7reacny4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tc2V0LWRlZmF1bHQtY2EgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQKICAgIGVjaG8gLWUgIiR7Z3JlZW596Ieq5Yqo57ut5pyf5bey6YWN572uICjmr4/lpKnmo4Dmn6UpJHtwbGFpbn0iCn0KCiMg5Li05pe26K+B5Lmm6I+c5Y2VCmNlcnRfbWVudSgpIHsKICAgIHdoaWxlIHRydWU7IGRvCiAgICAgICAgZWNobyAtZSAiJHtncmVlbn09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvIC1lICIgJHt5ZWxsb3d95Li05pe26K+B5Lmm566h55CGIChMZXQncyBFbmNyeXB0IHZpYSBhY21lLnNoKSR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW59PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvICIiCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTEpJHtwbGFpbn0g5a6J6KOFL+abtOaWsCBhY21lLnNoIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0yKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoSFRUUC0wMe+8jOmcgOW8gOaUviA4MCDnq6/lj6MpIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0zKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoRE5TLTAx77yM6ZyAIEROUyBBUEkgS2V5KSIKICAgICAgICBlY2hvIC1lICIgICR7Z3JlZW59NCkke3BsYWlufSDphY3nva7oh6rliqjnu63mnJ8iCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTUpJHtwbGFpbn0g5p+l55yL5bey5pyJ6K+B5LmmIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0wKSR7cGxhaW59IOi/lOWbnuS4u+iPnOWNlSIKICAgICAgICBlY2hvICIiCiAgICAgICAgcmVhZCAtcCAi6K+36L6T5YWl5oKo55qE6YCJ5oupOiAiIGNlcnRfY2hvaWNlCiAgICAgICAgY2FzZSAkY2VydF9jaG9pY2UgaW4KICAgICAgICAgICAgMSkgaW5zdGFsbF9hY21lX3NoIDs7CiAgICAgICAgICAgIDIpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICLpgq7nrrEgW2FkbWluQCRkXTogIiBlOyBpc3N1ZV9jZXJ0X2h0dHAgIiRkIiAiJGUiIDs7CiAgICAgICAgICAgIDMpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICJETlMg5o+Q5L6b5ZWGIChjZi9kcC9hbGlkbnMvYXdzLy4uLik6ICIgZHA7IGlzc3VlX2NlcnRfZG5zICIkZCIgIiRkcCIgOzsKICAgICAgICAgICAgNCkgYXV0b19yZW5ld19jZXJ0IDs7CiAgICAgICAgICAgIDUpIH4vLmFjbWUuc2gvYWNtZS5zaCAtLWxpc3QgOzsKICAgICAgICAgICAgMCkgYnJlYWsgOzsKICAgICAgICAgICAgKikgZWNobyAtZSAiJHtyZWR95peg5pWI6YCJ5oupJHtwbGFpbn0iIDs7CiAgICAgICAgZXNhYwogICAgICAgIGVjaG8gIiIKICAgIGRvbmUKfQo=
+# ==========================================================
 # 临时证书申请插件
 # ==========================================================
 
@@ -583,26 +606,21 @@ auto_renew_cert() {
 # 临时证书菜单
 cert_menu() {
     while true; do
-        echo -e "${green}=========================================================${plaine"
+        echo -e "${green}======================================================${plain}"
         echo -e " ${yellow}临时证书管理 (Let's Encrypt via acme.sh)${plain}"
-        echo -e "${green}==================================================================${plain}"
+        echo -e "${green}=====================================================${plain}"
         echo ""
         echo -e "  ${green}1)${plain} 安装/更新 acme.sh"
         echo -e "  ${green}2)${plain} 申请证书 (HTTP-01，需开放 80 端口)"
-        echo -e "  ${green}3)${plaine 申请证书 (DNS-01，需 DNS API Key)"
-        echo -e " ${green}4${plain} 查看已有证书"
-        echo -e "  ${green}4${plain} 查看已有证书"
-        echo -e "  ${green}4${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 查看已有证书"
-        echo -e "  ${red}无效选择${plain}" ;;
+        echo -e "  ${green}3)${plain} 申请证书 (DNS-01，需 DNS API Key)"
+        echo -e "  ${green}4)${plain} 配置自动续期"
+        echo -e "  ${green}5)${plain} 查看已有证书"
+        echo -e "  ${green}0)${plain} 返回主菜单"
+        echo ""
+        read -p "请输入您的选择: " cert_choice
         case $cert_choice in
             1) install_acme_sh ;;
-            2) read -p "域名: " d; read -p "邮箱 [admin $d]: " e; issue_cert_http "$d" "$e" ;;
+            2) read -p "域名: " d; read -p "邮箱 [admin@$d]: " e; issue_cert_http "$d" "$e" ;;
             3) read -p "域名: " d; read -p "DNS 提供商 (cf/dp/alidns/aws/...): " dp; issue_cert_dns "$d" "$dp" ;;
             4) auto_renew_cert ;;
             5) ~/.acme.sh/acme.sh --list ;;
@@ -611,55 +629,4 @@ cert_menu() {
         esac
         echo ""
     done
-}# ==========================================================
-# 主菜单
-# ==========================================================
-    while true; do
-        echo -e "${green}=============================================================================${plain}"
-        echo -e "":$��．使用 ${yellow}〔makex-ui 面板〕${plain} 管理脚本"
-        echo -e "${green}============================================================${plain}"
-        echo ""
-        echo -e "  ${green}1)${plain} 安装/更新 btakex-ui 魢板> 
-        echo -e "  ${green}2)${plain} 湾牼运慤国逑 (MET's Encrypt)"
-        echo -e "  ${green}3%${plain} 查看已有证书"
-        echo -e "  ${green}0${plain} 送厺理畩"
-        echo -e " " 
-        read -p "쯷输入您的选择: " menu_choice
-        echo ""
-        case "$menu_choice" in
-            1) install_makex_ui ;;
-            2) cert_menu ;;
-            3) /usr/local/makex-ui/makex-ui setting -show true ;;
-            0) exit 0 ;;
-            *) echo -e "${red}无效选择, 请重新输入${plain}" ;;
-        esac
-    done
 }
-
-# ==========================================================
-# 主菜单
-# ==========================================================
-main_menu() {
-    while true; do
-        echo -e "${green}======================================================${plain}"
-        echo -e " 欢迎使用 ${yellow}[makex-ui 面板]${plain} 管理脚本"
-        echo -e "${green}=======================================================${plain}"
-        echo ""
-        echo -e "  ${green}1)${plain} 安装/更新 makex-ui 面板"
-        echo -e "  ${green}2)${plain} 临时证书管理 (Let's Encrypt""�        echo -e "  ${green}2)${plain} 查看面板信息"
-        echo -e "  ${green}0)${plain} 退出"
-        echo ""
-        read -p "请输入您的选择: " menu_choice
-        echo ""
-        case "$menu_choice" in
-            1) install_makex_ui ;;
-            2) cert_menu ;;
-            3) /usr/local/makex-ui/makex-ui setting -show true ;;
-            0) exit 0 ;;
-            *) echo -e "${red}无效选择, 请重新输入${plain}" ;;
-        esac
-    done
-}
-
-clear
-main_menu
