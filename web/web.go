@@ -18,7 +18,7 @@ import (
 	"makex-ui/logger"
 	"makex-ui/util/common"
 	"makex-ui/web/controller"
-	"makex-ui/web/job"
+    //	"makex-ui/web/job"
 	"makex-ui/web/locale"
 	"makex-ui/web/middleware"
 	"makex-ui/web/network"
@@ -314,7 +314,7 @@ func (s *Server) startTask() {
 	}()
 
 	// check client ips from log file every 10 sec
-	s.cron.AddJob("@every 10s", job.NewCheckClientIpJob())
+	//	s.cron.AddJob("@every 10s", job.NewCheckClientIpJob())
 
 	// check client ips from log file every day
 	s.cron.AddJob("@daily", job.NewClearLogsJob())

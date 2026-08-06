@@ -13,7 +13,7 @@ import (
 	// 中文注释: 新增了 time 和 x-ui/job 的导入，这是运行定时任务所必需的包
 	"time"
 
-	"x-ui/web/job"
+    //	"x-ui/web/job"
 	"x-ui/config"
 	"x-ui/database"
 	"x-ui/logger"
@@ -148,15 +148,15 @@ func runWebServer() {
 		
 		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
 		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService)
-
-
-		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
-		for {
-			<-ticker.C
-			checkJob.Run()
-		}
-	}()
+//		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService)
+//
+//
+//		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
+//		for {
+//			<-ticker.C
+//			checkJob.Run()
+//		}
+//	}()
 
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
