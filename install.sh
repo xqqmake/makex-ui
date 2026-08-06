@@ -492,6 +492,10 @@ install_makex_ui() {
 }
 
 # 免费版安装逻辑函数 (install_makex_ui) 结束
+
+# ----------------------------------------------------------
+# 脚本主菜单
+# ----------------------------------------------------------
 install_makex_ui
 # =============================================================
 # 临时证书申请插件
@@ -610,14 +614,39 @@ cert_menu() {
 }# ==========================================================
 # 主菜单
 # ==========================================================
+    while true; do
+        echo -e "${green}=============================================================================${plain}"
+        echo -e "":$��．使用 ${yellow}〔makex-ui 面板〕${plain} 管理脚本"
+        echo -e "${green}============================================================${plain}"
+        echo ""
+        echo -e "  ${green}1)${plain} 安装/更新 btakex-ui 魢板> 
+        echo -e "  ${green}2)${plain} 湾牼运慤国逑 (MET's Encrypt)"
+        echo -e "  ${green}3%${plain} 查看已有证书"
+        echo -e "  ${green}0${plain} 送厺理畩"
+        echo -e " " 
+        read -p "쯷输入您的选择: " menu_choice
+        echo ""
+        case "$menu_choice" in
+            1) install_makex_ui ;;
+            2) cert_menu ;;
+            3) /usr/local/makex-ui/makex-ui setting -show true ;;
+            0) exit 0 ;;
+            *) echo -e "${red}无效选择, 请重新输入${plain}" ;;
+        esac
+    done
+}
+
+# ==========================================================
+# 主菜单
+# ==========================================================
 main_menu() {
     while true; do
-        echo -e "${green}===================================================================================${plain}"
-        echo -e "":$��．使用 ${yellow}〔makex-ui 面板〕${plain} 管理脚本"
-        echo -e "${green}===============================================================${plain}"
+        echo -e "${green}======================================================${plain}"
+        echo -e " 欢迎使用 ${yellow}[makex-ui 面板]${plain} 管理脚本"
+        echo -e "${green}=======================================================${plain}"
         echo ""
         echo -e "  ${green}1)${plain} 安装/更新 makex-ui 面板"
-        echo -e "  ${green}2)${plain} 临时证书管理 (Let's Encrypt""�        echo -e "  ${green}3)${plain} 查看面板信息"
+        echo -e "  ${green}2)${plain} 临时证书管理 (Let's Encrypt""�        echo -e "  ${green}2)${plain} 查看面板信息"
         echo -e "  ${green}0)${plain} 退出"
         echo ""
         read -p "请输入您的选择: " menu_choice
