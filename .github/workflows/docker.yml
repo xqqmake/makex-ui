@@ -19,8 +19,8 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: |
-          xeefei/x-panel
-          ghcr.io/xeefei/x-panel
+          xqqmake/makex-ui
+          ghcr.io/xqqmake/makex-ui
         tags: |
           type=ref,event=branch
           type=ref,event=tag
