@@ -43,7 +43,7 @@
       <tr-qr-box class="qr-box">
         <a-tag color="green" class="qr-tag"><span>[[ row.remark ]]</span></a-tag>
         <tr-qr-bg class="qr-bg">
-          <canvas @click="copy(row.link)" :id="'qrCode-'+index" class="qr-cv"></canvas>
+          <canvas @click="copy(row.link)" @dblclick="copy(row.link)" :id="'qrCode-'+index" class="qr-cv"></canvas>
         </tr-qr-bg>
       </tr-qr-box>
     </template>
