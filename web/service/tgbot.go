@@ -228,7 +228,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 			{Command: "id", Description: t.I18nBot("tgbot.commands.idDesc")},
 			{Command: "oneclick", Description: "🚀 一键配置节点 (有可选项)"},
 			{Command: "subconverter", Description: "🔄 检测或安装订阅转换"},
-			{Command: "restartx", Description: "♻️ 重启〔X-Panel 面板〕"},
+			{Command: "restartx", Description: "♻️ 重启〔makex-ui 面板〕"},
 		},
 	})
 	if err != nil {
@@ -572,7 +572,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 	case "oneclick":
 		onlyMessage = true
 		if isAdmin {
-			t.SendMsgToTgbot(chatId, "〔一键配置〕功能现已升级为“付费Pro版”专属功能，\n\n请联系面板管理员〔购买授权码〕之后才能继续使用，\n\n----->>> “授权码购买”机器人：@Buy_ShouQuan_Bot")
+			t.SendMsgToTgbot(chatId, "〔一键配置〕功能为 makex-ui 免费版已开放功能，正在为您配置节点，请稍候......")
 		} else {
 			handleUnknownCommand()
 		}
@@ -600,7 +600,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 				),
 			)
 			// 〔中文注释〕: 从您提供的需求中引用提示文本
-			t.SendMsgToTgbot(chatId, "🤔 您“现在的操作”是要确定进行，\n\n重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
+			t.SendMsgToTgbot(chatId, "🤔 您“现在的操作”是要确定进行，\n\n重启〔makex-ui 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 		} else {
 			handleUnknownCommand()
 		}	
@@ -1775,13 +1775,13 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		messageId := callbackQuery.Message.GetMessageID() // 获取原消息 ID
 		
 		// 〔中文注释〕: 首先，回应 TG 的回调请求，告诉用户机器人已收到操作。
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖，请稍后......")
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔makex-ui 小白哥〕正在为您摇奖，请稍后......")
 		
 		// 这条消息会永久停留在聊天窗口，作为等待提示。
 		t.editMessageTgBot(
 			chatId,
 			messageId,
-			"⏳ **抽奖结果生成中...**\n\n------->>>请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
+			"⏳ **抽奖结果生成中...**\n\n------->>>请耐心等待 5 秒......\n\n〔makex-ui 小白哥〕马上为您揭晓！",
 			// 【关键】: 不传入键盘参数，自动移除旧键盘
 		)
 
@@ -1872,7 +1872,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				            "**防伪码 (Hash)**: `" + validationHash + "`\n\n" +
 							"**兑奖说明**：请截图此完整消息，\n\n" +
 							"并联系交流群内管理员进行兑奖。\n\n" +
-							"------------->>>>〔X-Panel 面板〕交流群：\n\n" +
+							"------------->>>>〔makex-ui 面板〕交流群：\n\n" +
 							"------------->>>> https://t.me/XUI_CN"
 
 			// --- 【向中央统计频道发送报告（异步）】 ---
@@ -1990,7 +1990,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	 case "oneclick_options":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "功能升级提示......")
-		 t.SendMsgToTgbot(chatId, "〔一键配置〕功能现已升级为“付费Pro版”专属功能，\n\n请联系面板管理员〔购买授权码〕之后才能继续使用，\n\n----->>> “授权码购买”机器人：@Buy_ShouQuan_Bot")
+		 t.SendMsgToTgbot(chatId, "〔一键配置〕功能为 makex-ui 免费版已开放功能，正在为您配置节点，请稍候......")
 
 	 case "subconverter_install":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -2023,7 +2023,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				tu.InlineKeyboardButton("❌ 否，我再想想").WithCallbackData(t.encodeQuery("restart_panel_cancel")),
 			),
 		)
-		t.SendMsgToTgbot(chatId, "🤔 您“现在的操作”是要确定进行，\n\n重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
+		t.SendMsgToTgbot(chatId, "🤔 您“现在的操作”是要确定进行，\n\n重启〔makex-ui 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 
 	case "restart_panel_confirm":
 		// 〔中文注释〕: 用户确认重启
@@ -2432,7 +2432,7 @@ func (t *Tgbot) SendReport() {
     }
 
 	greetingMsg := fmt.Sprintf(
-		"☀️ **每日定时报告** (任务: `%s`)\n\n*  美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**：`%s`",
+		"☀️ **每日定时报告** (任务: `%s`)\n\n*  美好的一天，从〔makex-ui 面板〕开始！*\n\n⏰ **当前时间**：`%s`",
 		taskName,
 		time.Now().Format("2006-01-02 15:04:05"),
 	)
