@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -2447,6 +2448,16 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 	if opts.Host == "" {
 		return nil, "", common.NewError("host is required")
 	}
+	// 【中文注释】: 防御性剥离 host 中的端口（用户可能填 IP:443 或带面板端口），
+	// 保证 vmess add / vless/trojan 链接主机都是纯 IP/域名，端口单独拼接
+	if h, _, err := net.SplitHostPort(opts.Host); err == nil {
+		opts.Host = h
+	} else if strings.Count(opts.Host, ":") == 1 && !strings.Contains(opts.Host, "[") {
+		// 兼容形如 1.2.3.4:5678 的 host（SplitHostPort 对无协议裸 host:port 也能解析，此处为兜底）
+		if idx := strings.LastIndex(opts.Host, ":"); idx > 0 && isAllDigits(opts.Host[idx+1:]) {
+			opts.Host = opts.Host[:idx]
+		}
+	}
 	// Reality 模式默认 Target/SNI
 	if opts.Security == "reality" {
 		if opts.Target == "" {
@@ -2690,6 +2701,19 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 	}
 
 	return created, link, nil
+}
+
+// isAllDigits 判断字符串是否全为数字（用于 host 剥端口时的兜底判断）
+func isAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // genRandomCert 调用 xray tls cert 生成随机自签证书，保存到指定目录
