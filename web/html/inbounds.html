@@ -1201,7 +1201,9 @@ async openPort(port) {
 
             // 【中文注释】: 一键配置——调用后端 API 自动创建入站+客户端
             async createOneClickConfig() {
-                const host = this.oneClickHost.trim() || window.location.host;
+                // 【中文注释】: 默认用 hostname（纯 IP/域名，不带面板端口），
+                // 避免生成 vmess add 带端口 / vless 链接双冒号导致 V2rayN 无法解析
+                const host = this.oneClickHost.trim() || window.location.hostname;
                 // Reality 模式下 Target/SNI 若留空则用默认值
                 let target = this.oneClickTarget.trim() || '1.1.1.1:443';
                 let sni = this.oneClickSNI.trim() || 'www.yahu.com';
@@ -1224,8 +1226,8 @@ async openPort(port) {
                     this.oneClickPort = msg.obj.port;
                     this.oneClickId = msg.obj.id;
                     this.$message.success('{{ i18n "pages.inbounds.oneClick.successTitle" }}');
-                    // 刷新入站列表，让新节点立即可见
-                    this.getDBInbounds();
+                    // 【中文注释】: 等待列表刷新完成，确保 oneClickId 对应的 DBInbound 已就绪（二维码/复制要用）
+                    await this.getDBInbounds();
                 } catch (e) {
                     this.$message.error(e.message || '{{ i18n "somethingWentWrong" }}');
                 } finally {
@@ -1233,16 +1235,41 @@ async openPort(port) {
                 }
             },
 
-            // 【中文注释】: 复制一键配置生成的链接
-            copyOneClickLink() {
+            // 【中文注释】: 复制一键配置生成的链接（与正常节点「复制」一致的 V2rayN 链接格式）
+            async copyOneClickLink() {
+                // 优先从列表取真实 DBInbound 生成与正常节点一致的链接（host 用 hostname，无端口污染）
+                let dbInbound = null;
+                if (this.oneClickId) {
+                    dbInbound = this.dbInbounds.find(row => row.id === this.oneClickId);
+                }
+                if (!dbInbound) {
+                    dbInbound = this.dbInbounds[this.dbInbounds.length - 1];
+                }
+                if (dbInbound) {
+                    const newDbInbound = this.checkFallback(dbInbound);
+                    const links = newDbInbound.genInboundLinks(newDbInbound.remark, app.remarkModel);
+                    if (links) {
+                        try {
+                            await ClipboardManager.copyText(links);
+                            this.$message.success('{{ i18n "copied" }}');
+                            return;
+                        } catch (e) {
+                            // 复制失败则回退到后端返回的链接
+                        }
+                    }
+                }
+                // 兜底：复制后端返回的链接
                 ClipboardManager.copyText(this.oneClickLink).then(() => {
                     this.$message.success('{{ i18n "copied" }}');
                 });
             },
 
             // 【中文注释】: 展示一键配置生成链接的二维码
-            showOneClickQrcode() {
-                // 从刷新后的列表中找刚创建的入站（真实 DBInbound 实例，qrModal 需要 toInbound 方法）
+            async showOneClickQrcode() {
+                // 【中文注释】: 先确保列表刷新完成（异步），再取真实 DBInbound，qrModal 需要 toInbound 方法
+                if (this.oneClickId) {
+                    await this.getDBInbounds();
+                }
                 let dbInbound = null;
                 if (this.oneClickId) {
                     dbInbound = this.dbInbounds.find(row => row.id === this.oneClickId);
