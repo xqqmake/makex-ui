@@ -1,4 +1,4 @@
-name: Release X-Panel
+name: Release makex-ui
 
 on:
   workflow_dispatch:
