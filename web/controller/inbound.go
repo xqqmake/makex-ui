@@ -45,6 +45,7 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.POST("/onlines", a.onlines)
 	g.POST("/lastOnline", a.lastOnline)
 	g.POST("/updateClientTraffic/:email", a.updateClientTraffic)
+	g.POST("/oneclick", a.oneClickConfig)
 }
 
 func (a *InboundController) getInbounds(c *gin.Context) {
@@ -372,4 +373,39 @@ func (a *InboundController) updateClientTraffic(c *gin.Context) {
 	}
 
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
+}
+
+// oneClickConfig 一键配置：自动创建 VLESS Reality 入站+客户端并返回连接链接
+func (a *InboundController) oneClickConfig(c *gin.Context) {
+	type OneClickRequest struct {
+		Remark string `json:"remark"`
+		Host   string `json:"host"`
+	}
+	var req OneClickRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = OneClickRequest{}
+	}
+	// 未显式传 host 时，使用面板访问地址的 host 部分
+	if req.Host == "" {
+		req.Host = c.Request.Host
+	}
+
+	inbound, link, err := a.inboundService.OneClickCreateInbound(req.Remark, req.Host)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+
+	data := map[string]any{
+		"link":    link,
+		"id":      inbound.Id,
+		"port":    inbound.Port,
+		"remark":  inbound.Remark,
+		"subId":   "",
+		"enabled": inbound.Enable,
+	}
+	if len(inbound.ClientStats) > 0 {
+		data["subId"] = inbound.ClientStats[0].Email
+	}
+	jsonObj(c, data, nil)
 }
