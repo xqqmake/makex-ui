@@ -708,27 +708,39 @@
       :class="themeSwitcher.currentTheme"
       @cancel="handleOneClickCancel"
       :footer="null"
-   >
-      <a-alert
-      message="功能升级提示"
-      type="info"
-      show-icon
->
-    <template #description>
-        〔一键配置〕功能现已升级为“makex-ui 免费版”专属功能，
-        <br />
-        <br />
-        makex-ui 免费版无需任何授权码。
-    </template>
-    
-    <template #icon><a-icon type="crown"></a-icon></template>
-     </a-alert>
-        <div :style="{ marginTop: '20px', textAlign: 'center' }">
-          <p>
-             <a href="#" target="_blank">makex-ui 免费版：makex-ui 免费版</a>
-          </p>
-       </div>
-     </a-modal>
+      :width="520"
+  >
+      <a-form layout="vertical">
+        <a-form-item :label="`{{ i18n "pages.inbounds.remark" }}`">
+          <a-input v-model="oneClickRemark" :placeholder="`{{ i18n "pages.inbounds.oneClick.remarkPlaceholder" }}`"></a-input>
+        </a-form-item>
+        <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.hostLabel" }}`">
+          <a-input v-model="oneClickHost" :placeholder="window.location.host"></a-input>
+          <div :style="{ marginTop: '4px', fontSize: '12px', color: 'rgba(0,0,0,0.45)' }">{{ i18n "pages.inbounds.oneClick.hostTip" }}</div>
+        </a-form-item>
+        <a-form-item>
+          <a-button type="primary" icon="thunderbolt" :loading="oneClickLoading" block @click="createOneClickConfig">
+            {{ i18n "pages.inbounds.oneClick.create" }}
+          </a-button>
+        </a-form-item>
+      </a-form>
+      <template v-if="oneClickLink">
+        <a-divider></a-divider>
+        <a-alert type="success" show-icon :message="`{{ i18n "pages.inbounds.oneClick.successTitle" }}`">
+          <template #description>
+            <a-space direction="vertical" :style="{ width: '100%' }">
+              <span><b>ID:</b> {{ oneClickPort }}</span>
+              <a-input type="textarea" v-model="oneClickLink" :autosize="{ minRows: 4, maxRows: 8 }" readonly></a-input>
+              <a-space>
+                <a-button size="small" type="primary" icon="copy" @click="copyOneClickLink">{{ i18n "copy" }}</a-button>
+                <a-button size="small" icon="qrcode" @click="showOneClickQrcode">{{ i18n "qrCode" }}</a-button>
+                <a-button size="small" @click="handleOneClickCancel">{{ i18n "close" }}</a-button>
+              </a-space>
+            </a-space>
+          </template>
+        </a-alert>
+      </template>
+    </a-modal>
     </a-layout-content>
   </a-layout>
 </a-layout>
@@ -896,6 +908,11 @@
 			
             // 【中文注释】: 新增数据属性，用于控制“一键配置”模态框的显示状态
             oneClickModalVisible: false,
+            oneClickRemark: '',
+            oneClickHost: '',
+            oneClickLink: '',
+            oneClickPort: '',
+            oneClickLoading: false,
         },
 		
         mounted() {
@@ -1136,12 +1153,56 @@ async openPort(port) {
             // 【中文注释】: 打开“一键配置”模态框
             openOneClickConfig() {
                 this.oneClickModalVisible = true;
+                this.oneClickLink = '';
+                this.oneClickPort = '';
+                this.oneClickLoading = false;
             },
 
             // 【中文注释】: 处理“一键配置”模态框的取消操作
             handleOneClickCancel() {
                 this.oneClickModalVisible = false;
-                this.inboundLink = '';          // 关闭时清空链接，以便下次重新打开时显示选项
+                this.oneClickLink = '';          // 关闭时清空链接，以便下次重新打开时显示选项
+                this.oneClickPort = '';
+                this.oneClickLoading = false;
+            },
+
+            // 【中文注释】: 一键配置——调用后端 API 自动创建 VLESS Reality 入站+客户端
+            async createOneClickConfig() {
+                const host = this.oneClickHost.trim() || window.location.host;
+                this.oneClickLoading = true;
+                try {
+                    const msg = await HttpUtil.post('/panel/api/inbounds/oneclick', {
+                        remark: this.oneClickRemark.trim(),
+                        host: host
+                    });
+                    if (!msg.success) {
+                        this.$message.error(msg.msg || '{{ i18n "somethingWentWrong" }}');
+                        return;
+                    }
+                    this.oneClickLink = msg.obj.link;
+                    this.oneClickPort = msg.obj.port;
+                    this.$message.success('{{ i18n "pages.inbounds.oneClick.successTitle" }}');
+                    // 刷新入站列表，让新节点立即可见
+                    this.getDBInbounds();
+                } catch (e) {
+                    this.$message.error(e.message || '{{ i18n "somethingWentWrong" }}');
+                } finally {
+                    this.oneClickLoading = false;
+                }
+            },
+
+            // 【中文注释】: 复制一键配置生成的链接
+            copyOneClickLink() {
+                ClipboardManager.copyText(this.oneClickLink).then(() => {
+                    this.$message.success('{{ i18n "copied" }}');
+                });
+            },
+
+            // 【中文注释】: 展示一键配置生成链接的二维码
+            showOneClickQrcode() {
+                const client = { id: this.oneClickLink, email: this.oneClickRemark || 'oneclick' };
+                const inbound = { remark: this.oneClickRemark || '{{ i18n "pages.inbounds.oneClick.title" }}', port: this.oneClickPort, protocol: 'vless' };
+                qrModal.show('{{ i18n "qrCode" }}', inbound, client);
             },
 
             // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
