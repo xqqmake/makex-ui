@@ -13,7 +13,7 @@
 ## 📦 快速开始
 
 `ash
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.sh)
 `
 
 安装后输入 makex-ui 进入管理菜单。
