@@ -1872,9 +1872,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				            "**中奖时间**: " + winningTime + "\n\n" +
 				            "**防伪码 (Hash)**: `" + validationHash + "`\n\n" +
 							"**兑奖说明**：请截图此完整消息，\n\n" +
-							"并联系交流群内管理员进行兑奖。\n\n" +
-							"------------->>>>〔makex-ui 面板〕交流群：\n\n" +
-							"------------->>>> https://t.me/XUI_CN"
+							"并联系面板管理员进行兑奖。\n\n"
 
 			// --- 【向中央统计频道发送报告（异步）】 ---
 			go func() {
@@ -2013,7 +2011,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")
-	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
+	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖
 	case "restart_panel":
 		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -2062,48 +2060,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		// 〔中文注释〕: 直接调用您代码中已有的 sendLotteryGameInvitation 函数即可
 		t.sendLotteryGameInvitation()
 
-	case "vps_recommend":
-		// 〔中文注释〕: 发送您指定的VPS推荐信息
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请查看VPS推荐列表")
-		vpsMessage := `✰若需要购买VPS，以下可供选择（包含AFF）✰
-
-1、搬瓦工GIA高端线路，仅推荐购买GIA套餐：
-https://bandwagonhost.com/aff.php?aff=75015
-
-2、Dmit高端GIA线路：
-https://www.dmit.io/aff.php?aff=9326
-
-3、Gomami亚太顶尖优化线路：
-https://gomami.io/aff.php?aff=174
-
-4、ISIF优质亚太优化线路：
-https://cloud.isif.net/login?affiliation_code=333
-
-5、ZoroCloud全球优质原生家宽&住宅双lSP，跨境首选：
-https://my.zorocloud.com/aff.php?aff=1072
-
-6、三网直连 IEPL / IPLC 直播流量转发：
-https://idc333.top/#register/BCUZXNELNO
-
-7、Bagevm优质落地鸡（原生IP全解锁）：
-https://www.bagevm.com/aff.php?aff=754
-
-8、白丝云【4837线路】实惠量大管饱：
-https://cloudsilk.io/aff.php?aff=706
-
-9、RackNerd极致性价比机器：
-https://my.racknerd.com/aff.php?aff=15268&pid=912`
-		// 〔中文注释〕: 发送消息时禁用链接预览，使界面更整洁
-		params := tu.Message(
-			tu.ID(chatId),
-			vpsMessage,
-		).WithLinkPreviewOptions(&telego.LinkPreviewOptions{IsDisabled: true})
-
-		_, err := bot.SendMessage(context.Background(), params)
-		if err != nil {
-			logger.Warning("发送VPS推荐消息失败:", err)
-		}	
 	}
 }
 
@@ -2296,10 +2252,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
 		),
-		// 〔中文注释〕: 【新增功能行】 - 添加娱乐抽奖和VPS推荐按钮
+		// 〔中文注释〕: 【新增功能行】 - 添加娱乐抽奖按钮
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🎁 娱乐抽奖").WithCallbackData(t.encodeQuery("lottery_play_menu")),
-			tu.InlineKeyboardButton("🛰️ VPS 推荐").WithCallbackData(t.encodeQuery("vps_recommend")),
 		),
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
