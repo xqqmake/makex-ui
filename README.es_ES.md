@@ -1,13 +1,13 @@
 [English](/README.md) | [Chinese](/README.zh.md) | [Español](/README.es_ES.md)
 
-<p align="center"><a href="#"><img src="./media/makemakex-ui.png" alt="Image"></a></p>
+<p align="center"><a href="#"><img src="./media/makex-ui.png" alt="Image"></a></p>
 
 **Un Panel Web Avanzado • Construido sobre Xray Core**
 
-[![](https://img.shields.io/github/v/release/xqqmake/makemakex-ui.svg)](https://github.com/xqqmake/makemakex-ui/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makemakex-ui/release.yml.svg)](#)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makemakex-ui.svg)](#)
-[![Downloads](https://img.shields.io/github/downloads/xqqmake/makemakex-ui/total.svg)](#)
+[![](https://img.shields.io/github/v/release/xqqmake/makex-ui.svg)](https://github.com/xqqmake/makex-ui/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makex-ui/release.yml.svg)](#)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makex-ui.svg)](#)
+[![Downloads](https://img.shields.io/github/downloads/xqqmake/makex-ui/total.svg)](#)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 > **Descargo de responsabilidad:** Este proyecto es solo para aprendizaje personal y comunicación, por favor no lo uses con fines ilegales, por favor no lo uses en un entorno de producción
@@ -29,7 +29,7 @@
 ## Instalar y Actualizar
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
 ```
 
 ## Instalar una Versión Personalizada
@@ -37,7 +37,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/in
 Para instalar la versión deseada, agrega la versión al final del comando de instalación. Por ejemplo, ver `v2.4.1`:
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh) v2.4.1
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh) v2.4.1
 ```
 
 ## Certificado SSL
@@ -89,7 +89,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xqqmake/makemakex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/xqqmake/makex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. Una vez que se haya descargado el paquete comprimido, ejecuta los siguientes comandos para instalar o actualizar makex-ui:
@@ -136,7 +136,7 @@ systemctl restart makex-ui
 2. Clona el Repositorio del Proyecto:
 
    ```sh
-   git clone https://github.com/xqqmake/makemakex-ui.git
+   git clone https://github.com/xqqmake/makex-ui.git
    cd 3makex-ui
    ```
 
@@ -156,7 +156,7 @@ systemctl restart makex-ui
       --network=host \
       --restart=unless-stopped \
       --name 3makex-ui \
-      ghcr.io/xqqmake/makemakex-ui:latest
+      ghcr.io/xqqmake/makex-ui:latest
    ```
 
 actualizar a la última versión
@@ -499,4 +499,4 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/makex-ui" go build main.go
 
 ## Estrellas a lo largo del tiempo
 
-[![Stargazers over time](https://starchart.cc/xqqmake/makemakex-ui.svg)](https://starchart.cc/xqqmake/makemakex-ui)
+[![Stargazers over time](https://starchart.cc/xqqmake/makex-ui.svg)](https://starchart.cc/xqqmake/makex-ui)
