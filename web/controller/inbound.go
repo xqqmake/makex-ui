@@ -379,16 +379,18 @@ func (a *InboundController) updateClientTraffic(c *gin.Context) {
 // 支持协议: vless/vmess/trojan；安全: reality/tls/none；端口随机 20000-65535
 func (a *InboundController) oneClickConfig(c *gin.Context) {
 	type OneClickRequest struct {
-		Remark   string `json:"remark"`
-		Email    string `json:"email"`
-		Host     string `json:"host"`
-		Protocol string `json:"protocol"`
-		Security string `json:"security"`
-		Target   string `json:"target"`
-		SNI      string `json:"sni"`
+		Remark   string `json:"remark" form:"remark"`
+		Email    string `json:"email" form:"email"`
+		Host     string `json:"host" form:"host"`
+		Protocol string `json:"protocol" form:"protocol"`
+		Security string `json:"security" form:"security"`
+		Target   string `json:"target" form:"target"`
+		SNI      string `json:"sni" form:"sni"`
 	}
 	var req OneClickRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// 前端 axios 拦截器会把 data 转为 form-urlencoded，因此必须用 ShouldBind（自动兼容 form/JSON），
+	// 不能用 ShouldBindJSON，否则字段全部丢失导致协议/备注/邮箱不生效
+	if err := c.ShouldBind(&req); err != nil {
 		req = OneClickRequest{}
 	}
 	// 未显式传 host 时，使用面板访问地址的 host 部分
