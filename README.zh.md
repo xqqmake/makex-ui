@@ -1,12 +1,12 @@
-<p align="center"><a href="#"><img src="./media/makemakex-ui.png" alt="Image"></a></p>
+<p align="center"><a href="#"><img src="./media/makex-ui.png" alt="Image"></a></p>
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
 
-[![](https://img.shields.io/github/v/release/xqqmake/makemakex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makemakex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makemakex-ui.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/xqqmake/makemakex-ui/total.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/releases/latest)
+[![](https://img.shields.io/github/v/release/xqqmake/makex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/actions)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makex-ui.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/xqqmake/makex-ui/total.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 > **声明：** 此项目仅供个人学习、交流使用，请遵守当地法律法规，勿用于非法用途；请勿用于生产环境。
@@ -27,12 +27,12 @@
 - Solana ---->>> `7qVEZuV98QTDN5qUmsFwvqTSvkYpmLtNf8o1sh1mppwR`
 - BSC/BEP20 ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
 
-## [【makemakex-ui面板】交流群：https://t.me/makex_ui](https://t.me/makex_ui)
-## [【makemakex-ui面板】详细安装流程步骤：https://xqqmake.blogspot.com/2025/09/x-panel.html](https://xqqmake.blogspot.com/2025/09/x-panel.html)
+## [【makex-ui面板】交流群：https://t.me/makex_ui](https://t.me/makex_ui)
+## [【makex-ui面板】详细安装流程步骤：https://xqqmake.blogspot.com/2025/09/x-panel.html](https://xqqmake.blogspot.com/2025/09/x-panel.html)
 
 
 ------------
-## ✰怎么购买【授权码】使用〔makemakex-ui-Pro版 面板〕？✰
+## ✰怎么购买【授权码】使用〔makex-ui-Pro版 面板〕？✰
 #### 1、【授权码】100/15U一个，一机一码，一直有效，永久使用，包括：重装，后期的升级/更新，都能使用，但是不能用于不同的机器，所以推荐稳定使用的机器用【授权码】，注：“授权码”属虚拟商品，购买之后，一经激活生效，概不退款，
 #### 2、对于一年期限（年付/年抛）的机器，后期可以【换绑】，为什么要有时间限制？就是为了防止，有些人拿【授权码】滥用，
 #### 3、购买方式/渠道联系机器人：[https://t.me/makex_buy_bot](https://t.me/makex_buy_bot)
@@ -58,10 +58,10 @@
 
 #### 8、请注意：机器人发给您的所有信息，尽量都去自己【耐心阅读】一遍，“使用说明”，以及〔VIP 群〕的信息，也全部都包含在里面的，
 
-#### 9、按照之前您安装更新〔makemakex-ui 面板〕的方式，直接重新输入【安装命令】，选择【2】，就能去，把之前的【免费版】，“无缝升级”到最新的【Pro版】。
+#### 9、按照之前您安装更新〔makex-ui 面板〕的方式，直接重新输入【安装命令】，选择【2】，就能去，把之前的【免费版】，“无缝升级”到最新的【Pro版】。
 
 ————————————————————————————————
-#### 10、不能重复用于不同的机器 VPS，后期视情况不定时会上涨价格；对于〔makemakex-ui 面板〕后期的“新功能”，都将在【付费Pro版】中进行更新，
+#### 10、不能重复用于不同的机器 VPS，后期视情况不定时会上涨价格；对于〔makex-ui 面板〕后期的“新功能”，都将在【付费Pro版】中进行更新，
 
 #### 11、目前的【安装界面】，是有：两种可选，“免费基础版”一样可用，只是后期不再提供技术支持和重大更新，另外，在【免费基础版】中，【一键配置】功能将不再可用，全部放到了【付费Pro版】中，
 
@@ -70,8 +70,8 @@
 ![62](./media/62.png)
 
 ------------
-## ✰〔makemakex-ui-Pro版 面板〕已实现的功能✰
-#### 1、新增 -【付费Pro版】的面板后台UI，添加醒目的“makemakex-ui-Pro”标识，
+## ✰〔makex-ui-Pro版 面板〕已实现的功能✰
+#### 1、新增 -【付费Pro版】的面板后台UI，添加醒目的“makex-ui-Pro”标识，
 #### 2、优化 -【付费Pro版】TG端 【版本更新】提示功能，增加详细的“更新说明”，
 #### 3、增加〔Pro版面板后台〕，使用 Reality 协议时，可点击随机更换所偷的域名，
 #### 4、新增 -【付费Pro版】TG端 的【发送授权报告】，增加“唯一授权防伪码”，
@@ -86,23 +86,23 @@
 #### 13、优化 -〔Pro版〕中的〔一键配置〕功能，有更友好的提示方式，
 #### 14、新增 -【付费Pro版】---->>>面板后台的【首页 UI】，目前是有“5种”可选：标准布局 (默认)，炫彩动画，深海科技，暮光薰衣，和幽林秘境；你喜欢什么类型的主题，就去点击“选定”之后，就不会自动变了，若后期需要更换，就重选，
 #### 15、新增 -【付费Pro版】---->>>在“创建入站”时，可以在页面上更加方便地选择【重置流量】的方式：有每日重置，每周重置，按月重置，或从不重置，
-#### 16、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】TG端“每日报告”，可定制【发送内容】，自己可点击“打开或关闭”，并且可以选择【发送时间】，可按天，或者每周，每月发，
+#### 16、新增 -〔makex-ui 面板〕----->>【付费Pro版】TG端“每日报告”，可定制【发送内容】，自己可点击“打开或关闭”，并且可以选择【发送时间】，可按天，或者每周，每月发，
 #### 17、优化 -【付费Pro版】的“授权码验证机制”，增加【后台联网验证】，以及“机器指纹”等属性，
-#### 18、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】TG端“多面板管理”，一个机器人可同时管理其他面板，可以很丝滑地远程操作【被控端 VPS】，
-#### 19、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】TG端“获取节点链接”功能，支持【本机】和【远程被控端 VPS】都能获取，开发此功能的目的在于：不用进〔面板后台〕，就能在 TG端 获取到之前已经创建过的“链接”，
-#### 20、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“一键部署中转节点”，解决了不懂配置的麻烦，已实现：远程Socks5创建 --> 本机路由配置 --> 本机入口创建 --> 生成“二维码和链接”，“小手一点”，直接可用，
-#### 21、新增 -〔makemakex-ui 面板〕----->>【申请安装证书】“第18选项”，有“备用方式申请证书”，当用常规方式【1】申请不下来时，可以试试“备用方式”，
-#### 22、新增 -〔makemakex-ui 面板〕----->>【申请安装证书】“第18选项”，有“可自定义证书路径”，自己进入 VPS 中“手动上传证书”，复制路径，在脚本中填入即可，
-#### 23、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“深度调优脚本”，包含 BBR+FQ, TCP Fast Open, 内存缓冲区及队列优化，在〔Pro版〕脚本中“第29选项”可直接用，
-#### 24、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“首页会员等级”显示，能够明确展示：自己的会员等级，授权码信息，以及“版本更新”提示，
-#### 25、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“节点上/下线TG通知”功能，对于【拼车】的宝子，能明确知道：哪个节点，什么时候上线？或者下线时间，做到“心中有数”，
-#### 26、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“签到得积分”功能，后期针对有【积分】的宝子，会不断推出：相应的【特权】和【福利待遇】，
-#### 27、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“TG端签到得积分”功能，推出：积分查询，积分换购，授权码查询，修改用户名，积分转移/打赏，以及“积分排行榜”，
-#### 28、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“TG端签到得积分”功能，推出【“积分换购”的可用功能】：A、消耗1000积分“自助重置换绑时间”，B、消耗5000积分“自助换购一个普通授权码”，
-#### 29、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“创建数据快照 + 远程急救还原”的提示功能： 可直观通过「终端UI界面」看到具体「备份 + 还原」步骤；用法：面板报错“崩了”，不用像之前那样：卸载面板 -->> 重装面板，更不用很麻烦去“重装系统”解决，直接：远程急救还原，前提就是：你自己要知道，在面板“正常运行”的时候，去「备份数据快照」，
-#### 30、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“每月重置流量”功能：可输入1—31之间的任意数字，比如：输入12，即代表“每月12号”「重置入站流量」，以便提供更友好的“重置流量方式”，
-#### 31、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“批量部署节点”功能：可直接在面板后台的“一键配置”中去使用，点击一次可批量部署生成10条「VLESS + TCP + Reality + Vision」协议组合的入站，
-#### 32、新增 -〔makemakex-ui 面板〕----->>【付费Pro版】“购买机器人”功能，可自助全自动在“机器人”中：购买授权码，增加配额，充值积分，自助重置换绑等，联系：[https://t.me/makex_buy_bot](https://t.me/makex_buy_bot) 。
+#### 18、新增 -〔makex-ui 面板〕----->>【付费Pro版】TG端“多面板管理”，一个机器人可同时管理其他面板，可以很丝滑地远程操作【被控端 VPS】，
+#### 19、新增 -〔makex-ui 面板〕----->>【付费Pro版】TG端“获取节点链接”功能，支持【本机】和【远程被控端 VPS】都能获取，开发此功能的目的在于：不用进〔面板后台〕，就能在 TG端 获取到之前已经创建过的“链接”，
+#### 20、新增 -〔makex-ui 面板〕----->>【付费Pro版】“一键部署中转节点”，解决了不懂配置的麻烦，已实现：远程Socks5创建 --> 本机路由配置 --> 本机入口创建 --> 生成“二维码和链接”，“小手一点”，直接可用，
+#### 21、新增 -〔makex-ui 面板〕----->>【申请安装证书】“第18选项”，有“备用方式申请证书”，当用常规方式【1】申请不下来时，可以试试“备用方式”，
+#### 22、新增 -〔makex-ui 面板〕----->>【申请安装证书】“第18选项”，有“可自定义证书路径”，自己进入 VPS 中“手动上传证书”，复制路径，在脚本中填入即可，
+#### 23、新增 -〔makex-ui 面板〕----->>【付费Pro版】“深度调优脚本”，包含 BBR+FQ, TCP Fast Open, 内存缓冲区及队列优化，在〔Pro版〕脚本中“第29选项”可直接用，
+#### 24、新增 -〔makex-ui 面板〕----->>【付费Pro版】“首页会员等级”显示，能够明确展示：自己的会员等级，授权码信息，以及“版本更新”提示，
+#### 25、新增 -〔makex-ui 面板〕----->>【付费Pro版】“节点上/下线TG通知”功能，对于【拼车】的宝子，能明确知道：哪个节点，什么时候上线？或者下线时间，做到“心中有数”，
+#### 26、新增 -〔makex-ui 面板〕----->>【付费Pro版】“签到得积分”功能，后期针对有【积分】的宝子，会不断推出：相应的【特权】和【福利待遇】，
+#### 27、新增 -〔makex-ui 面板〕----->>【付费Pro版】“TG端签到得积分”功能，推出：积分查询，积分换购，授权码查询，修改用户名，积分转移/打赏，以及“积分排行榜”，
+#### 28、新增 -〔makex-ui 面板〕----->>【付费Pro版】“TG端签到得积分”功能，推出【“积分换购”的可用功能】：A、消耗1000积分“自助重置换绑时间”，B、消耗5000积分“自助换购一个普通授权码”，
+#### 29、新增 -〔makex-ui 面板〕----->>【付费Pro版】“创建数据快照 + 远程急救还原”的提示功能： 可直观通过「终端UI界面」看到具体「备份 + 还原」步骤；用法：面板报错“崩了”，不用像之前那样：卸载面板 -->> 重装面板，更不用很麻烦去“重装系统”解决，直接：远程急救还原，前提就是：你自己要知道，在面板“正常运行”的时候，去「备份数据快照」，
+#### 30、新增 -〔makex-ui 面板〕----->>【付费Pro版】“每月重置流量”功能：可输入1—31之间的任意数字，比如：输入12，即代表“每月12号”「重置入站流量」，以便提供更友好的“重置流量方式”，
+#### 31、新增 -〔makex-ui 面板〕----->>【付费Pro版】“批量部署节点”功能：可直接在面板后台的“一键配置”中去使用，点击一次可批量部署生成10条「VLESS + TCP + Reality + Vision」协议组合的入站，
+#### 32、新增 -〔makex-ui 面板〕----->>【付费Pro版】“购买机器人”功能，可自助全自动在“机器人”中：购买授权码，增加配额，充值积分，自助重置换绑等，联系：[https://t.me/makex_buy_bot](https://t.me/makex_buy_bot) 。
 ![76](./media/76.png)
 
 ------------
@@ -118,13 +118,13 @@
 ![33](./media/33.png)
 #### 5、若在搭建之前没有翻墙加密，则【http明文模式】登录面板有很大的信息泄露安全风险，那建议你第一次搭建成功之后，去修改用户/密码，和访问路径，后期则通过搭建好的代理加密访问，
 ![34](./media/34.png)
-#### 6、在做【ssh转发】过程中，本地电脑的终端不能关闭，保持打开不能断开；且每一次要登录〔makemakex-ui面板〕管理后台都要做【ssh转发】，因为关闭之后就失效了。
+#### 6、在做【ssh转发】过程中，本地电脑的终端不能关闭，保持打开不能断开；且每一次要登录〔makex-ui面板〕管理后台都要做【ssh转发】，因为关闭之后就失效了。
 ![35](./media/35.png)
 #### PS：上述两种方法：【ssh端口转发】或申请安装证书的目的都是为了更安全地登录面板，而至于搭建的其他流程和步骤，都是一样的；如果你已经【申请安装证书】了，并不会受到其他什么额外影响，就不用去折腾【ssh转发】了，直接用 【https://你的域名:端口/路径】 去登录你的面板管理后台就行了。
 
 ------------
-## 如何在〔makemakex-ui-Pro 面板〕中去使用【一个机器人管理多面板】功能？
-#### 1、先购买【授权码】安装好〔makemakex-ui-Pro 面板〕，进入后台，在【主从管理】界面，
+## 如何在〔makex-ui-Pro 面板〕中去使用【一个机器人管理多面板】功能？
+#### 1、先购买【授权码】安装好〔makex-ui-Pro 面板〕，进入后台，在【主从管理】界面，
 ![64](./media/64.png)
 #### 2、点击【添加被控端 VPS】，按照要求填入面板登录地址，用户名和密码，备注等信息，
 ![65](./media/65.png)
@@ -136,8 +136,8 @@
 ![68](./media/68.png)
 
 ------------
-## 如何在〔makemakex-ui-Pro 面板〕中去使用【一键部署中转节点】的功能？
-#### 1、先购买【授权码】安装好〔makemakex-ui-Pro 面板〕，进入后台，在【主从管理】界面，
+## 如何在〔makex-ui-Pro 面板〕中去使用【一键部署中转节点】的功能？
+#### 1、先购买【授权码】安装好〔makex-ui-Pro 面板〕，进入后台，在【主从管理】界面，
 #### 2、点击【添加中转机 VPS】，按照要求填入面板登录地址，用户名和密码，备注等信息，
 ![69](./media/69.png)
 #### 3、然后点击列表页中的【一键部署中转】，即可在后续的流程中，自动进入配置流程，
@@ -148,13 +148,13 @@
 ![72](./media/72.png)
 
 ------------
-## ✰如何从其他makex-ui版本迁移到〔makemakex-ui面板〕？✰
+## ✰如何从其他makex-ui版本迁移到〔makex-ui面板〕？✰
 #### 1、若你用的是伊朗老哥的3X-UI，是可以直接〔覆盖安装〕的，因为数据库文件等位置是没有改变的，所以直接覆盖安装，并不会影响你〔原有节点及配置〕等数据；安装命令如下：
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
 ```
 #### 2、若你之前用的是Docker方式安装，那先进入容器里面/命令：docker exec -it 容器id /bin/sh，再执行以上脚本命令直接【覆盖安装】即可，
-#### 3、若你用的是之前F佬的makex-ui或者其他分支版本，那直接覆盖安装的话，并不能确保一定就能够兼容？建议你先去备份〔数据库〕配置文件，再进行安装〔makemakex-ui面板〕。
+#### 3、若你用的是之前F佬的makex-ui或者其他分支版本，那直接覆盖安装的话，并不能确保一定就能够兼容？建议你先去备份〔数据库〕配置文件，再进行安装〔makex-ui面板〕。
 
 
 ------------
@@ -199,12 +199,12 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/in
 
 ------------
 ## 安装 & 升级
-- 使用〔makemakex-ui面板〕脚本一般情况下，安装完成创建入站之后，端口是默认关闭的，所以必须进入脚本选择【22】去放行端口
+- 使用〔makex-ui面板〕脚本一般情况下，安装完成创建入站之后，端口是默认关闭的，所以必须进入脚本选择【22】去放行端口
 - 要使用【自动续签】证书功能，也必须放行【80】端口，保持80端口是打开的，才会每3个月自动续签一次
 
 - 【全新安装】请执行以下脚本：
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
 ```
 #### 如果执行了上面的代码但是报错，证明你的系统里面没有curl这个软件，请执行以下命令先安装curl软件，安装curl之后再去执行上面代码，
 ```
@@ -223,7 +223,7 @@ apt update -y&&apt install -y curl&&apt install -y socat
 若要安装指定的版本，请使用以下安装命令。 e.g., ver `v26.2.15`:
 
 ```
-VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/makemakex-ui/$VERSION/install.sh") $VERSION
+VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/makex-ui/$VERSION/install.sh") $VERSION
 ```
 ------------
 ## 若你的VPS默认有防火墙，请在安装完成之后放行指定端口
@@ -236,7 +236,7 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 #### PS：若你的VPS没有防火墙，则所有端口都是能够ping通的，可自行选择是否进入脚本安装防火墙保证安全，但安装了防火墙必须放行相应端口。
 
 ------------
-## 如何在〔makemakex-ui面板〕中使用简单快捷的【一键配置】生成功能？
+## 如何在〔makex-ui面板〕中使用简单快捷的【一键配置】生成功能？
 #### 1、进入后台，并且你已经【安装了证书】，可在【添加入站】处看到，
 ![53](./media/53.png)
 #### 2、点击【一键配置】，在弹出的页面中【按需选择】去生成协议配置即可，
@@ -251,7 +251,7 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ![58](./media/58.png)
 
 ------------
-## 如何在〔makemakex-ui 项目〕中进行【抽奖游戏】赢奖品？
+## 如何在〔makex-ui 项目〕中进行【抽奖游戏】赢奖品？
 #### 1、必须绑定好【TG端机器人】，怎么绑定？去看下面“绑定机器人”那部分教程，
 #### 2、在【TG端】直接点击【娱乐抽奖】菜单，就会弹出【每日幸运】抽奖游戏，
 ![59](./media/59.png)
@@ -302,11 +302,11 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ## 备份与恢复/迁移数据库（以Debian系统为例）
 #### 一、备份：通过配置好电报管理机器人，可点击管理机器人的“相应菜单按钮”获取【备份配置】文件，有makex-ui.db和config.json两个文件，可自行下载保存到自己电脑里面，
 ![14](./media/14.png)
-#### 二、搭建：在新的VPS中全新安装好〔makemakex-ui面板〕，通过脚本放行之前配置的所有端口，一次性放行多个端口请用【英文逗号】分隔，
+#### 二、搭建：在新的VPS中全新安装好〔makex-ui面板〕，通过脚本放行之前配置的所有端口，一次性放行多个端口请用【英文逗号】分隔，
 #### 三、若需要安装证书，则提前把域名解析到新的VPS对应的IP，并且去输入makex-ui选择第【18】选项去安装，并记录公钥/私钥的路径，无域名则跳过这一步，
 #### 四、恢复：SSH登录服务器找到/etc/makex-ui/makex-ui.db和/usr/local/makex-ui/bin/config.json文件位置，上传之前的两个备份文件，进行覆盖，
 ![12](./media/12.png)
-##### PS：把之前通过自动备份下载得到的两个文件上传覆盖掉旧文件，重启〔makemakex-ui面板〕即可【迁移成功】；即使迁移过程中出现问题，你是有备份文件的，不用担心，多试几次。
+##### PS：把之前通过自动备份下载得到的两个文件上传覆盖掉旧文件，重启〔makex-ui面板〕即可【迁移成功】；即使迁移过程中出现问题，你是有备份文件的，不用担心，多试几次。
 ![13](./media/13.png)
 #### 五、若安装了证书，去核对/更改一下证书的路径，一般是同一个域名的话，位置在：/root/cert/域名/fullchain.pem，路径是相同的就不用更改，
 #### 六、重启面板/重启服务器，让上述步骤生效即可，这时可以看到所有配置都是之前自己常用的，包括面板用户名、密码，入站、客户端，电报机器人配置等。
@@ -322,9 +322,9 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ![17](./media/17.png)
 
 ------------
-## 用〔makemakex-ui面板〕如何实现【自己偷自己】？
+## 用〔makex-ui面板〕如何实现【自己偷自己】？
 - 其实很简单，只要你为面板设置了证书，
-- 开启了HTTPS登录，就可以将〔makemakex-ui面板〕自身作为Web Server，
+- 开启了HTTPS登录，就可以将〔makex-ui面板〕自身作为Web Server，
 - 无需Nginx等，这里给一个示例：
 - 其中目标网站（Dest）请填写面板监听端口，
 - 可选域名（SNI）填写面板登录域名，
@@ -339,7 +339,7 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ## 〔子域名〕被墙针对特征
 #### 网络表现：
 ##### 1、可以Ping通域名和IP地址，
-##### 2、子域名无法打开〔makemakex-ui面板〕管理界面，
+##### 2、子域名无法打开〔makex-ui面板〕管理界面，
 ##### 3、什么都正常就是不能上网；
 
 #### 问题：
@@ -349,23 +349,23 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ##### 1、更换为新的子域名，
 ##### 2、解析新的子域名到VPS的IP，
 ##### 3、重新去安装新证书，
-##### 4、重启〔makemakex-ui面板〕和服务器，
+##### 4、重启〔makex-ui面板〕和服务器，
 ##### 5、重新去获取链接并测试上网。
-#### PS：若通过以上步骤还是不能正常上网，则重装VPS服务器OS系统，以及〔makemakex-ui面板〕全部重新安装，之后就正常了！
+#### PS：若通过以上步骤还是不能正常上网，则重装VPS服务器OS系统，以及〔makex-ui面板〕全部重新安装，之后就正常了！
 
 ------------
-## 用〔makemakex-ui面板〕如何开启【设备限制】功能？
+## 用〔makex-ui面板〕如何开启【设备限制】功能？
 ##### 1、进入后台在【添加入站】的时候，弹出来的页面就能有【设备数量】输入框，
 ![37](./media/37.png)
 ##### 2、通过步骤1设置完成后，在后台的【入站列表】页面也有对应的同步数据显示。
 ![38](./media/38.png)
-##### 3、具体要查看【设备限制】功能的封禁情况，就进入〔makemakex-ui面板〕后台用日志查看。
+##### 3、具体要查看【设备限制】功能的封禁情况，就进入〔makex-ui面板〕后台用日志查看。
 ![39](./media/39.png)
 ##### 4、以下图片里面，详细阐述了我们的〔设备限制〕功能，跟3X-UI原本就有的〔IP Limit〕之间的区别对比。
 ![40](./media/40.png)
 
 ------------
-## 用〔makemakex-ui面板〕如何开启【独立限速】功能？
+## 用〔makex-ui面板〕如何开启【独立限速】功能？
 ##### 1、进入后台在【添加入站】的时候，弹出来的页面在【客户/用户】那里就能输入具体数字，
 ![47](./media/47.png)
 ##### 2、也可以在添加好一个【入站】之后，点击【添加客户端】去找到【独立限速】输入框，
@@ -375,11 +375,11 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ![50](./media/50.png)
 ##### 4、若后期你想更改某一个【客户端/用户】的限制速率，那就自己先找到，然后点击【编辑】即可，
 ![51](./media/51.png)
-##### 5、具体要查看【独立限速】功能的启用情况，就进入〔makemakex-ui面板〕后台用日志查看。
+##### 5、具体要查看【独立限速】功能的启用情况，就进入〔makex-ui面板〕后台用日志查看。
 ![52](./media/52.png)
 
 ------------
-## 用〔makemakex-ui面板〕如何开启【每月流量自动重置】？
+## 用〔makex-ui面板〕如何开启【每月流量自动重置】？
 ##### 1、进入后台的【入站列表】，选择需要设置的【客户端】，
 ![29](./media/29.png)
 ##### 2、要注意是编辑【入站】下面的【客户端】，才会有效果，
@@ -419,7 +419,7 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 ##### 5、创建【入站协议】的时候，尽量用【高位端口】，比如40000--65000之间的端口号。
 #### 提醒：为什么在特殊时期，比如：两会，春节等被封得最严重最惨？
 ##### 尼玛同一个IP+同一个端口号，多个省份去漫游，跟开飞机场一样！不封你，封谁的IP和端口？
-#### 总结：不要多终端/多省份/多个朋友/共同使用同一个IP和端口号！使用〔makemakex-ui面板〕多创建几个【入站】，
+#### 总结：不要多终端/多省份/多个朋友/共同使用同一个IP和端口号！使用〔makex-ui面板〕多创建几个【入站】，
 ####      多做几条备用，各用各的！各行其道才比较安全！GFW的思维模式是干掉机场，机场的特征个人用户不要去沾染，自然IP就保护好了。
 
 ------------
@@ -500,7 +500,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xqqmake/makemakex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/xqqmake/makex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. 下载压缩包后，执行以下命令安装或升级 makex-ui：
@@ -551,8 +551,8 @@ systemctl restart makex-ui
 2. **克隆项目仓库**
 
    ```sh
-   git clone https://github.com/xqqmake/makemakex-ui.git
-   cd x-panel
+   git clone https://github.com/xqqmake/makex-ui.git
+   cd makex-ui
    ```
 
 3. **启动服务**：
@@ -572,26 +572,26 @@ systemctl restart makex-ui
       -v $PWD/cert/:/root/cert/ \
       --network=host \
       --restart=unless-stopped \
-      --name x-panel \
-      ghcr.io/xqqmake/makemakex-ui:latest
+      --name makex-ui \
+      ghcr.io/xqqmake/makex-ui:latest
    ```
 
 4. **更新至最新版本**
 
    ```sh
-   cd x-panel
+   cd makex-ui
    docker compose down
-   docker compose pull x-panel
+   docker compose pull makex-ui
    docker compose up -d
    ```
 
-5. **从Docker中删除x-panel **
+5. **从Docker中删除makex-ui **
 
    ```sh
-   docker stop x-panel
-   docker rm x-panel
+   docker stop makex-ui
+   docker rm makex-ui
    cd --
-   rm -r x-panel
+   rm -r makex-ui
    ```
 
 </details>
@@ -935,4 +935,4 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/makex-ui" go build main.go
 ------------
 ## Star 趋势
 
-[![Stargazers over time](https://starchart.cc/xqqmake/makemakex-ui.svg)](https://starchart.cc/xqqmake/makemakex-ui)
+[![Stargazers over time](https://starchart.cc/xqqmake/makex-ui.svg)](https://starchart.cc/xqqmake/makex-ui)
