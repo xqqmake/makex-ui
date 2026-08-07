@@ -2,7 +2,6 @@
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
-
 [![](https://img.shields.io/github/v/release/xqqmake/makex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases)
 [![](https://img.shields.io/github/actions/workflow/status/xqqmake/makex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/actions)
 [![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makex-ui.svg?style=for-the-badge)](#)
@@ -38,13 +37,11 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/instal
 **اگر این پروژه برای شما مفید است، می‌توانید به آن یک**:star2: بدهید
 
 <p align="left">
-  <a href="https://buymeacoffee.com/mhsanaei" target="_blank">
+
     <img src="./media/buymeacoffe.png" alt="Image">
   </a>
 </p>
 
-- USDT (TRC20): `TXncxkvhkDWGts487Pjqq1qT9JmwRUz8CC`
-- POL (polygon): `0x41C9548675D044c6Bfb425786C765bc37427256A`
 - LTC (Litecoin): `ltc1q2ach7x6d2zq0n4l0t4zl7d7xe2s6fs7a3vspwv`
 
 ## ستاره‌ها در طول زمان
