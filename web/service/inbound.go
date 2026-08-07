@@ -3,11 +3,15 @@ package service
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -2344,9 +2348,37 @@ func (s *InboundService) FilterAndSortClientEmails(emails []string) ([]string, [
 	return validEmails, extraEmails, nil
 }
 
-// getFreePort 从 10000 开始向上找一个未被占用的端口
+// getFreePort 在 20000-65535 范围内随机找一个未被占用的端口
 func (s *InboundService) getFreePort() (int, error) {
-	port := 10000
+	const minPort = 20000
+	const maxPort = 65535
+	// crypto/rand 随机取端口
+	randPort := func() (int, error) {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(maxPort-minPort+1)))
+		if err != nil {
+			return 0, err
+		}
+		return minPort + int(n.Int64()), nil
+	}
+	// 先尝试随机采样若干次，提高随机性
+	for i := 0; i < 50; i++ {
+		port, err := randPort()
+		if err != nil {
+			return 0, err
+		}
+		exist, err := s.checkPortExist("", port, 0)
+		if err != nil {
+			return 0, err
+		}
+		if !exist {
+			return port, nil
+		}
+	}
+	// 随机采样失败后，从随机起点顺序向上找
+	port, err := randPort()
+	if err != nil {
+		return 0, err
+	}
 	for {
 		exist, err := s.checkPortExist("", port, 0)
 		if err != nil {
@@ -2356,8 +2388,8 @@ func (s *InboundService) getFreePort() (int, error) {
 			return port, nil
 		}
 		port++
-		if port > 65535 {
-			return 0, common.NewError("no free port found")
+		if port > maxPort {
+			port = minPort
 		}
 	}
 }
@@ -2388,15 +2420,41 @@ func (s *InboundService) genShortID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// OneClickCreateInbound 一键配置：自动分配端口/生成 UUID/Reality 密钥，
-// 创建 VLESS Reality 入站+客户端，并返回入站对象与 vless 链接。
-// host 为用于生成链接的域名/IP（可带端口）。
-func (s *InboundService) OneClickCreateInbound(remark string, host string) (*model.Inbound, string, error) {
-	if remark == "" {
-		remark = "一键配置节点"
+// OneClickOptions 一键配置请求参数
+type OneClickOptions struct {
+	Remark   string // 备注（用户自填）
+	Email    string // 电子邮件（用户自填）
+	Protocol string // 协议: vless / vmess / trojan（默认 vless）
+	Security string // 安全: reality / tls / none（默认 reality）
+	Target   string // Reality Target，默认 1.1.1.1:443
+	SNI      string // Reality SNI，默认 www.yahu.com
+	Host     string // 用于生成链接的域名/IP（可带端口）
+}
+
+// OneClickCreateInbound 一键配置：随机端口(20000-65535)/生成 UUID/Reality 密钥，
+// 创建指定协议入站+客户端，并返回入站对象与连接链接。
+// 选 Reality 时自动生成随机证书并保存到 /root/cert/oneclick-<port>/。
+func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inbound, string, error) {
+	if opts.Remark == "" {
+		opts.Remark = "一键配置节点"
 	}
-	if host == "" {
+	if opts.Protocol == "" {
+		opts.Protocol = "vless"
+	}
+	if opts.Security == "" {
+		opts.Security = "reality"
+	}
+	if opts.Host == "" {
 		return nil, "", common.NewError("host is required")
+	}
+	// Reality 模式默认 Target/SNI
+	if opts.Security == "reality" {
+		if opts.Target == "" {
+			opts.Target = "1.1.1.1:443"
+		}
+		if opts.SNI == "" {
+			opts.SNI = "www.yahu.com"
+		}
 	}
 
 	port, err := s.getFreePort()
@@ -2415,48 +2473,132 @@ func (s *InboundService) OneClickCreateInbound(remark string, host string) (*mod
 		return nil, "", err
 	}
 
-	client := model.Client{
-		ID:       clientUUID,
-		Flow:     "xtls-rprx-vision",
-		Email:    fmt.Sprintf("oneclick_%d@makex-ui", port),
-		Enable:   true,
-		LimitIP:  0,
-		TotalGB:  0,
-		ExpiryTime: 0,
-		SubID:    subID,
+	// Reality 模式：随机获取新证书保存到 /root/cert/oneclick-<port>/
+	if opts.Security == "reality" {
+		if _, err := s.genRandomCert(fmt.Sprintf("/root/cert/oneclick-%d", port)); err != nil {
+			logger.Warning("一键配置: 随机证书生成失败(不影响Reality节点):", err)
+		}
 	}
 
-	settings := model.VLESSSettings{
-		Clients:    []model.Client{client},
-		Decryption: "none",
-		Fallbacks:  []any{},
+	client := model.Client{
+		ID:         clientUUID,
+		Flow:       "xtls-rprx-vision",
+		Email:      opts.Email,
+		Enable:     true,
+		LimitIP:    0,
+		TotalGB:    0,
+		ExpiryTime: 0,
+		SubID:      subID,
 	}
-	settingsJSON, err := json.MarshalIndent(settings, "", "  ")
+
+	// 按协议构造 settings
+	var settingsJSON []byte
+	switch opts.Protocol {
+	case "vmess":
+		vmessSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"id":         clientUUID,
+					"alterId":    0,
+					"email":      opts.Email,
+					"limitIp":    0,
+					"totalGB":    0,
+					"expiryTime": 0,
+					"enable":     true,
+					"tgId":       "",
+					"subId":      subID,
+					"reset":      0,
+				},
+			},
+			"disableInsecureEncryption": false,
+		}
+		settingsJSON, err = json.MarshalIndent(vmessSettings, "", "  ")
+	case "trojan":
+		trojanSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"password":   clientUUID,
+					"email":      opts.Email,
+					"limitIp":    0,
+					"totalGB":    0,
+					"expiryTime": 0,
+					"enable":     true,
+					"tgId":       "",
+					"subId":      subID,
+					"reset":      0,
+				},
+			},
+			"fallbacks": []any{},
+		}
+		settingsJSON, err = json.MarshalIndent(trojanSettings, "", "  ")
+	default: // vless
+		vlessSettings := model.VLESSSettings{
+			Clients:    []model.Client{client},
+			Decryption: "none",
+			Fallbacks:  []any{},
+		}
+		settingsJSON, err = json.MarshalIndent(vlessSettings, "", "  ")
+	}
 	if err != nil {
 		return nil, "", err
 	}
 
-	// 标准 Reality over TCP 传输配置
-	streamSettings := map[string]any{
-		"network": "tcp",
-		"security": "reality",
-		"realitySettings": map[string]any{
-			"show":        false,
-			"dest":        "www.microsoft.com:443",
-			"xver":        0,
-			"serverNames": []string{"www.microsoft.com"},
-			"privateKey":  privKey,
-			"minClient":   "",
-			"maxClient":   "",
-			"maxTimediff": 0,
-			"shortIds":    []string{shortID},
-			"settings": map[string]any{
-				"publicKey":   pubKey,
-				"fingerprint": "chrome",
-				"serverName":  "",
-				"spiderX":     "/",
+	// 按安全协议构造 streamSettings
+	var streamSettings map[string]any
+	switch opts.Security {
+	case "tls":
+		streamSettings = map[string]any{
+			"network": "tcp",
+			"security": "tls",
+			"tlsSettings": map[string]any{
+				"serverName": opts.SNI,
+				"certificates": []map[string]any{
+					{
+						"certificateFile": fmt.Sprintf("/root/cert/oneclick-%d/fullchain.pem", port),
+						"keyFile":         fmt.Sprintf("/root/cert/oneclick-%d/privkey.pem", port),
+					},
+				},
 			},
-		},
+			"tcpSettings": map[string]any{
+				"acceptProxyProtocol": false,
+				"header": map[string]any{"type": "none"},
+			},
+		}
+	case "none":
+		streamSettings = map[string]any{
+			"network": "tcp",
+			"security": "none",
+			"tcpSettings": map[string]any{
+				"acceptProxyProtocol": false,
+				"header": map[string]any{"type": "none"},
+			},
+		}
+	default: // reality —— 与手动创建一致的字段结构
+		streamSettings = map[string]any{
+			"network":   "tcp",
+			"security":  "reality",
+			"realitySettings": map[string]any{
+				"show":        false,
+				"xver":        0,
+				"target":      opts.Target,
+				"serverNames": []string{opts.SNI},
+				"privateKey":  privKey,
+				"minClient":   "",
+				"maxClient":   "",
+				"maxTimediff": 0,
+				"shortIds":    []string{shortID},
+				"settings": map[string]any{
+					"publicKey":   pubKey,
+					"fingerprint": "chrome",
+					"serverName":  "",
+					"spiderX":     "/",
+				},
+			},
+			"tcpSettings": map[string]any{
+				"acceptProxyProtocol": false,
+				"header": map[string]any{"type": "none"},
+			},
+		}
 	}
 	streamJSON, err := json.MarshalIndent(streamSettings, "", "  ")
 	if err != nil {
@@ -2475,10 +2617,10 @@ func (s *InboundService) OneClickCreateInbound(remark string, host string) (*mod
 
 	inbound := &model.Inbound{
 		UserId:         1,
-		Remark:         remark,
+		Remark:         opts.Remark,
 		Enable:         true,
 		Port:           port,
-		Protocol:       model.VLESS,
+		Protocol:       model.Protocol(opts.Protocol),
 		Settings:       string(settingsJSON),
 		StreamSettings: string(streamJSON),
 		Tag:            fmt.Sprintf("inbound-%d-tcp", port),
@@ -2490,8 +2632,96 @@ func (s *InboundService) OneClickCreateInbound(remark string, host string) (*mod
 		return nil, "", err
 	}
 
-	link := fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=www.microsoft.com#%s",
-		clientUUID, host, port, pubKey, shortID, url.QueryEscape(remark))
+	// 按协议+安全生成连接链接
+	var link string
+	switch opts.Protocol {
+	case "vmess":
+		vmessJSON := map[string]any{
+			"v":    "2",
+			"ps":   opts.Remark,
+			"add":  opts.Host,
+			"port": strconv.Itoa(port),
+			"id":   clientUUID,
+			"aid":  "0",
+			"scy":  "auto",
+			"net":  "tcp",
+			"type": "none",
+			"host": "",
+			"path": "",
+			"tls":  "",
+			"sni":  "",
+		}
+		if opts.Security == "reality" {
+			vmessJSON["tls"] = "reality"
+			vmessJSON["sni"] = opts.SNI
+			vmessJSON["fp"] = "chrome"
+			vmessJSON["pbk"] = pubKey
+			vmessJSON["sid"] = shortID
+			vmessJSON["spx"] = "/"
+		} else if opts.Security == "tls" {
+			vmessJSON["tls"] = "tls"
+			vmessJSON["sni"] = opts.SNI
+			vmessJSON["fp"] = "chrome"
+		}
+		vmessRaw, _ := json.Marshal(vmessJSON)
+		link = "vmess://" + base64.StdEncoding.EncodeToString(vmessRaw)
+	case "trojan":
+		if opts.Security == "reality" {
+			link = fmt.Sprintf("trojan://%s@%s:%d?security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=%s#%s",
+				clientUUID, opts.Host, port, pubKey, shortID, opts.SNI, url.QueryEscape(opts.Remark))
+		} else if opts.Security == "tls" {
+			link = fmt.Sprintf("trojan://%s@%s:%d?security=tls&type=tcp&headerType=none&sni=%s#%s",
+				clientUUID, opts.Host, port, opts.SNI, url.QueryEscape(opts.Remark))
+		} else {
+			link = fmt.Sprintf("trojan://%s@%s:%d?type=tcp&headerType=none#%s",
+				clientUUID, opts.Host, port, url.QueryEscape(opts.Remark))
+		}
+	default: // vless
+		if opts.Security == "reality" {
+			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=%s&flow=xtls-rprx-vision#%s",
+				clientUUID, opts.Host, port, pubKey, shortID, opts.SNI, url.QueryEscape(opts.Remark))
+		} else if opts.Security == "tls" {
+			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=tls&type=tcp&headerType=none&fp=chrome&sni=%s#%s",
+				clientUUID, opts.Host, port, opts.SNI, url.QueryEscape(opts.Remark))
+		} else {
+			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=none&type=tcp&headerType=none#%s",
+				clientUUID, opts.Host, port, url.QueryEscape(opts.Remark))
+		}
+	}
 
 	return created, link, nil
+}
+
+// genRandomCert 调用 xray tls cert 生成随机自签证书，保存到指定目录
+func (s *InboundService) genRandomCert(dir string) (string, error) {
+	cmd := exec.Command(xray.GetBinaryPath(), "tls", "cert")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	var certData struct {
+		Certificate []string `json:"certificate"`
+		Key         []string `json:"key"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &certData); err != nil {
+		return "", err
+	}
+	if len(certData.Certificate) == 0 || len(certData.Key) == 0 {
+		return "", common.NewError("invalid xray tls cert output")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	certPath := filepath.Join(dir, "fullchain.pem")
+	keyPath := filepath.Join(dir, "privkey.pem")
+	certContent := strings.Join(certData.Certificate, "\n") + "\n"
+	keyContent := strings.Join(certData.Key, "\n") + "\n"
+	if err := os.WriteFile(certPath, []byte(certContent), 0o644); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(keyPath, []byte(keyContent), 0o600); err != nil {
+		return "", err
+	}
+	return certPath, nil
 }
