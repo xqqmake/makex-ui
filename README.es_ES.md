@@ -15,16 +15,10 @@
 **Si este proyecto te es útil, podrías considerar darle una**:star2:
 
 <p align="left">
-  <a href="https://buymeacoffee.com/xqqmakez" target="_blank">
     <img src="./media/buymeacoffe.png" alt="Image">
   </a>
 </p>
 
-- Sponsorship Address (USDT):
-- TRC20 ---->>> `TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ`
-- Polygon ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
-- Solana ---->>> `7qVEZuV98QTDN5qUmsFwvqTSvkYpmLtNf8o1sh1mppwR`
-- BSC/BEP20 ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
 
 ## Instalar y Actualizar
 
@@ -89,7 +83,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xqqmake/makex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/xqqmake/makex-ui/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. Una vez que se haya descargado el paquete comprimido, ejecuta los siguientes comandos para instalar o actualizar makex-ui:
@@ -107,12 +101,12 @@ case "${ARCH}" in
 esac
 
 cd /root/
-rm -rf makex-ui/ /usr/local/makex-ui/ /usr/bin/makex-ui
-tar zxvf makex-ui-linux-${XUI_ARCH}.tar.gz
-chmod +x makex-ui/makex-ui makex-ui/bin/xray-linux-* makex-ui/makex-ui.sh
-cp makex-ui/makex-ui.sh /usr/bin/makex-ui
-cp -f makex-ui/makex-ui.service /etc/systemd/system/
-mv makex-ui/ /usr/local/
+rm -rf x-ui/ /usr/local/x-ui/ /usr/bin/makex-ui
+tar zxvf x-ui-linux-${XUI_ARCH}.tar.gz
+chmod +x x-ui/makex-ui x-ui/bin/xray-linux-* x-ui/x-ui.sh
+cp x-ui/x-ui.sh /usr/bin/makex-ui
+cp -f x-ui/x-ui.service /etc/systemd/system/
+mv x-ui/ /usr/local/
 systemctl daemon-reload
 systemctl enable makex-ui
 systemctl restart makex-ui
@@ -137,7 +131,7 @@ systemctl restart makex-ui
 
    ```sh
    git clone https://github.com/xqqmake/makex-ui.git
-   cd 3makex-ui
+   cd makex-ui
    ```
 
 3. Inicia el Servicio
@@ -151,30 +145,30 @@ systemctl restart makex-ui
    ```sh
    docker run -itd \
       -e XRAY_VMESS_AEAD_FORCED=false \
-      -v $PWD/db/:/etc/makex-ui/ \
+      -v $PWD/db/:/etc/x-ui/ \
       -v $PWD/cert/:/root/cert/ \
       --network=host \
       --restart=unless-stopped \
-      --name 3makex-ui \
+      --name makex-ui \
       ghcr.io/xqqmake/makex-ui:latest
    ```
 
 actualizar a la última versión
 
    ```sh
-    cd 3makex-ui
+    cd makex-ui
     docker compose down
-    docker compose pull 3makex-ui
+    docker compose pull makex-ui
     docker compose up -d
    ```
 
-eliminar 3makex-ui de docker
+eliminar makex-ui de docker
 
    ```sh
-    docker stop 3makex-ui
-    docker rm 3makex-ui
+    docker stop makex-ui
+    docker rm makex-ui
     cd --
-    rm -r 3makex-ui
+    rm -r makex-ui
    ```
 
 </details>
@@ -259,9 +253,9 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
   Puedes realizar copias de seguridad y restauraciones de la base de datos directamente desde el panel.
 
 ### Ruta Base Web
-  - /etc/makex-ui/makex-ui.db
+  - /etc/x-ui/x-ui.db
 - **Ruta de Configuración de Xray:**
-  - /usr/local/makex-ui/bin/config.json
+  - /usr/local/x-ui/bin/config.json
 - **Ruta del Panel Web sin Implementar SSL:**
   - http://ip:2053/panel
   - http://domain:2053/panel
@@ -492,7 +486,6 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/makex-ui" go build main.go
 
 ## Reconocimientos
 
-赞助地址（USDT/TRC20）：TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ
 
 - [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) (Licencia: **GPL-3.0**): _Reglas de enrutamiento mejoradas de v2ray/xray y v2ray/xray-clients con dominios iraníes integrados y un enfoque en seguridad y bloqueo de anuncios._
 - [Vietnam Adblock rules](https://github.com/vuong2023/vn-v2ray-rules) (License: **GPL-3.0**): _Un dominio alojado en Vietnam y una lista de bloqueo con la máxima eficiencia para vietnamitas._
