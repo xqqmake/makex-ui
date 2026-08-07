@@ -3,7 +3,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./media/makex-ui.png">
-    <img alt="3makex-ui" src="./media/makex-ui.png">
+    <img alt="makex-ui" src="./media/makex-ui.png">
   </picture>
 </p>
 
