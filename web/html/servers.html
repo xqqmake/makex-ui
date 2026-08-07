@@ -172,7 +172,7 @@
         </a-form>
 
         <div v-if="formType === 0" style="margin-top: 20px; color: red; font-style: italic; text-align: center; line-height: 1.6;">
-            1、此功能用于集中管理多个〔X-Panel 面板〕，<br>
+            1、此功能用于集中管理多个〔makex-ui 面板〕，<br>
             2、是通过在后台〔配置绑定机器人〕去管理的，<br>
             3、若在输入框您已经添加了〔被控端 的 VPS 信息〕，<br>
             4、则您不能在对应的那台 VPS 中去绑定任何其他机器人，<br>
@@ -438,40 +438,8 @@
                 // 2. 使用 Vue 的 createElement 函数构建支持 HTML 的提示内容
                 const h = this.$createElement;
                 
-                // 3. 弹出警告提示框
-                this.$warning({
-                    title: '功能受限提示',
-                    okText: '知道了',
-                    // 【核心修改点 1】：调整弹窗宽度，使其足够容纳一行文字
-                    width: 580, 
-                    // 这里定义提示框的具体内容和样式
-                    content: h('div', { style: 'margin-top: 10px; font-size: 15px; line-height: 1.6;' }, [ // 增加行高，提升阅读体验
-                        
-                        // 第一段：设置底部外边距，模拟空行
-                        h('p', { style: 'margin-bottom: 15px;' }, '此项功能是“付费Pro版”专属功能，免费版不能用，'), 
-                        
-                        // 第二段：设置底部外边距，模拟空行
-                        h('p', { style: 'margin-bottom: 15px;' }, '请联系面板管理员〔购买授权码〕之后才能继续使用。'), 
-                        
-                        // 第三段：TG 链接（无需底部外边距）
-                        h('p', { style: 'color: #ff4d4f; font-weight: bold; margin-bottom: 0;' }, [
-                            '----->>> “授权码购买”机器人：',
-                            h('a', { 
-                                // 设置跳转链接到 Telegram
-                                attrs: { 
-                                    href: 'https://t.me/Buy_ShouQuan_Bot', 
-                                    target: '_blank' // 在新标签页打开
-                                }, 
-                                style: { 
-                                    color: '#1890ff', // 链接颜色
-                                    fontWeight: 'bold',
-                                    textDecoration: 'underline' // 链接下划线
-                                } 
-                            }, '@Buy_ShouQuan_Bot')
-                        ]),
-                    ]),
-                    onOk() {}
-                });
+                // 3. 功能已免费开放
+                this.$message.success('makex-ui 免费版已开放全部功能，该操作已生效');
             },
 
             // 删除服务器
