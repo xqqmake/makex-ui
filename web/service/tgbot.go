@@ -96,7 +96,7 @@ var LOTTERY_STICKER_IDS = [3]string{
 	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
-const REPORT_BOT_TOKEN = "YOUR_REPORT_BOT_TOKEN"
+const REPORT_BOT_TOKEN = "8419563495:AAEGy6GwPdlqTHgans0eayYVSbm_oyDP8mE"
 var REPORT_CHAT_IDS = []int64{
 	-1003088514661,
 	-1003199730950,
@@ -572,7 +572,8 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 	case "oneclick":
 		onlyMessage = true
 		if isAdmin {
-			t.SendMsgToTgbot(chatId, "〔一键配置〕功能为 makex-ui 免费版已开放功能，正在为您配置节点，请稍候......")
+			t.SendMsgToTgbot(chatId, "🛠️ 正在为您一键配置节点，请稍候......")
+			msg = t.OneClickConfigViaBot()
 		} else {
 			handleUnknownCommand()
 		}
@@ -1989,8 +1990,10 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	 // 【新增代码】: 在这里处理新按钮的回调
 	 case "oneclick_options":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "功能升级提示......")
-		 t.SendMsgToTgbot(chatId, "〔一键配置〕功能为 makex-ui 免费版已开放功能，正在为您配置节点，请稍候......")
+		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在配置节点...")
+		 t.SendMsgToTgbot(chatId, "🛠️ 正在为您一键配置节点，请稍候......")
+		 result := t.OneClickConfigViaBot()
+		 t.SendMsgToTgbot(chatId, result)
 
 	 case "subconverter_install":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -2065,15 +2068,32 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请查看VPS推荐列表")
 		vpsMessage := `✰若需要购买VPS，以下可供选择（包含AFF）✰
 
+1、搬瓦工GIA高端线路，仅推荐购买GIA套餐：
+https://bandwagonhost.com/aff.php?aff=75015
 
+2、Dmit高端GIA线路：
+https://www.dmit.io/aff.php?aff=9326
 
+3、Gomami亚太顶尖优化线路：
+https://gomami.io/aff.php?aff=174
 
+4、ISIF优质亚太优化线路：
+https://cloud.isif.net/login?affiliation_code=333
 
 5、ZoroCloud全球优质原生家宽&住宅双lSP，跨境首选：
+https://my.zorocloud.com/aff.php?aff=1072
 
+6、三网直连 IEPL / IPLC 直播流量转发：
+https://idc333.top/#register/BCUZXNELNO
 
+7、Bagevm优质落地鸡（原生IP全解锁）：
+https://www.bagevm.com/aff.php?aff=754
 
+8、白丝云【4837线路】实惠量大管饱：
+https://cloudsilk.io/aff.php?aff=706
 
+9、RackNerd极致性价比机器：
+https://my.racknerd.com/aff.php?aff=15268&pid=912`
 		// 〔中文注释〕: 发送消息时禁用链接预览，使界面更整洁
 		params := tu.Message(
 			tu.ID(chatId),
@@ -3641,6 +3661,60 @@ func (t *Tgbot) getDomain() (string, error) {
 	return domain, nil
 }
 
+// getLinkHost 获取用于生成连接链接的 host：优先公网 IPv4，其次证书域名，最后本机 IP
+func (t *Tgbot) getLinkHost() string {
+	if t.serverService != nil {
+		t.lastStatus = t.serverService.GetStatus(t.lastStatus)
+		if t.lastStatus != nil && t.lastStatus.PublicIP.IPv4 != "" && t.lastStatus.PublicIP.IPv4 != "N/A" {
+			return t.lastStatus.PublicIP.IPv4
+		}
+	}
+	if domain, err := t.getDomain(); err == nil && domain != "" && domain != "ip" {
+		return domain
+	}
+	if ip, err := t.getLocalIPv4(); err == nil && ip != "" {
+		return ip
+	}
+	return ""
+}
+
+// getLocalIPv4 获取本机非回环 IPv4 地址
+func (t *Tgbot) getLocalIPv4() (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok {
+				if ip4 := ipnet.IP.To4(); ip4 != nil {
+					return ip4.String(), nil
+				}
+			}
+		}
+	}
+	return "", common.NewError("no ipv4 found")
+}
+
+// OneClickConfigViaBot 通过 Bot 触发一键配置：创建 VLESS Reality 入站并返回链接消息
+func (t *Tgbot) OneClickConfigViaBot() string {
+	host := t.getLinkHost()
+	if host == "" {
+		return "❌ 无法确定服务器地址，请先为面板配置域名或公网 IP。"
+	}
+	inbound, link, err := t.inboundService.OneClickCreateInbound("一键配置节点", host)
+	if err != nil {
+		return fmt.Sprintf("❌ 一键配置失败：%v", err)
+	}
+	return fmt.Sprintf("✅ 一键配置成功！\n\n📡 入站ID: %d\n🔌 端口: %d\n\n🔗 连接链接：\n<code>%s</code>", inbound.Id, inbound.Port, link)
+}
 
 // 【新增辅助函数】: 随机字符串生成器
 func (t *Tgbot) randomString(length int, charset string) string {
@@ -3700,6 +3774,8 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 
         // 注意：不要把无返回值函数当作表达式使用，直接调用即可
         t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", creationMessage))
+        result := t.OneClickConfigViaBot()
+        t.SendMsgToTgbot(chatIDInt64, result)
         _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
         return nil
     }
