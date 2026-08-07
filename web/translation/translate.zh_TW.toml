@@ -328,6 +328,11 @@
 "descriptionContent" = "1、此功能將自動產生 VLESS + TCP + Reality (xtls-rprx-vision) 和 VLESS + XHTTP + Reality 協定的入站，以上最前面兩種協定組合適合直連，\r\n2、或 VLESS Encryption + XHTTP + TLS（可選套CDN）協定的入站，\r\n3、並隨機分配一個可用端口，請確保此端口放行，生成後請直接複製【鏈接地址】，\r\n4、此處的【一鍵配置】生成功能，跟【入站】的數據是打通的，\r\n5、你可以在一鍵創建後於列表中，手動查看/複製或編輯信息，以便添加其他參數。"
 
 "remarkPlaceholder" = "例如：我的節點"
+"emailLabel" = "電子郵件 (可選)"
+"protocolLabel" = "協議"
+"securityLabel" = "安全協議"
+"targetLabel" = "Reality Target"
+"sniLabel" = "Reality SNI"
 "hostLabel" = "連結主機 (域名/IP)"
 "hostTip" = "預設使用當前面板訪問地址；如使用 CDN 或需要指定 IP 請手動填寫"
 "create" = "🚀 一鍵建立"
