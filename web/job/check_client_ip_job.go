@@ -330,7 +330,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 			return
 		}
 		tgMessage := fmt.Sprintf(
-			"<b>〔X-Panel面板〕设备超限提醒</b>\n\n"+
+			"<b>〔makex-ui面板〕设备超限提醒</b>\n\n"+
 				"  ------------------------------------\n"+
 				"  👤 用户 Email：%s\n"+
 				"  🖥️ 设备限制数量：%d\n"+
