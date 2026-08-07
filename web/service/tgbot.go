@@ -3664,7 +3664,10 @@ func (t *Tgbot) OneClickConfigViaBot() string {
 	if host == "" {
 		return "❌ 无法确定服务器地址，请先为面板配置域名或公网 IP。"
 	}
-	inbound, link, err := t.inboundService.OneClickCreateInbound("一键配置节点", host)
+	inbound, link, err := t.inboundService.OneClickCreateInbound(OneClickOptions{
+		Remark: "一键配置节点",
+		Host:   host,
+	})
 	if err != nil {
 		return fmt.Sprintf("❌ 一键配置失败：%v", err)
 	}
