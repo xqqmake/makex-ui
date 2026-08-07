@@ -942,6 +942,7 @@
             oneClickHost: '',
             oneClickLink: '',
             oneClickPort: '',
+            oneClickId: 0,
             oneClickLoading: false,
         },
 		
@@ -1185,6 +1186,7 @@ async openPort(port) {
                 this.oneClickModalVisible = true;
                 this.oneClickLink = '';
                 this.oneClickPort = '';
+                this.oneClickId = 0;
                 this.oneClickLoading = false;
             },
 
@@ -1193,6 +1195,7 @@ async openPort(port) {
                 this.oneClickModalVisible = false;
                 this.oneClickLink = '';          // 关闭时清空链接，以便下次重新打开时显示选项
                 this.oneClickPort = '';
+                this.oneClickId = 0;
                 this.oneClickLoading = false;
             },
 
@@ -1219,6 +1222,7 @@ async openPort(port) {
                     }
                     this.oneClickLink = msg.obj.link;
                     this.oneClickPort = msg.obj.port;
+                    this.oneClickId = msg.obj.id;
                     this.$message.success('{{ i18n "pages.inbounds.oneClick.successTitle" }}');
                     // 刷新入站列表，让新节点立即可见
                     this.getDBInbounds();
@@ -1238,9 +1242,20 @@ async openPort(port) {
 
             // 【中文注释】: 展示一键配置生成链接的二维码
             showOneClickQrcode() {
-                const client = { id: this.oneClickLink, email: this.oneClickRemark || 'oneclick' };
-                const inbound = { remark: this.oneClickRemark || '{{ i18n "pages.inbounds.oneClick.title" }}', port: this.oneClickPort, protocol: 'vless' };
-                qrModal.show('{{ i18n "qrCode" }}', inbound, client);
+                // 从刷新后的列表中找刚创建的入站（真实 DBInbound 实例，qrModal 需要 toInbound 方法）
+                let dbInbound = null;
+                if (this.oneClickId) {
+                    dbInbound = this.dbInbounds.find(row => row.id === this.oneClickId);
+                }
+                if (!dbInbound) {
+                    dbInbound = this.dbInbounds[this.dbInbounds.length - 1];
+                }
+                if (!dbInbound) {
+                    this.$message.error('{{ i18n "somethingWentWrong" }}');
+                    return;
+                }
+                const newDbInbound = this.checkFallback(dbInbound);
+                qrModal.show('{{ i18n "qrCode" }}', newDbInbound);
             },
 
             // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
@@ -1990,7 +2005,13 @@ async openPort(port) {
             },
             copy(dbInboundId) {
               dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-              txtModal.show('{{ i18n "pages.inbounds.inboundData" }}', JSON.stringify(dbInbound, null, 2));
+              if (!dbInbound) return;
+              // 【中文注释】: 复制 V2rayN 可识别的订阅链接（替代原来的 JSON 数据导出）
+              newDbInbound = this.checkFallback(dbInbound);
+              const links = newDbInbound.genInboundLinks(this.remarkModel);
+              ClipboardManager.copyText(links).then(() => {
+                  this.$message.success('{{ i18n "copied" }}');
+              });
             },
             async startDataRefreshLoop() {
                 while (this.isRefreshEnabled) {
