@@ -128,7 +128,7 @@
         color: #40a9ff !important;
     }
 
-    /* 隐藏【X-Panel面板】卡片内容区产生的横向滚动条 */
+    /* 隐藏【makex-ui面板】卡片内容区产生的横向滚动条 */
     .glass-card .ant-card-body div[style*="overflow-x: auto"] {
         -ms-overflow-style: none;  /* IE and Edge */
         scrollbar-width: none;  /* Firefox */
@@ -187,7 +187,7 @@
     .running-animation .ant-badge-status-dot { animation: runningAnimation 1.2s linear infinite; }
     @keyframes runningAnimation { 0%,50%,100% {transform: scale(1);opacity: 1;} 10% {transform: scale(1.5);opacity: .2;} }
 
-    /* === X-Panel LOGO 炫酷效果样式 (保留) === */
+    /* === makex-ui LOGO 炫酷效果样式 (保留) === */
     @keyframes neonGlow {
         0%, 100% {
             text-shadow: 0 0 5px #00aaff, 0 0 10px #00aaff, 0 0 20px #00aaff, 0 0 40px #00aaff;
@@ -197,7 +197,7 @@
         }
     }
 
-    .x-panel-logo-text {
+    .makex-ui-logo-text {
         font-size: 3rem; 
         font-weight: 900;
         margin: 0;
@@ -209,13 +209,13 @@
         line-height: 1.2;
     }
 
-    .x-panel-desc {
+    .makex-ui-desc {
         text-align: center;
         font-size: 1rem;
         color: inherit;
         line-height: 1.5;
     }
-    .x-panel-desc b {
+    .makex-ui-desc b {
         font-weight: normal;
     }
 	
@@ -264,7 +264,7 @@
         transition: transform 0.3s ease;
     }
 
-    /* 隐藏【X-Panel面板】卡片内容区产生的横向滚动条 */
+    /* 隐藏【makex-ui面板】卡片内容区产生的横向滚动条 */
     .glass-card .ant-card-body div[style*="overflow-x: auto"] {
         -ms-overflow-style: none;  /* IE and Edge */
         scrollbar-width: none;  /* Firefox */
@@ -360,8 +360,8 @@
     .running-animation .ant-badge-status-dot { animation: runningAnimation 1.2s linear infinite; }
     @keyframes runningAnimation { 0%,50%,100% {transform: scale(1);opacity: 1;} 10% {transform: scale(1.5);opacity: .2;} }
 
-    /* === X-Panel LOGO 标准样式 (无动画) === */
-    .x-panel-logo-text {
+    /* === makex-ui LOGO 标准样式 (无动画) === */
+    .makex-ui-logo-text {
         font-size: 3rem; 
         font-weight: 900;
         margin: 0;
@@ -371,13 +371,13 @@
         line-height: 1.2;
     }
 
-    .x-panel-desc {
+    .makex-ui-desc {
         text-align: center;
         font-size: 1rem;
         color: inherit;
         line-height: 1.5;
     }
-    .x-panel-desc b {
+    .makex-ui-desc b {
         font-weight: normal;
     }
 </style>
@@ -410,9 +410,9 @@
 
 								<a-col :sm="24" :lg="16">
 									<a-card hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px', paddingBottom: '16px' }">
-										<div class="x-panel-logo-text">X-Panel</div>
+										<div class="makex-ui-logo-text">makex-ui</div>
 										<br>
-										<div class="x-panel-desc">
+										<div class="makex-ui-desc">
 											<b>{{ i18n "pages.index.betterPanel" }}</b>
 											<br><br>
 											<b>{{ i18n "pages.index.builtOnXray" }}</b>
@@ -570,7 +570,7 @@
 								<a-col :sm="24" :lg="8">
 									<a-card title='{{ i18n "pages.index.xpanelTitle" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<div style="white-space: nowrap; overflow-x: auto;">
-											<a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
+											<a rel="noopener" href="https://github.com/xqqmake/makex-ui/releases" target="_blank">
 												<a-tag color="green"><span>v{{ .cur_ver }}</span></a-tag>
 											</a>
 											<a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
@@ -779,13 +779,13 @@
         <div style="padding: 20px 10px;">
             <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #52c41a;">
                 <a-icon type="smile" theme="filled" style="margin-right: 8px;"></a-icon>
-                <span>X-Panel 免费基础版</span>
+                <span>makex-ui 免费版</span>
             </div>
 
             <a-divider style="margin: 15px 0;"></a-divider>
 
             <p style="font-size: 16px; color: #1890ff; font-style: italic; font-weight: 500;">
-                * 美好的一天，从〔X-Panel 面板〕开始！*
+                * 美好的一天，从〔makex-ui 面板〕开始！*
             </p>
             <p style="font-size: 15px; color: #666;">
                 您当前所使用的版本为：<b>免费基础版</b>
@@ -795,11 +795,11 @@
                 
                 <div style="color: #ff4d4f; font-weight: bold; font-size: 14px; line-height: 1.8;">
                     <div>若需要使用〔Pro 版〕更多“新功能”，</div>
-                    <div>请自助联系“授权码购买”机器人：</div>
+                    <div>makex-ui 免费版无需授权：</div>
                     <div style="margin-top: 5px;">
                         ------->>>>  
-                        <a href="https://t.me/Buy_ShouQuan_Bot" target="_blank" style="color: #1890ff; font-weight: bold; text-decoration: underline; margin-left: 5px;">
-                            @Buy_ShouQuan_Bot
+                        <a href="#" target="_blank" style="color: #1890ff; font-weight: bold; text-decoration: underline; margin-left: 5px;">
+                            makex-ui 免费版
                         </a>
                     </div>
                 </div>
@@ -808,7 +808,7 @@
 
                 <div style="font-size: 14px;">
                     <a-icon type="rocket" style="margin-right: 5px;"></a-icon>
-                    〔X-Panel-Pro 面板〕已实现功能：
+                    〔makex-ui 面板〕已实现功能：
                     <a @click="jumpToProFeatures" style="font-weight: bold; color: #722ed1;">
                         点击查看 <a-icon type="right"></a-icon>
                     </a>
@@ -1229,47 +1229,20 @@ ${dateTime}
                 txtModal.show('config.json', JSON.stringify(msg.obj, null, 2), 'config.json');
             },
 
-            // 按钮 1 触发的方法：显示付费提示
+            // 按钮 1 触发的方法：数据快照（备份到 TG 机器人）
             async performRemoteBackup() {
-                // 注意：这里删除了 this.visible = false，因为在主页上下文中没有弹窗需要关闭，直接弹警告即可
-                
-                // 使用 Vue 的 createElement 函数构建支持 HTML 的提示内容
-                const h = this.$createElement;
-                
-                // 弹出警告提示框
-                this.$warning({
-                    title: '功能受限提示',
-                    okText: '知道了',
-                    // 【核心修改点 1】：调整弹窗宽度，使其足够容纳一行文字
-                    width: 580, 
-                    // 这里定义提示框的具体内容和样式
-                    content: h('div', { style: 'margin-top: 10px; font-size: 15px; line-height: 1.6;' }, [ // 增加行高，提升阅读体验
-                        
-                        // 第一段：设置底部外边距，模拟空行
-                        h('p', { style: 'margin-bottom: 15px;' }, '此项功能是“付费Pro版”专属功能，免费版不能用，'), 
-                        
-                        // 第二段：设置底部外边距，模拟空行
-                        h('p', { style: 'margin-bottom: 15px;' }, '请联系面板管理员〔购买授权码〕之后才能继续使用。'), 
-                        
-                        // 第三段：TG 链接（无需底部外边距）
-                        h('p', { style: 'color: #ff4d4f; font-weight: bold; margin-bottom: 0;' }, [
-                            '----->>> “授权码购买”机器人：',
-                            h('a', { 
-                                // 设置跳转链接到 Telegram
-                                attrs: { 
-                                    href: 'https://t.me/Buy_ShouQuan_Bot', 
-                                    target: '_blank' // 在新标签页打开
-                                }, 
-                                style: { 
-                                    color: '#1890ff', // 链接颜色
-                                    fontWeight: 'bold',
-                                    textDecoration: 'underline' // 链接下划线
-                                } 
-                            }, '@Buy_ShouQuan_Bot')
-                        ]),
-                    ]),
-                    onOk() {}
-                });
+                // 直接调用后端接口，将数据库备份发送到已绑定的 Telegram 机器人
+                try {
+                    const resp = await fetch(basePath.replace(/\/$/, '') + '/panel/api/server/backuptotgbot');
+                    const msg = await resp.json();
+                    if (msg && msg.success) {
+                        this.$message.success('备份已发送至 Telegram 机器人');
+                    } else {
+                        this.$message.warning('备份失败，请确认已正确绑定 Telegram 机器人');
+                    }
+                } catch (e) {
+                    this.$message.error('请求失败，请检查网络或服务状态');
+                }
             },
 
             // 1. 关闭弹窗并记录状态
@@ -1279,13 +1252,10 @@ ${dateTime}
                 sessionStorage.setItem('welcomeShown', 'true');
             },
 
-            // 2. 跳转到 navigation 页面 (尝试定位到第3个选项卡)
+            // 2. makex-ui 免费版全部功能已开放
             jumpToProFeatures() {
                 this.closeWelcomeModal(); // 先关闭弹窗
-                // 根据 Sidebar 逻辑拼接路径
-                // 注意：这里默认跳转到 navigation 页面。
-                // 如果 navigation 页面支持 ?tab=3 这种参数请保留参数，不支持则只会跳转到默认页
-                window.location.href = '{{ .base_path }}panel/navigation?tab=3'; 
+                this.$message.success('makex-ui 免费版已开放全部功能'); 
             },
 
             // 按钮 2 触发的方法：显示相同的提示
