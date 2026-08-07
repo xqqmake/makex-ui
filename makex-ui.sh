@@ -799,6 +799,39 @@ update_geo() {
     before_show_menu
 }
 
+
+# ===== 临时SSL辅助函数 =====
+is_ipv4() {
+    [[ "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] && return 0 || return 1
+}
+is_ipv6() {
+    [[ "$1" =~ : ]] && return 0 || return 1
+}
+is_port_in_use() {
+    local port="$1"
+    if command -v ss > /dev/null 2>&1; then
+        ss -ltn 2> /dev/null | awk -v p=":${port}$" '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v netstat > /dev/null 2>&1; then
+        netstat -lnt 2> /dev/null | awk -v p=":${port} " '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v lsof > /dev/null 2>&1; then
+        lsof -nP -iTCP:${port} -sTCP:LISTEN > /dev/null 2>&1 && return 0
+    fi
+    return 1
+}
+prompt_or_default() {
+    local __var="$1" __prompt="$2" __default="$3" __env="${4:-$1}"
+    if [[ "$NONINTERACTIVE" == "1" ]]; then
+        printf -v "$__var" '%s' "${!__env:-$__default}"
+    else
+        # shellcheck disable=SC2229
+        read -rp "$__prompt" "$__var"
+    fi
+}
+
 install_acme() { 
     # 检查是否已安装 acme.sh
     if command -v ~/.acme.sh/acme.sh &>/dev/null; then 
@@ -1019,6 +1052,154 @@ ssl_cert_issue_standalone_embedded() {
     fi
 }
 
+
+# 【临时获取SSL】Let's Encrypt IP 临时证书 (shortlived profile, 约6天有效期自动续期) ★推荐
+setup_ip_certificate() {
+    local ipv4="$1"
+    local ipv6="$2" # optional
+
+    echo -e "${green}正在签发 Let's Encrypt IP 临时证书 (shortlived profile)...${plain}"
+    echo -e "${yellow}注意：IP 证书有效期约 6 天，会自动续期。${plain}"
+    echo -e "${yellow}默认监听 80 端口；若选择其他端口，需确保外部 80 端口转发到该端口。${plain}"
+
+    # Check for acme.sh
+    if ! command -v ~/.acme.sh/acme.sh &> /dev/null; then
+        install_acme
+        if [ $? -ne 0 ]; then
+            echo -e "${red}acme.sh 安装失败${plain}"
+            return 1
+        fi
+    fi
+
+    # Validate IP address
+    if [[ -z "$ipv4" ]]; then
+        echo -e "${red}需要提供 IPv4 地址${plain}"
+        return 1
+    fi
+
+    if ! is_ipv4 "$ipv4"; then
+        echo -e "${red}无效的 IPv4 地址: $ipv4${plain}"
+        return 1
+    fi
+
+    # Create certificate directory
+    local certDir="/root/cert/ip"
+    mkdir -p "$certDir"
+
+    # Build domain arguments
+    local domain_args="-d ${ipv4}"
+    if [[ -n "$ipv6" ]] && is_ipv6 "$ipv6"; then
+        domain_args="${domain_args} -d ${ipv6}"
+        echo -e "${green}包含 IPv6 地址: ${ipv6}${plain}"
+    fi
+
+    # Set reload command for auto-renewal (add || true so it doesn't fail during first install)
+    local reloadCmd="systemctl restart makex-ui 2>/dev/null || rc-service makex-ui restart 2>/dev/null || true"
+
+    # Choose port for HTTP-01 listener (default 80, prompt override)
+    local WebPort=""
+    prompt_or_default WebPort "用于 ACME HTTP-01 验证的端口 (默认 80): " "80" XUI_ACME_HTTP_PORT
+    WebPort="${WebPort:-80}"
+    if ! [[ "${WebPort}" =~ ^[0-9]+$ ]] || ((WebPort < 1 || WebPort > 65535)); then
+        echo -e "${red}端口无效，回退到 80。${plain}"
+        WebPort=80
+    fi
+    echo -e "${green}将使用端口 ${WebPort} 进行 standalone 验证。${plain}"
+    if [[ "${WebPort}" -ne 80 ]]; then
+        echo -e "${yellow}提醒：Let's Encrypt 仍连接 80 端口；请将外部 80 端口转发到 ${WebPort}。${plain}"
+    fi
+
+    # Ensure chosen port is available
+    while true; do
+        if is_port_in_use "${WebPort}"; then
+            echo -e "${yellow}端口 ${WebPort} 已被占用。${plain}"
+
+            local alt_port=""
+            read -rp "输入 acme.sh standalone 监听的其他端口 (留空则中止): " alt_port
+            alt_port="${alt_port// /}"
+            if [[ -z "${alt_port}" ]]; then
+                echo -e "${red}端口 ${WebPort} 忙；无法继续。${plain}"
+                return 1
+            fi
+            if ! [[ "${alt_port}" =~ ^[0-9]+$ ]] || ((alt_port < 1 || alt_port > 65535)); then
+                echo -e "${red}无效端口。${plain}"
+                return 1
+            fi
+            WebPort="${alt_port}"
+            continue
+        else
+            echo -e "${green}端口 ${WebPort} 空闲，可进行 standalone 验证。${plain}"
+            break
+        fi
+    done
+
+    # Issue certificate with shortlived profile
+    echo -e "${green}正在为 ${ipv4} 签发 IP 证书...${plain}"
+    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt --force > /dev/null 2>&1
+    [[ -n "${XUI_ACME_EMAIL:-}" ]] && ~/.acme.sh/acme.sh --register-account -m "${XUI_ACME_EMAIL}" > /dev/null 2>&1
+
+    ~/.acme.sh/acme.sh --issue \
+        ${domain_args} \
+        --standalone \
+        --server letsencrypt \
+        --certificate-profile shortlived \
+        --days 6 \
+        --httpport ${WebPort} \
+        --force
+
+    if [ $? -ne 0 ]; then
+        echo -e "${red}IP 证书签发失败${plain}"
+        echo -e "${yellow}请确保端口 ${WebPort} 可访问（或从外部 80 端口转发）${plain}"
+        rm -rf ~/.acme.sh/${ipv4} ~/.acme.sh/${ipv4}_ecc 2> /dev/null
+        [[ -n "$ipv6" ]] && rm -rf ~/.acme.sh/${ipv6} ~/.acme.sh/${ipv6}_ecc 2> /dev/null
+        rm -rf ${certDir} 2> /dev/null
+        return 1
+    fi
+
+    echo -e "${green}证书签发成功，正在安装...${plain}"
+
+    # Install certificate
+    ~/.acme.sh/acme.sh --installcert --force -d ${ipv4} \
+        --key-file "${certDir}/privkey.pem" \
+        --fullchain-file "${certDir}/fullchain.pem" \
+        --reloadcmd "${reloadCmd}" 2>&1 || true
+
+    if [[ ! -f "${certDir}/fullchain.pem" || ! -f "${certDir}/privkey.pem" ]]; then
+        echo -e "${red}安装后未找到证书文件${plain}"
+        rm -rf ~/.acme.sh/${ipv4} ~/.acme.sh/${ipv4}_ecc 2> /dev/null
+        [[ -n "$ipv6" ]] && rm -rf ~/.acme.sh/${ipv6} ~/.acme.sh/${ipv6}_ecc 2> /dev/null
+        rm -rf ${certDir} 2> /dev/null
+        return 1
+    fi
+
+    echo -e "${green}证书文件安装成功${plain}"
+
+    # Enable auto-upgrade for acme.sh (ensures cron job runs)
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade > /dev/null 2>&1
+
+    # Secure permissions
+    chmod 600 ${certDir}/privkey.pem 2> /dev/null
+    chmod 644 ${certDir}/fullchain.pem 2> /dev/null
+
+    # Configure panel to use the certificate
+    echo -e "${green}正在为面板配置证书路径...${plain}"
+    /usr/local/makex-ui/makex-ui cert -webCert "${certDir}/fullchain.pem" -webCertKey "${certDir}/privkey.pem"
+
+    if [ $? -ne 0 ]; then
+        echo -e "${yellow}警告：无法自动设置证书路径${plain}"
+        echo -e "${yellow}证书文件位于：${plain}"
+        echo -e "  Cert: ${certDir}/fullchain.pem"
+        echo -e "  Key:  ${certDir}/privkey.pem"
+    else
+        echo -e "${green}证书路径配置成功${plain}"
+    fi
+
+    echo -e "${green}IP 临时证书安装并配置成功！${plain}"
+    echo -e "${green}证书有效期约 6 天，通过 acme.sh 定时任务自动续期。${plain}"
+    echo -e "${yellow}acme.sh 将在到期前自动续期并重载 makex-ui。${plain}"
+    return 0
+}
+
 ssl_cert_issue_main() { 
     echo -e "${green}\t1.${plain} 获取 SSL 证书" 
     echo -e "${green}\t2.${plain} 撤销证书" 
@@ -1027,6 +1208,7 @@ ssl_cert_issue_main() {
     echo -e "${green}\t5.${plain} 备用方式申请证书" 
     echo -e "${green}\t6.${plain} 显示现有域名" 
     echo -e "${green}\t7.${plain} 为面板设置证书路径" 
+    echo -e "${green}\t8.${plain} 临时获取SSL（IP证书，约6天自动续期）" 
     echo -e "${green}\t0.${plain} 返回主菜单"
     echo "" 
  
@@ -1199,7 +1381,25 @@ ssl_cert_issue_main() {
         fi 
         ssl_cert_issue_main 
         ;; 
- 
+    8)
+        # 【功能：临时获取SSL】Let's Encrypt IP 临时证书 (shortlived, 约6天自动续期)
+        local default_ip=$(curl -s4 --max-time 10 https://api.ipify.org 2>/dev/null)
+        if [[ -z "$default_ip" ]]; then
+            default_ip=$(curl -s4 --max-time 10 https://ifconfig.me/ip 2>/dev/null)
+        fi
+        if [[ -z "$default_ip" ]]; then
+            default_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+        fi
+        local tmp_ipv4=""
+        local tmp_ipv6=""
+        read -rp "请输入服务器公网 IPv4 地址 [默认: ${default_ip}]: " tmp_ipv4
+        tmp_ipv4="${tmp_ipv4:-${default_ip}}"
+        tmp_ipv4="${tmp_ipv4// /}"
+        read -rp "是否包含 IPv6 地址? (留空跳过): " tmp_ipv6
+        tmp_ipv6="${tmp_ipv6// /}"
+        setup_ip_certificate "${tmp_ipv4}" "${tmp_ipv6}"
+        ssl_cert_issue_main
+        ;;
     *) 
         echo -e "${red}无效选项，请选择有效的数字。${plain}\n" 
         ssl_cert_issue_main 
