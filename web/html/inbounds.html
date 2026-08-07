@@ -729,7 +729,7 @@
         <a-alert type="success" show-icon :message="`{{ i18n "pages.inbounds.oneClick.successTitle" }}`">
           <template #description>
             <a-space direction="vertical" :style="{ width: '100%' }">
-              <span><b>ID:</b> {{ oneClickPort }}</span>
+              <span><b>ID:</b> [[ oneClickPort ]]</span>
               <a-input type="textarea" v-model="oneClickLink" :autosize="{ minRows: 4, maxRows: 8 }" readonly></a-input>
               <a-space>
                 <a-button size="small" type="primary" icon="copy" @click="copyOneClickLink">{{ i18n "copy" }}</a-button>
