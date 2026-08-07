@@ -323,6 +323,11 @@
 "descriptionContent" = "1.This function will automatically generate inbound connections for the VLESS + TCP + Reality (xtls-rprx-vision) and VLESS + XHTTP + Reality protocols. The first two combinations are suitable for direct connections.\r\n2.Or for VLESS Encryption + XHTTP + TLS (with optional CDN) protocols.\r\n3.And randomly assign an available port. Please ensure that this port is open. After generating, please copy the [Link Address] directly.\r\n4.The [One-Click Configuration] generation function here is connected to the [Inbound] data.\r\n5.After one-click creation, you can manually view/copy or edit the details in the list to add other parameters."
 
 "remarkPlaceholder" = "e.g. My Node"
+"emailLabel" = "Email (optional)"
+"protocolLabel" = "Protocol"
+"securityLabel" = "Security"
+"targetLabel" = "Reality Target"
+"sniLabel" = "Reality SNI"
 "hostLabel" = "Link Host (Domain/IP)"
 "hostTip" = "Defaults to current panel address; fill in manually if using CDN or a specific IP"
 "create" = "🚀 Create Now"
