@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ==========================================================
-# makex-ui 统一安装脚本 (付费/免费二合一)
-# 作者: makex-ui
+# X-Panel 统一安装脚本 (付费/免费二合一)
+# 作者: X-Panel
 # ==========================================================
 
 red='\033[0;31m'
@@ -15,9 +15,106 @@ plain='\033[0m'
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
 
 # ----------------------------------------------------------
-install_makex_ui() {
+# 获取机器唯一硬件标识 (HWID)
+# ----------------------------------------------------------
+get_hwid() {
+    local machine_id=""
+
+    # 1. 优先尝试获取 DMI Product UUID (VPS 硬件 ID，重装系统通常不变)
+    if [[ -r /sys/class/dmi/id/product_uuid ]]; then
+        machine_id=$(cat /sys/class/dmi/id/product_uuid)
+    
+    # 2. 其次尝试获取 eth0 网卡 MAC 地址 (大部分 VPS 重装后 MAC 不变)
+    elif [[ -r /sys/class/net/eth0/address ]]; then
+        machine_id=$(cat /sys/class/net/eth0/address)
+        
+    # 3. 如果都失败，才使用 machine-id (重装会变，作为最后兜底)
+    elif [[ -f /etc/machine-id ]]; then
+        machine_id=$(cat /etc/machine-id)
+    else
+        machine_id=$(hostname)
+    fi
+    
+    # 取 MD5 作为唯一指纹，确保格式统一
+    echo -n "$machine_id" | md5sum | awk '{print $1}'
+}
+
+# ----------------------------------------------------------
+# 函数：付费Pro版安装逻辑 (install_paid_version)
+# ----------------------------------------------------------
+# 此函数负责获取授权码和IP + 机器指纹，并从远程授权服务器获取并执行付费脚本
+#
+install_paid_version() {
     echo ""
-    echo -e "${green}您选择了安装 【makex-ui 免费基础版】${plain}"
+    echo -e "${green}您正在安装/升级/更新 【X-Panel 付费Pro版】${plain}"
+    echo ""
+    echo -e "${yellow}------------------------------------------------------${plain}"
+    echo ""
+
+    # 1. 提示用户输入授权码
+    read -p "$(echo -e "${yellow}请输入您的授权码 (License Key): ${plain}")" auth_key
+    echo ""
+    
+    if [ -z "$auth_key" ]; then
+        echo -e "${red}错误: 您没有输入授权码。${plain}"
+        exit 1
+    fi
+    
+    # 2. 获取本机的公共 IPv4 地址
+    echo -e "${green}正在获取本机 IP 地址......${plain}"
+    vps_ip=$(curl -s4m8 ip.sb -k | head -n 1)
+    
+    if [ -z "$vps_ip" ]; then
+        echo -e "${red}致命错误: 未能获取服务器的公共 IP 地址。${plain}"
+        echo -e "${red}请检查您的网络连接或 curl 是否正常工作。${plain}"
+        exit 1
+    fi
+
+    # 3. [新增] 获取本机硬件指纹
+    vps_hwid=$(get_hwid)
+
+    echo -e "${green}本机 IP: ${vps_ip}${plain}"
+    echo -e "${green}机器指纹: ${vps_hwid}${plain}" # 调试用
+    echo ""
+    
+    # 4. 设置您的授权服务器地址
+    AUTH_SERVER_URL="https://auth.x-panel.vip/install_pro.php"
+    
+    echo -e "${green}正在连接〔远程授权服务器〕进行验证......${plain}"
+    echo ""
+    echo -e "${yellow}请稍候.........${plain}"
+    
+    # 5. 将服务器响应保存到变量
+    response=$(curl -sL --connect-timeout 20 -X POST -d "key=${auth_key}&ip=${vps_ip}&hwid=${vps_hwid}" "${AUTH_SERVER_URL}")
+    
+    # 6. 简单判断响应是否为空
+    if [ -z "$response" ]; then
+        echo -e "${red}错误: 无法连接到授权服务器或服务器无响应。${plain}"
+        echo -e "${yellow}请检查网络连接或联系管理员。${plain}"
+        exit 1
+    fi
+
+    # 7. 判断是否包含 PHP 错误 (如 Syntax error 或 Fatal error)
+    # 如果 PHP 报错，通常会包含 "Fatal error" 或 "Parse error" 字样
+    if echo "$response" | grep -qE "Fatal error|Parse error"; then
+         echo -e "${red}错误: 授权服务器发生内部错误。${plain}"
+         echo -e "详细信息: $response"
+         exit 1
+    fi
+
+    # 8. 执行脚本
+    bash <(echo "$response")
+    
+    exit 0
+}
+
+
+# ----------------------------------------------------------
+# 函数：免费基础版安装逻辑 (install_free_version) 
+# ----------------------------------------------------------
+install_free_version() {
+    echo ""
+    echo -e "${green}您选择了安装 【X-Panel 免费基础版】${plain}"
     echo ""
     echo -e "${green}即将开始执行标准安装流程...${plain}"
     sleep 2
@@ -69,28 +166,28 @@ install_makex_ui() {
     # echo ""
     echo -e "${yellow}---------->>>>>当前系统的架构为: $(arch)${plain}"
     echo ""
-    last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    # 获取 makex-ui 版本
-    xui_version=$(/usr/local/makex-ui/makex-ui -v)
+    last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    # 获取 x-ui 版本
+    xui_version=$(/usr/local/x-ui/x-ui -v)
 
     # 检查 xui_version 是否为空
     if [[ -z "$xui_version" ]]; then
         echo ""
-        echo -e "${red}------>>>当前服务器没有安装任何 makex-ui 系列代理面板${plain}"
+        echo -e "${red}------>>>当前服务器没有安装任何 x-ui 系列代理面板${plain}"
         echo ""
-        echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔makex-ui面板〕${plain}"
+        echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔X-Panel面板〕${plain}"
     else
         # 检查版本号中是否包含冒号
         if [[ "$xui_version" == *:* ]]; then
-            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}其他 makex-ui 分支版本${plain}"
+            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}其他 x-ui 分支版本${plain}"
             echo ""
-            echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔makex-ui面板〕${plain}"
+            echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔X-Panel面板〕${plain}"
         else
-            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}〔makex-ui面板〕v${xui_version}${plain}"
+            echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
         fi
     fi
     echo ""
-    echo -e "${yellow}---------------------->>>>>〔makex-ui面板〕最新版为：${last_version}${plain}"
+    echo -e "${yellow}---------------------->>>>>〔X-Panel面板〕最新版为：${last_version}${plain}"
     sleep 4
 
     os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
@@ -184,7 +281,7 @@ install_makex_ui() {
         echo "$random_string"
     }
 
-    # This function will be called when user installed makex-ui out of security
+    # This function will be called when user installed x-ui out of security
     config_after_install() {
         echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
         echo ""
@@ -199,11 +296,11 @@ install_makex_ui() {
             read -p "请设置面板登录访问路径: " config_webBasePath
             echo -e "${yellow}您的面板访问路径为: ${config_webBasePath}${plain}"
             echo -e "${yellow}正在初始化，请稍候...${plain}"
-            /usr/local/makex-ui/makex-ui setting -username ${config_account} -password ${config_password}
+            /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password}
             echo -e "${yellow}用户名和密码设置成功!${plain}"
-            /usr/local/makex-ui/makex-ui setting -port ${config_port}
+            /usr/local/x-ui/x-ui setting -port ${config_port}
             echo -e "${yellow}面板端口号设置成功!${plain}"
-            /usr/local/makex-ui/makex-ui setting -webBasePath ${config_webBasePath}
+            /usr/local/x-ui/x-ui setting -webBasePath ${config_webBasePath}
             echo -e "${yellow}面板登录访问路径设置成功!${plain}"
             echo ""
         else
@@ -211,11 +308,11 @@ install_makex_ui() {
             sleep 1
             echo -e "${red}--------------->>>>Cancel...--------------->>>>>>>取消修改...${plain}"
             echo ""
-            if [[ ! -f "/etc/makex-ui/makex-ui.db" ]]; then
+            if [[ ! -f "/etc/x-ui/x-ui.db" ]]; then
                 local usernameTemp=$(head -c 10 /dev/urandom | base64)
                 local passwordTemp=$(head -c 10 /dev/urandom | base64)
                 local webBasePathTemp=$(gen_random_string 15)
-                /usr/local/makex-ui/makex-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
+                /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
                 echo ""
                 echo -e "${yellow}检测到为全新安装，出于安全考虑将生成随机登录信息:${plain}"
                 echo -e "###############################################"
@@ -223,11 +320,11 @@ install_makex_ui() {
                 echo -e "${green}密  码: ${passwordTemp}${plain}"
                 echo -e "${green}访问路径: ${webBasePathTemp}${plain}"
                 echo -e "###############################################"
-                echo -e "${green}如果您忘记了登录信息，可以在安装后通过 makex-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
+                echo -e "${green}如果您忘记了登录信息，可以在安装后通过 x-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
             else
                 echo -e "${green}此次操作属于版本升级，保留之前旧设置项，登录方式保持不变${plain}"
                 echo ""
-                echo -e "${green}如果您忘记了登录信息，您可以通过 makex-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
+                echo -e "${green}如果您忘记了登录信息，您可以通过 x-ui 命令然后输入${red}数字 10 选项${green}进行查看${plain}"
                 echo ""
                 echo ""
             fi
@@ -235,23 +332,23 @@ install_makex_ui() {
         sleep 1
         echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         echo ""
-        /usr/local/makex-ui/makex-ui migrate
+        /usr/local/x-ui/x-ui migrate
     }
 
     echo ""
-    install_makex-ui() {
+    install_x-ui() {
         cd /usr/local/
 
         # Download resources
         if [ $# == 0 ]; then
-            last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+            last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
             if [[ ! -n "$last_version" ]]; then
-                echo -e "${red}获取 makex-ui 版本失败，可能是 Github API 限制，请稍后再试${plain}"
+                echo -e "${red}获取 X-Panel 版本失败，可能是 Github API 限制，请稍后再试${plain}"
                 exit 1
             fi
             echo ""
             echo -e "-----------------------------------------------------"
-            echo -e "${green}--------->>获取 makex-ui 最新版本：${yellow}${last_version}${plain}${green}，开始安装...${plain}"
+            echo -e "${green}--------->>获取 X-Panel 最新版本：${yellow}${last_version}${plain}${green}，开始安装...${plain}"
             echo -e "-----------------------------------------------------"
             echo ""
             sleep 2
@@ -261,17 +358,17 @@ install_makex_ui() {
             echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
             echo ""
             sleep 2
-            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(arch).tar.gz https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(arch).tar.gz
+            wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/xeefei/x-panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz
             if [[ $? -ne 0 ]]; then
-                echo -e "${red}下载 makex-ui 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
+                echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
                 exit 1
             fi
         else
             last_version=$1
-            url="https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(arch).tar.gz"
+            url="https://github.com/xeefei/x-panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz"
             echo ""
             echo -e "--------------------------------------------"
-            echo -e "${green}---------------->>>>开始安装 makex-ui 免费基础版$1${plain}"
+            echo -e "${green}---------------->>>>开始安装 X-Panel 免费基础版$1${plain}"
             echo -e "--------------------------------------------"
             echo ""
             sleep 2
@@ -281,40 +378,40 @@ install_makex_ui() {
             echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
             echo ""
             sleep 2
-            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(arch).tar.gz ${url}
+            wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz ${url}
             if [[ $? -ne 0 ]]; then
-                echo -e "${red}下载 makex-ui $1 失败, 请检查此版本是否存在 ${plain}"
+                echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
                 exit 1
             fi
         fi
-        wget -O /usr/bin/makex-ui-temp https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh
+        wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
 
-        # Stop makex-ui.service and remove old resources
-        if [[ -e /usr/local/makex-ui/ ]]; then
-            systemctl stop makex-ui
-            rm /usr/local/makex-ui/ -rf
+        # Stop x-ui service and remove old resources
+        if [[ -e /usr/local/x-ui/ ]]; then
+            systemctl stop x-ui
+            rm /usr/local/x-ui/ -rf
         fi
         
         sleep 3
         echo -e "${green}------->>>>>>>>>>>检查并保存安装目录${plain}"
         echo ""
-        tar zxvf makex-ui-linux-$(arch).tar.gz
-        rm makex-ui-linux-$(arch).tar.gz -f
+        tar zxvf x-ui-linux-$(arch).tar.gz
+        rm x-ui-linux-$(arch).tar.gz -f
         
-        cd makex-ui
-        chmod +x makex-ui
-        chmod +x makex-ui.sh
+        cd x-ui
+        chmod +x x-ui
+        chmod +x x-ui.sh
 
         # Check the system's architecture and rename the file accordingly
         if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
             mv bin/xray-linux-$(arch) bin/xray-linux-arm
             chmod +x bin/xray-linux-arm
         fi
-        chmod +x makex-ui bin/xray-linux-$(arch)
+        chmod +x x-ui bin/xray-linux-$(arch)
 
-        # Update makex-ui cli and se set permission
-        mv -f /usr/bin/makex-ui-temp /usr/bin/makex-ui
-        chmod +x /usr/bin/makex-ui
+        # Update x-ui cli and se set permission
+        mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
+        chmod +x /usr/bin/x-ui
         sleep 2
         echo -e "${green}------->>>>>>>>>>>保存成功${plain}"
         sleep 2
@@ -325,15 +422,15 @@ install_makex_ui() {
         # 获取 IPv4 和 IPv6 地址
         v4=$(curl -s4m8 http://ip.sb -k)
         v6=$(curl -s6m8 http://ip.sb -k)
-        local existing_webBasePath=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-        local existing_port=$(/usr/local/makex-ui/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-        local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-        local existing_key=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+        local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+        local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
         if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
             echo -e "${green}面板已安装证书采用SSL保护${plain}"
             echo ""
-            local existing_cert=$(/usr/local/makex-ui/makex-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+            local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
             domain=$(basename "$(dirname "$existing_cert")")
             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
         fi
@@ -352,9 +449,9 @@ install_makex_ui() {
                 echo ""
                 echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
                 echo ""
-                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
+                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
                 echo ""
-                echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
+                echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
             elif [[ -n $v4 && -n $v6 ]]; then
                 echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port}${blue} root@[$v6]${plain}"
                 echo ""
@@ -362,9 +459,9 @@ install_makex_ui() {
                 echo ""
                 echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
                 echo ""
-                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
+                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
                 echo ""
-                echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
+                echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
             else
                 echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain}"
                 echo ""
@@ -372,9 +469,9 @@ install_makex_ui() {
                 echo ""
                 echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
                 echo ""
-                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔makex-ui面板〕登录界面"
+                echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
                 echo ""
-                echo -e "${red}注意：若不使用〔ssh转发〕请为makex-ui面板配置安装证书再行登录管理后台${plain}"
+                echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
                 echo ""
             fi
         fi
@@ -382,10 +479,10 @@ install_makex_ui() {
     # 执行ssh端口转发
     ssh_forwarding
 
-        cp -f makex-ui.service /etc/systemd/system/
+        cp -f x-ui.service /etc/systemd/system/
         systemctl daemon-reload
-        systemctl enable makex-ui
-        systemctl start makex-ui
+        systemctl enable x-ui
+        systemctl start x-ui
         systemctl stop warp-go >/dev/null 2>&1
         wg-quick down wgcf >/dev/null 2>&1
         ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
@@ -394,28 +491,28 @@ install_makex_ui() {
         wg-quick up wgcf >/dev/null 2A>&1
 
         echo ""
-        echo -e "------->>>>${green}makex-ui 免费基础版 ${last_version}${plain}<<<<安装成功，正在启动..."
+        echo -e "------->>>>${green}X-Panel 免费基础版 ${last_version}${plain}<<<<安装成功，正在启动..."
         sleep 1
         echo ""
         echo -e "         ---------------------"
-        echo -e "         |${green}makex-ui 控制菜单用法 ${plain}|${plain}"
+        echo -e "         |${green}X-Panel 控制菜单用法 ${plain}|${plain}"
         echo -e "         |  ${yellow}一个更好的面板   ${plain}|${plain}"   
         echo -e "         | ${yellow}基于Xray Core构建 ${plain}|${plain}"  
         echo -e "--------------------------------------------"
-        echo -e "makex-ui              - 进入管理脚本"
-        echo -e "makex-ui start        - 启动 makex-ui 面板"
-        echo -e "makex-ui stop         - 关闭 makex-ui 面板"
-        echo -e "makex-ui restart      - 重启 makex-ui 面板"
-        echo -e "makex-ui status       - 查看 makex-ui 状态"
-        echo -e "makex-ui settings     - 查看当前设置信息"
-        echo -e "makex-ui enable       - 启用 makex-ui 开机启动"
-        echo -e "makex-ui disable      - 禁用 makex-ui 开机启动"
-        echo -e "makex-ui log          - 查看 makex-ui 运行日志"
-        echo -e "makex-ui banlog       - 检查 Fail2ban 禁止日志"
-        echo -e "makex-ui update       - 更新 makex-ui 面板"
-        echo -e "makex-ui custom       - 自定义 makex-ui 版本"
-        echo -e "makex-ui install      - 安装 makex-ui 面板"
-        echo -e "makex-ui uninstall    - 卸载 makex-ui 面板"
+        echo -e "x-ui              - 进入管理脚本"
+        echo -e "x-ui start        - 启动 X-Panel 面板"
+        echo -e "x-ui stop         - 关闭 X-Panel 面板"
+        echo -e "x-ui restart      - 重启 X-Panel 面板"
+        echo -e "x-ui status       - 查看 X-Panel 状态"
+        echo -e "x-ui settings     - 查看当前设置信息"
+        echo -e "x-ui enable       - 启用 X-Panel 开机启动"
+        echo -e "x-ui disable      - 禁用 X-Panel 开机启动"
+        echo -e "x-ui log          - 查看 X-Panel 运行日志"
+        echo -e "x-ui banlog       - 检查 Fail2ban 禁止日志"
+        echo -e "x-ui update       - 更新 X-Panel 面板"
+        echo -e "x-ui custom       - 自定义 X-Panel 版本"
+        echo -e "x-ui install      - 安装 X-Panel 面板"
+        echo -e "x-ui uninstall    - 卸载 X-Panel 面板"
         echo -e "--------------------------------------------"
         echo ""
         # if [[ -n $ipv4 ]]; then
@@ -428,34 +525,34 @@ install_makex_ui() {
         sleep 3
         echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         echo ""
-        echo -e "${yellow}----->>>makex-ui面板和Xray启动成功<<<-----${plain}"
+        echo -e "${yellow}----->>>X-Panel面板和Xray启动成功<<<-----${plain}"
     }
 
     # 设置VPS中的时区/时间为【上海时间】
     sudo timedatectl set-timezone Asia/Shanghai
 
     install_base
-    install_makex-ui $1
+    install_x-ui $1
     echo ""
     echo -e "----------------------------------------------"
     sleep 4
-    info=$(/usr/local/makex-ui/makex-ui setting -show true)
+    info=$(/usr/local/x-ui/x-ui setting -show true)
     echo -e "${info}${plain}"
     echo ""
-    echo -e "若您忘记了上述面板信息，后期可通过makex-ui命令进入脚本${red}输入数字〔10〕选项获取${plain}"
+    echo -e "若您忘记了上述面板信息，后期可通过x-ui命令进入脚本${red}输入数字〔10〕选项获取${plain}"
     echo ""
     echo -e "----------------------------------------------"
     echo ""
     sleep 2
     echo -e "${green}安装/更新完成，若在使用过程中有任何问题${plain}"
-    echo -e "${yellow}请先描述清楚所遇问题加〔makex-ui面板〕交流群${plain}"
-    echo -e "${yellow}在TG群中${red} https://t.me/makex_ui ${yellow}截图进行反馈${plain}"
+    echo -e "${yellow}请先描述清楚所遇问题加〔X-Panel面板〕交流群${plain}"
+    echo -e "${yellow}在TG群中${red} https://t.me/XUI_CN ${yellow}截图进行反馈${plain}"
     echo ""
     echo -e "----------------------------------------------"
     echo ""
-    echo -e "${green}〔makex-ui面板〕项目地址：${yellow}https://github.com/xqqmake/makex-ui${plain}" 
+    echo -e "${green}〔X-Panel面板〕项目地址：${yellow}https://github.com/xeefei/x-panel${plain}" 
     echo ""
-    echo -e "${green} 详细安装教程：${yellow}https://xqqmake.blogspot.com/2025/09/x-panel.html${plain}"
+    echo -e "${green} 详细安装教程：${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}"
     echo ""
     echo -e "----------------------------------------------"
     echo ""
@@ -483,150 +580,43 @@ install_makex_ui() {
     echo ""
 }
 
-# 免费版安装逻辑函数 (install_makex_ui) 结束
+# 免费版安装逻辑函数 (install_free_version) 结束
 
 # ----------------------------------------------------------
 # 脚本主菜单
 # ----------------------------------------------------------
-
-IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiMg5Li05pe26K+B5Lmm55Sz6K+35o+S5Lu2CiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKIyDlronoo4UgYWNtZS5zaAppbnN0YWxsX2FjbWVfc2goKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOWuieijhSBhY21lLnNoLi4uJHtwbGFpbn0iCiAgICBpZiBbWyAtZiB+Ly5hY21lLnNoL2FjbWUuc2ggXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke2dyZWVufWFjbWUuc2gg5bey5a6J6KOFJHtwbGFpbn0iCiAgICAgICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgICAgIHJldHVybiAwCiAgICBmaQogICAgY3VybCAtc0wgaHR0cHM6Ly9nZXQuYWNtZS5zaCB8IHNoIC1zIGVtYWlsPSQod2hvYW1pKUAkKGhvc3RuYW1lKQogICAgaWYgW1sgJD8gLW5lIDAgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH1hY21lLnNoIOWuieijheWksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgZWNobyAtZSAiJHtncmVlbn1hY21lLnNoIOWuieijheaIkOWKnyR7cGxhaW59Igp9CgojIOeUs+ivt+ivgeS5piAoSFRUUC0wMSDpqozor4HvvIzpnIAgODAg56uv5Y+jKQppc3N1ZV9jZXJ0X2h0dHAoKSB7CiAgICBsb2NhbCBkb21haW49JDEKICAgIGxvY2FsIGVtYWlsPSQyCiAgICBpZiBbWyAteiAiJGRvbWFpbiIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3kuI3og73kuLrnqboke3BsYWlufSIKICAgICAgICByZXR1cm4gMQogICAgZmkKICAgIGlmIFtbIC16ICIkZW1haWwiIF1dOyB0aGVuCiAgICAgICAgZW1haWw9ImFkbWluQCRkb21haW4iCiAgICBmaQogICAgZWNobyAtZSAiJHtncmVlbn3mraPlnKjnlLPor7for4HkuaYgKEhUVFAtMDEpLi4uJHtwbGFpbn0iCiAgICBlY2hvIC1lICIke3llbGxvd33ms6jmhI/vvJrpnIDlvIDmlL4gODAg56uv5Y+j55So5LqO6aqM6K+BJHtwbGFpbn0iCiAgICB+Ly5hY21lLnNoL2FjbWUuc2ggLS1pc3N1ZSAtZCAiJGRvbWFpbiIgLS1zdGFuZGFsb25lIC1rIGVjLTI1NiAtLXNlcnZlciBsZXRzZW5jcnlwdCAtLWFjY291bnRlbWFpbCAiJGVtYWlsIiAtLWZvcmNlCiAgICBpZiBbWyAkPyAtZXEgMCBdXTsgdGhlbgogICAgICAgIGxvY2FsIGNlcnRfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmNlcgogICAgICAgIGxvY2FsIGtleV9wYXRoPX4vLmFjbWUuc2gvJHtkb21haW59X2VjYy8ke2RvbWFpbn0ua2V5CiAgICAgICAgZWNobyAtZSAiJHtncmVlbn3or4HkuabnlLPor7fmiJDlip/vvIEke3BsYWlufSIKICAgICAgICBlY2hvIC1lICLor4Hkuabot6/lvoQ6ICRjZXJ0X3BhdGgiCiAgICAgICAgZWNobyAtZSAi56eB6ZKl6Lev5b6EOiAka2V5X3BhdGgiCiAgICAgICAgIyDphY3nva7liLDpnaLmnb8KICAgICAgICAvdXNyL2xvY2FsL21ha2V4LXVpL21ha2V4LXVpIHNldHRpbmcgLXdlYkNlcnQgIiRjZXJ0X3BhdGgiIC13ZWJLZXkgIiRrZXlfcGF0aCIKICAgICAgICBzeXN0ZW1jdGwgcmVzdGFydCBtYWtleC11aQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596Z2i5p2/5bey6YWN572u6K+B5Lmm5bm26YeN5ZCvJHtwbGFpbn0iCiAgICBlbHNlCiAgICAgICAgZWNobyAtZSAiJHtyZWR96K+B5Lmm55Sz6K+35aSx6LSlJHtwbGFpbn0iCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCn0KCiMg55Sz6K+36K+B5LmmIChETlMtMDEg6aqM6K+B77yM6ZyAIEROUyBBUEkpCmlzc3VlX2NlcnRfZG5zKCkgewogICAgbG9jYWwgZG9tYWluPSQxCiAgICBsb2NhbCBkbnNfcHJvdmlkZXI9JDIKICAgIGlmIFtbIC16ICIkZG9tYWluIiB8fCAteiAiJGRuc19wcm92aWRlciIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3lkowgRE5TIOaPkOS+m+WVhuS4jeiDveS4uuepuiR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIuaUr+aMgeeahOaPkOS+m+WVhjogY2YgKENsb3VkZmxhcmUpLCBkcCAoRG5zcG9kKSwgYWxpZG5zICjpmL/ph4zkupEpLCBhd3MgKFJvdXRlNTMpLCDnrYkiCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOeUs+ivt+ivgeS5piAoRE5TLTAxLCAkZG5zX3Byb3ZpZGVyKS4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0taXNzdWUgLWQgIiRkb21haW4iIC0tZG5zICIkZG5zX3Byb3ZpZGVyIiAtayBlYy0yNTYgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQgLS1mb3JjZQogICAgaWYgW1sgJD8gLWVxIDAgXV07IHRoZW4KICAgICAgICBsb2NhbCBjZXJ0X3BhdGg9fi8uYWNtZS5zaC8ke2RvbWFpbn1fZWNjLyR7ZG9tYWlufS5jZXIKICAgICAgICBsb2NhbCBrZXlfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmtleQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596K+B5Lmm55Sz6K+35oiQ5Yqf77yBJHtwbGFpbn0iCiAgICAgICAgL3Vzci9sb2NhbC9tYWtleC11aS9tYWtleC11aSBzZXR0aW5nIC13ZWJDZXJ0ICIkY2VydF9wYXRoIiAtd2ViS2V5ICIka2V5X3BhdGgiCiAgICAgICAgc3lzdGVtY3RsIHJlc3RhcnQgbWFrZXgtdWkKICAgICAgICBlY2hvIC1lICIke2dyZWVufemdouadv+W3sumFjee9ruivgeS5puW5tumHjeWQryR7cGxhaW59IgogICAgZWxzZQogICAgICAgIGVjaG8gLWUgIiR7cmVkfeivgeS5pueUs+ivt+Wksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQp9CgojIOivgeS5puiHquWKqOe7reacnwphdXRvX3JlbmV3X2NlcnQoKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeiuvue9ruivgeS5puiHquWKqOe7reacny4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tc2V0LWRlZmF1bHQtY2EgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQKICAgIGVjaG8gLWUgIiR7Z3JlZW596Ieq5Yqo57ut5pyf5bey6YWN572uICjmr4/lpKnmo4Dmn6UpJHtwbGFpbn0iCn0KCiMg5Li05pe26K+B5Lmm6I+c5Y2VCmNlcnRfbWVudSgpIHsKICAgIHdoaWxlIHRydWU7IGRvCiAgICAgICAgZWNobyAtZSAiJHtncmVlbn09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvIC1lICIgJHt5ZWxsb3d95Li05pe26K+B5Lmm566h55CGIChMZXQncyBFbmNyeXB0IHZpYSBhY21lLnNoKSR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW59PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvICIiCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTEpJHtwbGFpbn0g5a6J6KOFL+abtOaWsCBhY21lLnNoIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0yKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoSFRUUC0wMe+8jOmcgOW8gOaUviA4MCDnq6/lj6MpIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0zKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoRE5TLTAx77yM6ZyAIEROUyBBUEkgS2V5KSIKICAgICAgICBlY2hvIC1lICIgICR7Z3JlZW59NCkke3BsYWlufSDphY3nva7oh6rliqjnu63mnJ8iCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTUpJHtwbGFpbn0g5p+l55yL5bey5pyJ6K+B5LmmIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0wKSR7cGxhaW59IOi/lOWbnuS4u+iPnOWNlSIKICAgICAgICBlY2hvICIiCiAgICAgICAgcmVhZCAtcCAi6K+36L6T5YWl5oKo55qE6YCJ5oupOiAiIGNlcnRfY2hvaWNlCiAgICAgICAgY2FzZSAkY2VydF9jaG9pY2UgaW4KICAgICAgICAgICAgMSkgaW5zdGFsbF9hY21lX3NoIDs7CiAgICAgICAgICAgIDIpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICLpgq7nrrEgW2FkbWluQCRkXTogIiBlOyBpc3N1ZV9jZXJ0X2h0dHAgIiRkIiAiJGUiIDs7CiAgICAgICAgICAgIDMpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICJETlMg5o+Q5L6b5ZWGIChjZi9kcC9hbGlkbnMvYXdzLy4uLik6ICIgZHA7IGlzc3VlX2NlcnRfZG5zICIkZCIgIiRkcCIgOzsKICAgICAgICAgICAgNCkgYXV0b19yZW5ld19jZXJ0IDs7CiAgICAgICAgICAgIDUpIH4vLmFjbWUuc2gvYWNtZS5zaCAtLWxpc3QgOzsKICAgICAgICAgICAgMCkgYnJlYWsgOzsKICAgICAgICAgICAgKikgZWNobyAtZSAiJHtyZWR95peg5pWI6YCJ5oupJHtwbGFpbn0iIDs7CiAgICAgICAgZXNhYwogICAgICAgIGVjaG8gIiIKICAgIGRvbmUKfQo=
-
-# =======================================================
-# 主菜单
-# =======================================================
 main_menu() {
-    while true; do
-        echo -e "${green}======================================================${plain}"
-        echo -e " 欢迎使用 ${yellow}[makex-ui 面板]${plain} 管理脚本"
-        echo -e "${green}======================================================${plain}"
-        echo ""
-        echo -e "  ${green}1)${plain} 安装/更新 makex-ui 面板"
-        echo -e "  ${green}2)${plain} 临时证书管理 (Let's Encrypt)"
-        echo -e "  ${green}3)${plain} 查看面板信息"
-        echo -e "  ${green}0)${plain} 退出"
-        echo ""
-        read -p "请输入您的选择: " menu_choice
-        echo ""
-        case "$menu_choice" in
-            1) install_makex_ui ;;
-            2) cert_menu ;;
-            3) /usr/local/makex-ui/makex-ui setting -show true ;;
-            0) exit 0 ;;
-            *) echo -e "${red}无效选择, 请重新输入${plain}" ;;
-        esac
-    done
+    echo -e "${green}======================================================${plain}"
+    echo -e " 欢迎使用 ${yellow}〔X-Panel 面板〕${plain} 一键安装脚本"
+    echo -e "${green}======================================================${plain}"
+    echo ""
+    echo -e "请选择您要安装的版本:"
+    echo ""
+    echo -e "  ${green}1)${plain} 安装 ${yellow}〔X-Panel 面板〕免费基础版${plain} (GitHub 开源项目)"
+    echo ""
+    echo -e "  ${green}2)${plain} 安装 ${yellow}〔X-Panel 面板〕付费Pro版${plain} (需要购买授权码)"
+    echo ""
+    read -p "请输入您的选择 (1 或 2): " version_choice
+    echo ""
+    
+    case "$version_choice" in
+        1)
+            # 如果选择1，调用免费版函数
+            install_free_version
+            ;;
+        2)
+            # 如果选择2，调用付费版函数
+            install_paid_version
+            ;;
+        *)
+            echo -e "${red}输入无效, 退出安装。${plain}"
+            exit 1
+            ;;
+    esac
 }
 
+# ----------------------------------------------------------
+# 脚本执行入口
+# ----------------------------------------------------------
 clear
 main_menu
-IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CiMg5Li05pe26K+B5Lmm55Sz6K+35o+S5Lu2CiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQoKIyDlronoo4UgYWNtZS5zaAppbnN0YWxsX2FjbWVfc2goKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOWuieijhSBhY21lLnNoLi4uJHtwbGFpbn0iCiAgICBpZiBbWyAtZiB+Ly5hY21lLnNoL2FjbWUuc2ggXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke2dyZWVufWFjbWUuc2gg5bey5a6J6KOFJHtwbGFpbn0iCiAgICAgICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgICAgIHJldHVybiAwCiAgICBmaQogICAgY3VybCAtc0wgaHR0cHM6Ly9nZXQuYWNtZS5zaCB8IHNoIC1zIGVtYWlsPSQod2hvYW1pKUAkKGhvc3RuYW1lKQogICAgaWYgW1sgJD8gLW5lIDAgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH1hY21lLnNoIOWuieijheWksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgZWNobyAtZSAiJHtncmVlbn1hY21lLnNoIOWuieijheaIkOWKnyR7cGxhaW59Igp9CgojIOeUs+ivt+ivgeS5piAoSFRUUC0wMSDpqozor4HvvIzpnIAgODAg56uv5Y+jKQppc3N1ZV9jZXJ0X2h0dHAoKSB7CiAgICBsb2NhbCBkb21haW49JDEKICAgIGxvY2FsIGVtYWlsPSQyCiAgICBpZiBbWyAteiAiJGRvbWFpbiIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3kuI3og73kuLrnqboke3BsYWlufSIKICAgICAgICByZXR1cm4gMQogICAgZmkKICAgIGlmIFtbIC16ICIkZW1haWwiIF1dOyB0aGVuCiAgICAgICAgZW1haWw9ImFkbWluQCRkb21haW4iCiAgICBmaQogICAgZWNobyAtZSAiJHtncmVlbn3mraPlnKjnlLPor7for4HkuaYgKEhUVFAtMDEpLi4uJHtwbGFpbn0iCiAgICBlY2hvIC1lICIke3llbGxvd33ms6jmhI/vvJrpnIDlvIDmlL4gODAg56uv5Y+j55So5LqO6aqM6K+BJHtwbGFpbn0iCiAgICB+Ly5hY21lLnNoL2FjbWUuc2ggLS1pc3N1ZSAtZCAiJGRvbWFpbiIgLS1zdGFuZGFsb25lIC1rIGVjLTI1NiAtLXNlcnZlciBsZXRzZW5jcnlwdCAtLWFjY291bnRlbWFpbCAiJGVtYWlsIiAtLWZvcmNlCiAgICBpZiBbWyAkPyAtZXEgMCBdXTsgdGhlbgogICAgICAgIGxvY2FsIGNlcnRfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmNlcgogICAgICAgIGxvY2FsIGtleV9wYXRoPX4vLmFjbWUuc2gvJHtkb21haW59X2VjYy8ke2RvbWFpbn0ua2V5CiAgICAgICAgZWNobyAtZSAiJHtncmVlbn3or4HkuabnlLPor7fmiJDlip/vvIEke3BsYWlufSIKICAgICAgICBlY2hvIC1lICLor4Hkuabot6/lvoQ6ICRjZXJ0X3BhdGgiCiAgICAgICAgZWNobyAtZSAi56eB6ZKl6Lev5b6EOiAka2V5X3BhdGgiCiAgICAgICAgIyDphY3nva7liLDpnaLmnb8KICAgICAgICAvdXNyL2xvY2FsL21ha2V4LXVpL21ha2V4LXVpIHNldHRpbmcgLXdlYkNlcnQgIiRjZXJ0X3BhdGgiIC13ZWJLZXkgIiRrZXlfcGF0aCIKICAgICAgICBzeXN0ZW1jdGwgcmVzdGFydCBtYWtleC11aQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596Z2i5p2/5bey6YWN572u6K+B5Lmm5bm26YeN5ZCvJHtwbGFpbn0iCiAgICBlbHNlCiAgICAgICAgZWNobyAtZSAiJHtyZWR96K+B5Lmm55Sz6K+35aSx6LSlJHtwbGFpbn0iCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCn0KCiMg55Sz6K+36K+B5LmmIChETlMtMDEg6aqM6K+B77yM6ZyAIEROUyBBUEkpCmlzc3VlX2NlcnRfZG5zKCkgewogICAgbG9jYWwgZG9tYWluPSQxCiAgICBsb2NhbCBkbnNfcHJvdmlkZXI9JDIKICAgIGlmIFtbIC16ICIkZG9tYWluIiB8fCAteiAiJGRuc19wcm92aWRlciIgXV07IHRoZW4KICAgICAgICBlY2hvIC1lICIke3JlZH3ln5/lkI3lkowgRE5TIOaPkOS+m+WVhuS4jeiDveS4uuepuiR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIuaUr+aMgeeahOaPkOS+m+WVhjogY2YgKENsb3VkZmxhcmUpLCBkcCAoRG5zcG9kKSwgYWxpZG5zICjpmL/ph4zkupEpLCBhd3MgKFJvdXRlNTMpLCDnrYkiCiAgICAgICAgcmV0dXJuIDEKICAgIGZpCiAgICBlY2hvIC1lICIke2dyZWVufeato+WcqOeUs+ivt+ivgeS5piAoRE5TLTAxLCAkZG5zX3Byb3ZpZGVyKS4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0taXNzdWUgLWQgIiRkb21haW4iIC0tZG5zICIkZG5zX3Byb3ZpZGVyIiAtayBlYy0yNTYgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQgLS1mb3JjZQogICAgaWYgW1sgJD8gLWVxIDAgXV07IHRoZW4KICAgICAgICBsb2NhbCBjZXJ0X3BhdGg9fi8uYWNtZS5zaC8ke2RvbWFpbn1fZWNjLyR7ZG9tYWlufS5jZXIKICAgICAgICBsb2NhbCBrZXlfcGF0aD1+Ly5hY21lLnNoLyR7ZG9tYWlufV9lY2MvJHtkb21haW59LmtleQogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW596K+B5Lmm55Sz6K+35oiQ5Yqf77yBJHtwbGFpbn0iCiAgICAgICAgL3Vzci9sb2NhbC9tYWtleC11aS9tYWtleC11aSBzZXR0aW5nIC13ZWJDZXJ0ICIkY2VydF9wYXRoIiAtd2ViS2V5ICIka2V5X3BhdGgiCiAgICAgICAgc3lzdGVtY3RsIHJlc3RhcnQgbWFrZXgtdWkKICAgICAgICBlY2hvIC1lICIke2dyZWVufemdouadv+W3sumFjee9ruivgeS5puW5tumHjeWQryR7cGxhaW59IgogICAgZWxzZQogICAgICAgIGVjaG8gLWUgIiR7cmVkfeivgeS5pueUs+ivt+Wksei0pSR7cGxhaW59IgogICAgICAgIHJldHVybiAxCiAgICBmaQp9CgojIOivgeS5puiHquWKqOe7reacnwphdXRvX3JlbmV3X2NlcnQoKSB7CiAgICBlY2hvIC1lICIke2dyZWVufeiuvue9ruivgeS5puiHquWKqOe7reacny4uLiR7cGxhaW59IgogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tdXBncmFkZSAtLWF1dG8tdXBncmFkZQogICAgfi8uYWNtZS5zaC9hY21lLnNoIC0tc2V0LWRlZmF1bHQtY2EgLS1zZXJ2ZXIgbGV0c2VuY3J5cHQKICAgIGVjaG8gLWUgIiR7Z3JlZW596Ieq5Yqo57ut5pyf5bey6YWN572uICjmr4/lpKnmo4Dmn6UpJHtwbGFpbn0iCn0KCiMg5Li05pe26K+B5Lmm6I+c5Y2VCmNlcnRfbWVudSgpIHsKICAgIHdoaWxlIHRydWU7IGRvCiAgICAgICAgZWNobyAtZSAiJHtncmVlbn09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvIC1lICIgJHt5ZWxsb3d95Li05pe26K+B5Lmm566h55CGIChMZXQncyBFbmNyeXB0IHZpYSBhY21lLnNoKSR7cGxhaW59IgogICAgICAgIGVjaG8gLWUgIiR7Z3JlZW59PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0ke3BsYWlufSIKICAgICAgICBlY2hvICIiCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTEpJHtwbGFpbn0g5a6J6KOFL+abtOaWsCBhY21lLnNoIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0yKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoSFRUUC0wMe+8jOmcgOW8gOaUviA4MCDnq6/lj6MpIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0zKSR7cGxhaW59IOeUs+ivt+ivgeS5piAoRE5TLTAx77yM6ZyAIEROUyBBUEkgS2V5KSIKICAgICAgICBlY2hvIC1lICIgICR7Z3JlZW59NCkke3BsYWlufSDphY3nva7oh6rliqjnu63mnJ8iCiAgICAgICAgZWNobyAtZSAiICAke2dyZWVufTUpJHtwbGFpbn0g5p+l55yL5bey5pyJ6K+B5LmmIgogICAgICAgIGVjaG8gLWUgIiAgJHtncmVlbn0wKSR7cGxhaW59IOi/lOWbnuS4u+iPnOWNlSIKICAgICAgICBlY2hvICIiCiAgICAgICAgcmVhZCAtcCAi6K+36L6T5YWl5oKo55qE6YCJ5oupOiAiIGNlcnRfY2hvaWNlCiAgICAgICAgY2FzZSAkY2VydF9jaG9pY2UgaW4KICAgICAgICAgICAgMSkgaW5zdGFsbF9hY21lX3NoIDs7CiAgICAgICAgICAgIDIpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICLpgq7nrrEgW2FkbWluQCRkXTogIiBlOyBpc3N1ZV9jZXJ0X2h0dHAgIiRkIiAiJGUiIDs7CiAgICAgICAgICAgIDMpIHJlYWQgLXAgIuWfn+WQjTogIiBkOyByZWFkIC1wICJETlMg5o+Q5L6b5ZWGIChjZi9kcC9hbGlkbnMvYXdzLy4uLik6ICIgZHA7IGlzc3VlX2NlcnRfZG5zICIkZCIgIiRkcCIgOzsKICAgICAgICAgICAgNCkgYXV0b19yZW5ld19jZXJ0IDs7CiAgICAgICAgICAgIDUpIH4vLmFjbWUuc2gvYWNtZS5zaCAtLWxpc3QgOzsKICAgICAgICAgICAgMCkgYnJlYWsgOzsKICAgICAgICAgICAgKikgZWNobyAtZSAiJHtyZWR95peg5pWI6YCJ5oupJHtwbGFpbn0iIDs7CiAgICAgICAgZXNhYwogICAgICAgIGVjaG8gIiIKICAgIGRvbmUKfQo=
-# ==========================================================
-# 临时证书申请插件
-# ==========================================================
-
-# 安装 acme.sh
-install_acme_sh() {
-    echo -e "${green}正在安装 acme.sh...${plain}"
-    if [[ -f ~/.acme.sh/acme.sh ]]; then
-        echo -e "${green}acme.sh 已安装${plain}"
-        ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-        return 0
-    fi
-    curl -sL https://get.acme.sh | sh -s email=$(whoami)@$(hostname)
-    if [[ $? -ne 0 ]]; then
-        echo -e "${red}acme.sh 安装失败${plain}"
-        return 1
-    fi
-    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-    echo -e "${green}acme.sh 安装成功${plain}"
-}
-
-# 申请证书 (HTTP-01 验证，需 80 端口)
-issue_cert_http() {
-    local domain=$1
-    local email=$2
-    if [[ -z "$domain" ]]; then
-        echo -e "${red}域名不能为空${plain}"
-        return 1
-    fi
-    if [[ -z "$email" ]]; then
-        email="admin@$domain"
-    fi
-    echo -e "${green}正在申请证书 (HTTP-01)...${plain}"
-    echo -e "${yellow}注意：需开放 80 端口用于验证${plain}"
-    ~/.acme.sh/acme.sh --issue -d "$domain" --standalone -k ec-256 --server letsencrypt --accountemail "$email" --force
-    if [[ $? -eq 0 ]]; then
-        local cert_path=~/.acme.sh/${domain}_ecc/${domain}.cer
-        local key_path=~/.acme.sh/${domain}_ecc/${domain}.key
-        echo -e "${green}证书申请成功！${plain}"
-        echo -e "证书路径: $cert_path"
-        echo -e "私钥路径: $key_path"
-        # 配置到面板
-        /usr/local/makex-ui/makex-ui setting -webCert "$cert_path" -webKey "$key_path"
-        systemctl restart makex-ui
-        echo -e "${green}面板已配置证书并重启${plain}"
-    else
-        echo -e "${red}证书申请失败${plain}"
-        return 1
-    fi
-}
-
-# 申请证书 (DNS-01 验证，需 DNS API)
-issue_cert_dns() {
-    local domain=$1
-    local dns_provider=$2
-    if [[ -z "$domain" || -z "$dns_provider" ]]; then
-        echo -e "${red}域名和 DNS 提供商不能为空${plain}"
-        echo -e "支持的提供商: cf (Cloudflare), dp (Dnspod), alidns (阿里云), aws (Route53), 等"
-        return 1
-    fi
-    echo -e "${green}正在申请证书 (DNS-01, $dns_provider)...${plain}"
-    ~/.acme.sh/acme.sh --issue -d "$domain" --dns "$dns_provider" -k ec-256 --server letsencrypt --force
-    if [[ $? -eq 0 ]]; then
-        local cert_path=~/.acme.sh/${domain}_ecc/${domain}.cer
-        local key_path=~/.acme.sh/${domain}_ecc/${domain}.key
-        echo -e "${green}证书申请成功！${plain}"
-        /usr/local/makex-ui/makex-ui setting -webCert "$cert_path" -webKey "$key_path"
-        systemctl restart makex-ui
-        echo -e "${green}面板已配置证书并重启${plain}"
-    else
-        echo -e "${red}证书申请失败${plain}"
-        return 1
-    fi
-}
-
-# 证书自动续期
-auto_renew_cert() {
-    echo -e "${green}设置证书自动续期...${plain}"
-    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-    echo -e "${green}自动续期已配置 (每天检查)${plain}"
-}
-
-# 临时证书菜单
-cert_menu() {
-    while true; do
-        echo -e "${green}======================================================${plain}"
-        echo -e " ${yellow}临时证书管理 (Let's Encrypt via acme.sh)${plain}"
-        echo -e "${green}=====================================================${plain}"
-        echo ""
-        echo -e "  ${green}1)${plain} 安装/更新 acme.sh"
-        echo -e "  ${green}2)${plain} 申请证书 (HTTP-01，需开放 80 端口)"
-        echo -e "  ${green}3)${plain} 申请证书 (DNS-01，需 DNS API Key)"
-        echo -e "  ${green}4)${plain} 配置自动续期"
-        echo -e "  ${green}5)${plain} 查看已有证书"
-        echo -e "  ${green}0)${plain} 返回主菜单"
-        echo ""
-        read -p "请输入您的选择: " cert_choice
-        case $cert_choice in
-            1) install_acme_sh ;;
-            2) read -p "域名: " d; read -p "邮箱 [admin@$d]: " e; issue_cert_http "$d" "$e" ;;
-            3) read -p "域名: " d; read -p "DNS 提供商 (cf/dp/alidns/aws/...): " dp; issue_cert_dns "$d" "$dp" ;;
-            4) auto_renew_cert ;;
-            5) ~/.acme.sh/acme.sh --list ;;
-            0) break ;;
-            *) echo -e "${red}无效选择${plain}" ;;
-        esac
-        echo ""
-    done
-}
