@@ -1,12 +1,12 @@
-<p align="center"><a href="#"><img src="./media/makemakex-ui.png" alt="Image"></a></p>
+<p align="center"><a href="#"><img src="./media/makex-ui.png" alt="Image"></a></p>
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
 
-[![](https://img.shields.io/github/v/release/xqqmake/makemakex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makemakex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makemakex-ui.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/xqqmake/makemakex-ui/total.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/releases/latest)
+[![](https://img.shields.io/github/v/release/xqqmake/makex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/actions)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makex-ui.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/xqqmake/makex-ui/total.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **3X-UI** — یک پنل کنترل پیشرفته مبتنی بر وب با کد باز که برای مدیریت سرور Xray-core طراحی شده است. این پنل یک رابط کاربری آسان برای پیکربندی و نظارت بر پروتکل‌های مختلف VPN و پراکسی ارائه می‌دهد.
@@ -19,10 +19,10 @@
 ## شروع سریع
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
 ```
 
-برای مستندات کامل، لطفاً به [ویکی پروژه](https://github.com/xqqmake/makemakex-ui/wiki) مراجعه کنید.
+برای مستندات کامل، لطفاً به [ویکی پروژه](https://github.com/xqqmake/makex-ui/wiki) مراجعه کنید.
 
 ## تشکر ویژه از
 
