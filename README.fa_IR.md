@@ -49,4 +49,4 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/instal
 
 ## ستاره‌ها در طول زمان
 
-[![Stargazers over time](https://starchart.cc/MHSanaei/3makex-ui.svg?variant=adaptive)](https://starchart.cc/MHSanaei/3makex-ui) 
+[![Stargazers over time](https://starchart.cc/MHSanaei/makex-ui.svg?variant=adaptive)](https://starchart.cc/MHSanaei/makex-ui) 
