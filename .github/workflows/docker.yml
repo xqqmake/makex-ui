@@ -1,4 +1,4 @@
-name: Release X-Panel for Docker
+name: Release makex-ui for Docker
 on:
   workflow_dispatch:
   push:
