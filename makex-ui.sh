@@ -2094,35 +2094,13 @@ show_menu() {
   ${green}25.${plain} 安装订阅转换 
 ——————————————————————
   ${green}若在使用过程中有任何问题${plain}
-  ${yellow}请加入〔makex-ui面板〕交流群${plain}
-  ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
+  ${yellow}请在项目地址提交 Issue 反馈${plain}
   ${green}〔makex-ui面板〕项目地址${plain}
   ${yellow}https://github.com/xqqmake/makex-ui${plain}
   ${green}详细〔安装配置〕教程${plain}
   ${yellow}https://xqqmake.blogspot.com/2025/09/x-panel.html${plain}
 ——————————————————————
 
--------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
-
-${green}1、搬瓦工GIA高端线路：${yellow}https://bandwagonhost.com/aff.php?aff=75015${plain}
-
-${green}2、Dmit高端GIA线路：${yellow}https://www.dmit.io/aff.php?aff=9326${plain}
-
-${green}3、Gomami亚太顶尖优化线路：${yellow}https://gomami.io/aff.php?aff=174${plain}
-
-${green}4、ISIF优质亚太优化线路：${yellow}https://cloud.isif.net/login?affiliation_code=333${plain}
-
-${green}5、ZoroCloud全球优质原生家宽&住宅双lSP，跨境首选：${yellow}https://my.zorocloud.com/aff.php?aff=1072${plain}
-
-${green}6、三网直连 IEPL / IPLC 直播流量转发：${yellow}https://idc333.top/#register/BCUZXNELNO${plain}
-
-${green}7、Bagevm优质落地鸡（原生IP全解锁）：${yellow}https://www.bagevm.com/aff.php?aff=754${plain}
-
-${green}8、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}
-
-${green}9、RackNerd极致性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}
-
-----------------------------------------------
 "
     show_status
     echo && read -p "请输入选项 [0-25]: " num
