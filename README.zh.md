@@ -16,94 +16,10 @@
 **如果此项目对你有用，请给一个**:star2:
 
 <p align="left">
-  <a href="https://buymeacoffee.com/xqqmakez" target="_blank">
     <img src="./media/buymeacoffe.png" alt="Image">
   </a>
 </p>
 
-- “支持项目”赞助地址（USDT）：
-- TRC20 ---->>> `TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ`
-- Polygon ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
-- Solana ---->>> `7qVEZuV98QTDN5qUmsFwvqTSvkYpmLtNf8o1sh1mppwR`
-- BSC/BEP20 ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
-
-## [【makex-ui面板】交流群：https://t.me/makex_ui](https://t.me/makex_ui)
-## [【makex-ui面板】详细安装流程步骤：https://xqqmake.blogspot.com/2025/09/x-panel.html](https://xqqmake.blogspot.com/2025/09/x-panel.html)
-
-
-------------
-## ✰怎么购买【授权码】使用〔makex-ui-Pro版 面板〕？✰
-#### 1、【授权码】100/15U一个，一机一码，一直有效，永久使用，包括：重装，后期的升级/更新，都能使用，但是不能用于不同的机器，所以推荐稳定使用的机器用【授权码】，注：“授权码”属虚拟商品，购买之后，一经激活生效，概不退款，
-#### 2、对于一年期限（年付/年抛）的机器，后期可以【换绑】，为什么要有时间限制？就是为了防止，有些人拿【授权码】滥用，
-#### 3、购买方式/渠道联系机器人：[https://t.me/makex_buy_bot](https://t.me/makex_buy_bot)
-
-#### 4、经常换的机器，去使用“免费基础版”就行，目前【安装界面】是有“两种方式”可选择的，
-
-#### 5、对于有业务需求，比如做 TK 的，做〔跨境电商〕的，如果很多机器，比如：20台，50台，或者 100台 以上机器的宝子，若都要用【收费Pro版】的话，可以用【批量授权】：5 ——> 20台，8折，尾号：5555 ，20 ——> 50台，7折，尾号：66666 ，50 ——> 100台，6折，尾号：777777 ，100 ——> 200台，5折，尾号：8888888，200台 ——> 以上，4折，尾号：99999999，以上列举出来的，就是【批量折扣】的统一“优惠”。注：〔批量授权码〕要求最低5台以上，是“一码通用”，一个“授权码”，可以绑定验证多台 VPS 机器，并且有专属的“豹子号”授权码。
-![63](./media/63.png)
-————————————————————————————————
-
-#### 6、若您需要购买【授权码】，请跟下面这个“机器人”去对话，
-
-#### ———————————————-
-
-#### [https://t.me/makex_buy_bot](https://t.me/makex_buy_bot)
-#### （授权码购买机器人）
-
-#### ———————————————-
-
-#### 输入：/start  或 购买，即可“在线下单”，
-
-#### 7、弹出【购买页面】，选择或输入“数量”，付款了支付系统会收到回调，金额到账之后，就会通过那个机器人【发放授权码】给您，整个流程，是【全自助】的“自动处理”方式，若您是〔增加配额〕，基本也是一样的流程，
-
-#### 8、请注意：机器人发给您的所有信息，尽量都去自己【耐心阅读】一遍，“使用说明”，以及〔VIP 群〕的信息，也全部都包含在里面的，
-
-#### 9、按照之前您安装更新〔makex-ui 面板〕的方式，直接重新输入【安装命令】，选择【2】，就能去，把之前的【免费版】，“无缝升级”到最新的【Pro版】。
-
-————————————————————————————————
-#### 10、不能重复用于不同的机器 VPS，后期视情况不定时会上涨价格；对于〔makex-ui 面板〕后期的“新功能”，都将在【付费Pro版】中进行更新，
-
-#### 11、目前的【安装界面】，是有：两种可选，“免费基础版”一样可用，只是后期不再提供技术支持和重大更新，另外，在【免费基础版】中，【一键配置】功能将不再可用，全部放到了【付费Pro版】中，
-
-#### 12、后期的开发精力，全部会放到【付费Pro版】中，免费基础版不删库，持续保留，会大幅降低更新频率，后期只会同步更新 Xray 那边的【内核版本】等基础，想继续用的不影响，只是没有【新功能】可用，翻墙也足够。
-
-![62](./media/62.png)
-
-------------
-## ✰〔makex-ui-Pro版 面板〕已实现的功能✰
-#### 1、新增 -【付费Pro版】的面板后台UI，添加醒目的“makex-ui-Pro”标识，
-#### 2、优化 -【付费Pro版】TG端 【版本更新】提示功能，增加详细的“更新说明”，
-#### 3、增加〔Pro版面板后台〕，使用 Reality 协议时，可点击随机更换所偷的域名，
-#### 4、新增 -【付费Pro版】TG端 的【发送授权报告】，增加“唯一授权防伪码”，
-#### 5、优化 -【付费Pro版】安装脚本界面，增加【Pro版】该有的“明确标识”，
-#### 6、优化 -【付费Pro版】TG端的显示方式，增加该有的“会员标识”，
-#### 7、新增 -【付费Pro版】安装脚本，有“网页版SSH工具”可选部署，脚本中〔第26选项〕，
-#### 8、新增 - 【付费Pro版】安装脚本，有“线路和IP质量检测”可去使用，脚本中〔第27选项〕，
-#### 9、新增 - 【付费Pro版】安装脚本，有“地区服务器DNS检测”可去使用，脚本中〔第28选项〕，
-#### 10、新增 -【付费Pro版】---->>>TG端，同步有“网页版SSH工具”可选安装，
-#### 11、优化 - 【付费Pro版】---->>>TG端，点击“服务器状态”时的“版本号显示”，
-#### 12、说明 - 【付费Pro版】TG端中，使用命令：/webssh，安装“网页版SSH”，
-#### 13、优化 -〔Pro版〕中的〔一键配置〕功能，有更友好的提示方式，
-#### 14、新增 -【付费Pro版】---->>>面板后台的【首页 UI】，目前是有“5种”可选：标准布局 (默认)，炫彩动画，深海科技，暮光薰衣，和幽林秘境；你喜欢什么类型的主题，就去点击“选定”之后，就不会自动变了，若后期需要更换，就重选，
-#### 15、新增 -【付费Pro版】---->>>在“创建入站”时，可以在页面上更加方便地选择【重置流量】的方式：有每日重置，每周重置，按月重置，或从不重置，
-#### 16、新增 -〔makex-ui 面板〕----->>【付费Pro版】TG端“每日报告”，可定制【发送内容】，自己可点击“打开或关闭”，并且可以选择【发送时间】，可按天，或者每周，每月发，
-#### 17、优化 -【付费Pro版】的“授权码验证机制”，增加【后台联网验证】，以及“机器指纹”等属性，
-#### 18、新增 -〔makex-ui 面板〕----->>【付费Pro版】TG端“多面板管理”，一个机器人可同时管理其他面板，可以很丝滑地远程操作【被控端 VPS】，
-#### 19、新增 -〔makex-ui 面板〕----->>【付费Pro版】TG端“获取节点链接”功能，支持【本机】和【远程被控端 VPS】都能获取，开发此功能的目的在于：不用进〔面板后台〕，就能在 TG端 获取到之前已经创建过的“链接”，
-#### 20、新增 -〔makex-ui 面板〕----->>【付费Pro版】“一键部署中转节点”，解决了不懂配置的麻烦，已实现：远程Socks5创建 --> 本机路由配置 --> 本机入口创建 --> 生成“二维码和链接”，“小手一点”，直接可用，
-#### 21、新增 -〔makex-ui 面板〕----->>【申请安装证书】“第18选项”，有“备用方式申请证书”，当用常规方式【1】申请不下来时，可以试试“备用方式”，
-#### 22、新增 -〔makex-ui 面板〕----->>【申请安装证书】“第18选项”，有“可自定义证书路径”，自己进入 VPS 中“手动上传证书”，复制路径，在脚本中填入即可，
-#### 23、新增 -〔makex-ui 面板〕----->>【付费Pro版】“深度调优脚本”，包含 BBR+FQ, TCP Fast Open, 内存缓冲区及队列优化，在〔Pro版〕脚本中“第29选项”可直接用，
-#### 24、新增 -〔makex-ui 面板〕----->>【付费Pro版】“首页会员等级”显示，能够明确展示：自己的会员等级，授权码信息，以及“版本更新”提示，
-#### 25、新增 -〔makex-ui 面板〕----->>【付费Pro版】“节点上/下线TG通知”功能，对于【拼车】的宝子，能明确知道：哪个节点，什么时候上线？或者下线时间，做到“心中有数”，
-#### 26、新增 -〔makex-ui 面板〕----->>【付费Pro版】“签到得积分”功能，后期针对有【积分】的宝子，会不断推出：相应的【特权】和【福利待遇】，
-#### 27、新增 -〔makex-ui 面板〕----->>【付费Pro版】“TG端签到得积分”功能，推出：积分查询，积分换购，授权码查询，修改用户名，积分转移/打赏，以及“积分排行榜”，
-#### 28、新增 -〔makex-ui 面板〕----->>【付费Pro版】“TG端签到得积分”功能，推出【“积分换购”的可用功能】：A、消耗1000积分“自助重置换绑时间”，B、消耗5000积分“自助换购一个普通授权码”，
-#### 29、新增 -〔makex-ui 面板〕----->>【付费Pro版】“创建数据快照 + 远程急救还原”的提示功能： 可直观通过「终端UI界面」看到具体「备份 + 还原」步骤；用法：面板报错“崩了”，不用像之前那样：卸载面板 -->> 重装面板，更不用很麻烦去“重装系统”解决，直接：远程急救还原，前提就是：你自己要知道，在面板“正常运行”的时候，去「备份数据快照」，
-#### 30、新增 -〔makex-ui 面板〕----->>【付费Pro版】“每月重置流量”功能：可输入1—31之间的任意数字，比如：输入12，即代表“每月12号”「重置入站流量」，以便提供更友好的“重置流量方式”，
-#### 31、新增 -〔makex-ui 面板〕----->>【付费Pro版】“批量部署节点”功能：可直接在面板后台的“一键配置”中去使用，点击一次可批量部署生成10条「VLESS + TCP + Reality + Vision」协议组合的入站，
-#### 32、新增 -〔makex-ui 面板〕----->>【付费Pro版】“购买机器人”功能，可自助全自动在“机器人”中：购买授权码，增加配额，充值积分，自助重置换绑等，联系：[https://t.me/makex_buy_bot](https://t.me/makex_buy_bot) 。
-![76](./media/76.png)
 
 ------------
 ## ✰你必须要看的【重要安全提示/警告】✰
@@ -123,8 +39,8 @@
 #### PS：上述两种方法：【ssh端口转发】或申请安装证书的目的都是为了更安全地登录面板，而至于搭建的其他流程和步骤，都是一样的；如果你已经【申请安装证书】了，并不会受到其他什么额外影响，就不用去折腾【ssh转发】了，直接用 【https://你的域名:端口/路径】 去登录你的面板管理后台就行了。
 
 ------------
-## 如何在〔makex-ui-Pro 面板〕中去使用【一个机器人管理多面板】功能？
-#### 1、先购买【授权码】安装好〔makex-ui-Pro 面板〕，进入后台，在【主从管理】界面，
+## 如何在〔makex-ui 面板〕中去使用【一个机器人管理多面板】功能？
+#### 1、安装好〔makex-ui 面板〕，进入后台，在【主从管理】界面，
 ![64](./media/64.png)
 #### 2、点击【添加被控端 VPS】，按照要求填入面板登录地址，用户名和密码，备注等信息，
 ![65](./media/65.png)
@@ -136,8 +52,8 @@
 ![68](./media/68.png)
 
 ------------
-## 如何在〔makex-ui-Pro 面板〕中去使用【一键部署中转节点】的功能？
-#### 1、先购买【授权码】安装好〔makex-ui-Pro 面板〕，进入后台，在【主从管理】界面，
+## 如何在〔makex-ui 面板〕中去使用【一键部署中转节点】的功能？
+#### 1、安装好〔makex-ui 面板〕，进入后台，在【主从管理】界面，
 #### 2、点击【添加中转机 VPS】，按照要求填入面板登录地址，用户名和密码，备注等信息，
 ![69](./media/69.png)
 #### 3、然后点击列表页中的【一键部署中转】，即可在后续的流程中，自动进入配置流程，
@@ -151,7 +67,7 @@
 ## ✰如何从其他makex-ui版本迁移到〔makex-ui面板〕？✰
 #### 1、若你用的是伊朗老哥的3X-UI，是可以直接〔覆盖安装〕的，因为数据库文件等位置是没有改变的，所以直接覆盖安装，并不会影响你〔原有节点及配置〕等数据；安装命令如下：
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.sh)
 ```
 #### 2、若你之前用的是Docker方式安装，那先进入容器里面/命令：docker exec -it 容器id /bin/sh，再执行以上脚本命令直接【覆盖安装】即可，
 #### 3、若你用的是之前F佬的makex-ui或者其他分支版本，那直接覆盖安装的话，并不能确保一定就能够兼容？建议你先去备份〔数据库〕配置文件，再进行安装〔makex-ui面板〕。
@@ -159,7 +75,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/instal
 
 ------------
 ## 安装之前的准备
-- 购买一台性能还不错的VPS，可通过本页底部链接购买，
+  - 准备一台性能还不错的VPS，
 - PS：若你不想升级系统，则可以跳过此步骤。
 - 若你需要更新/升级系统，Debian系统可用如下命令：
   ```
@@ -204,7 +120,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/instal
 
 - 【全新安装】请执行以下脚本：
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.sh)
 ```
 #### 如果执行了上面的代码但是报错，证明你的系统里面没有curl这个软件，请执行以下命令先安装curl软件，安装curl之后再去执行上面代码，
 ```
@@ -300,17 +216,17 @@ VERSION=v26.2.15 && bash <(curl -Ls "https://raw.githubusercontent.com/xqqmake/m
 
 ------------
 ## 备份与恢复/迁移数据库（以Debian系统为例）
-#### 一、备份：通过配置好电报管理机器人，可点击管理机器人的“相应菜单按钮”获取【备份配置】文件，有makex-ui.db和config.json两个文件，可自行下载保存到自己电脑里面，
+#### 一、备份：通过配置好电报管理机器人，可点击管理机器人的“相应菜单按钮”获取【备份配置】文件，有x-ui.db和config.json两个文件，可自行下载保存到自己电脑里面，
 ![14](./media/14.png)
 #### 二、搭建：在新的VPS中全新安装好〔makex-ui面板〕，通过脚本放行之前配置的所有端口，一次性放行多个端口请用【英文逗号】分隔，
 #### 三、若需要安装证书，则提前把域名解析到新的VPS对应的IP，并且去输入makex-ui选择第【18】选项去安装，并记录公钥/私钥的路径，无域名则跳过这一步，
-#### 四、恢复：SSH登录服务器找到/etc/makex-ui/makex-ui.db和/usr/local/makex-ui/bin/config.json文件位置，上传之前的两个备份文件，进行覆盖，
+#### 四、恢复：SSH登录服务器找到/etc/x-ui/x-ui.db和/usr/local/x-ui/bin/config.json文件位置，上传之前的两个备份文件，进行覆盖，
 ![12](./media/12.png)
 ##### PS：把之前通过自动备份下载得到的两个文件上传覆盖掉旧文件，重启〔makex-ui面板〕即可【迁移成功】；即使迁移过程中出现问题，你是有备份文件的，不用担心，多试几次。
 ![13](./media/13.png)
 #### 五、若安装了证书，去核对/更改一下证书的路径，一般是同一个域名的话，位置在：/root/cert/域名/fullchain.pem，路径是相同的就不用更改，
 #### 六、重启面板/重启服务器，让上述步骤生效即可，这时可以看到所有配置都是之前自己常用的，包括面板用户名、密码，入站、客户端，电报机器人配置等。
-#### PS：若您使用的是【Pro版】，则可直接使用：“创建数据快照 + 远程急救还原”功能，对面板数据库和配置文件进行操作。
+#### PS：若您使用的是【makex-ui】，则可直接使用：“创建数据快照 + 远程急救还原”功能，对面板数据库和配置文件进行操作。
 
 ------------
 ## 安装完成后如何设置调整成【中文界面】？
@@ -500,7 +416,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xqqmake/makex-ui/releases/latest/download/makex-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/xqqmake/makex-ui/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. 下载压缩包后，执行以下命令安装或升级 makex-ui：
@@ -519,12 +435,12 @@ case "${ARCH}" in
 esac
 
 cd /root/
-rm -rf makex-ui/ /usr/local/makex-ui/ /usr/bin/makex-ui
-tar zxvf makex-ui-linux-${XUI_ARCH}.tar.gz
-chmod +x makex-ui/makex-ui makex-ui/bin/xray-linux-* makex-ui/makex-ui.sh
-cp makex-ui/makex-ui.sh /usr/bin/makex-ui
-cp -f makex-ui/makex-ui.service /etc/systemd/system/
-mv makex-ui/ /usr/local/
+rm -rf x-ui/ /usr/local/x-ui/ /usr/bin/makex-ui
+tar zxvf x-ui-linux-${XUI_ARCH}.tar.gz
+chmod +x x-ui/makex-ui x-ui/bin/xray-linux-* x-ui/x-ui.sh
+cp x-ui/x-ui.sh /usr/bin/makex-ui
+cp -f x-ui/x-ui.service /etc/systemd/system/
+mv x-ui/ /usr/local/
 systemctl daemon-reload
 systemctl enable makex-ui
 systemctl restart makex-ui
@@ -568,7 +484,7 @@ systemctl restart makex-ui
    ```sh
    docker run -itd \
       -e XRAY_VMESS_AEAD_FORCED=false \
-      -v $PWD/db/:/etc/makex-ui/ \
+      -v $PWD/db/:/etc/x-ui/ \
       -v $PWD/cert/:/root/cert/ \
       --network=host \
       --restart=unless-stopped \
@@ -680,9 +596,9 @@ systemctl restart makex-ui
     - 当您跳过设置时，这些信息会随机生成，
     - 您也可以在安装的时候自定义访问路径。
 - **数据库文件路径：**
-  - /etc/makex-ui/makex-ui.db
+  - /etc/x-ui/x-ui.db
 - **Xray 配置文件路径：**
-  - /usr/local/makex-ui/bin/config.json
+  - /usr/local/x-ui/bin/config.json
 - **面板链接（有SSL）：**
   - https://你的域名:13688/访问路径/panel
 
@@ -865,7 +781,6 @@ Web 面板通过 Telegram Bot 支持每日流量、面板登录、数据库备�
 - `client.email` for Shadowsocks
 
 
-
 - [API 文档](https://documenter.getpostman.com/view/16802678/2s9YkgD5jm)
 
 - [<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415%26entityType%3Dcollection%26workspaceId%3D2cd38c01-c851-4a15-a972-f181c23359d9)
@@ -906,18 +821,6 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/makex-ui" go build main.go
 ![7](./media/7.png)
 
 ------------
-## 广告赞助
-- 如果你觉得本项目对你有用，而且你也恰巧有这方面的需求，你也可以选择通过我的购买链接赞助我。
-- [1、搬瓦工GIA高端线路，仅推荐购买GIA套餐：https://bandwagonhost.com/aff.php?aff=75015](https://bandwagonhost.com/aff.php?aff=75015)
-- [2、Dmit高端GIA线路：https://www.dmit.io/aff.php?aff=9326](https://www.dmit.io/aff.php?aff=9326)
-- [3、Gomami亚太顶尖优化线路：https://gomami.io/aff.php?aff=174](https://gomami.io/aff.php?aff=174)
-- [4、ISIF优质亚太优化线路：https://cloud.isif.net/login?affiliation_code=333](https://cloud.isif.net/login?affiliation_code=333)
-- [5、ZoroCloud全球优质原生家宽&住宅双lSP，跨境首选：https://my.zorocloud.com/aff.php?aff=1072](https://my.zorocloud.com/aff.php?aff=1072)
-- [6、三网直连 IEPL / IPLC 直播流量转发：https://idc333.top/#register/BCUZXNELNO](https://idc333.top/#register/BCUZXNELNO)
-- [7、Bagevm优质落地鸡（原生IP全解锁）：https://www.bagevm.com/aff.php?aff=754](https://www.bagevm.com/aff.php?aff=754)
-- [8、白丝云【4837线路】实惠量大管饱：https://cloudsilk.io/aff.php?aff=706](https://cloudsilk.io/aff.php?aff=706)
-- [9、RackNerd极致性价比机器：https://my.racknerd.com/aff.php?aff=15268&pid=912](https://my.racknerd.com/aff.php?aff=15268&pid=912)
-
 ------------
 ## 特别感谢
 
