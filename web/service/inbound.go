@@ -1,8 +1,13 @@
 package service
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +19,7 @@ import (
 	"x-ui/util/common"
 	"x-ui/xray"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -2336,4 +2342,156 @@ func (s *InboundService) FilterAndSortClientEmails(emails []string) ([]string, [
 	}
 
 	return validEmails, extraEmails, nil
+}
+
+// getFreePort 从 10000 开始向上找一个未被占用的端口
+func (s *InboundService) getFreePort() (int, error) {
+	port := 10000
+	for {
+		exist, err := s.checkPortExist("", port, 0)
+		if err != nil {
+			return 0, err
+		}
+		if !exist {
+			return port, nil
+		}
+		port++
+		if port > 65535 {
+			return 0, common.NewError("no free port found")
+		}
+	}
+}
+
+// genX25519KeyPair 调用 xray 二进制生成 Reality 密钥对
+func (s *InboundService) genX25519KeyPair() (string, string, error) {
+	cmd := exec.Command(xray.GetBinaryPath(), "x25519")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return "", "", err
+	}
+	lines := strings.Split(strings.ReplaceAll(out.String(), "\u00a0", " "), "\n")
+	if len(lines) < 2 {
+		return "", "", common.NewError("invalid x25519 output")
+	}
+	priv := strings.TrimSpace(strings.SplitN(lines[0], ":", 2)[1])
+	pub := strings.TrimSpace(strings.SplitN(lines[1], ":", 2)[1])
+	return priv, pub, nil
+}
+
+// genShortID 生成 8 位十六进制短 ID
+func (s *InboundService) genShortID() (string, error) {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+// OneClickCreateInbound 一键配置：自动分配端口/生成 UUID/Reality 密钥，
+// 创建 VLESS Reality 入站+客户端，并返回入站对象与 vless 链接。
+// host 为用于生成链接的域名/IP（可带端口）。
+func (s *InboundService) OneClickCreateInbound(remark string, host string) (*model.Inbound, string, error) {
+	if remark == "" {
+		remark = "一键配置节点"
+	}
+	if host == "" {
+		return nil, "", common.NewError("host is required")
+	}
+
+	port, err := s.getFreePort()
+	if err != nil {
+		return nil, "", err
+	}
+
+	clientUUID := uuid.New().String()
+	subID := strings.ReplaceAll(uuid.New().String(), "-", "")
+	privKey, pubKey, err := s.genX25519KeyPair()
+	if err != nil {
+		return nil, "", common.NewErrorf("generate x25519 key failed: %v", err)
+	}
+	shortID, err := s.genShortID()
+	if err != nil {
+		return nil, "", err
+	}
+
+	client := model.Client{
+		ID:       clientUUID,
+		Flow:     "xtls-rprx-vision",
+		Email:    fmt.Sprintf("oneclick_%d@makex-ui", port),
+		Enable:   true,
+		LimitIP:  0,
+		TotalGB:  0,
+		ExpiryTime: 0,
+		SubID:    subID,
+	}
+
+	settings := model.VLESSSettings{
+		Clients:    []model.Client{client},
+		Decryption: "none",
+		Fallbacks:  []any{},
+	}
+	settingsJSON, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return nil, "", err
+	}
+
+	// 标准 Reality over TCP 传输配置
+	streamSettings := map[string]any{
+		"network": "tcp",
+		"security": "reality",
+		"realitySettings": map[string]any{
+			"show":        false,
+			"dest":        "www.microsoft.com:443",
+			"xver":        0,
+			"serverNames": []string{"www.microsoft.com"},
+			"privateKey":  privKey,
+			"minClient":   "",
+			"maxClient":   "",
+			"maxTimediff": 0,
+			"shortIds":    []string{shortID},
+			"settings": map[string]any{
+				"publicKey":   pubKey,
+				"fingerprint": "chrome",
+				"serverName":  "",
+				"spiderX":     "/",
+			},
+		},
+	}
+	streamJSON, err := json.MarshalIndent(streamSettings, "", "  ")
+	if err != nil {
+		return nil, "", err
+	}
+
+	sniffing := map[string]any{
+		"enabled":      true,
+		"destOverride": []string{"http", "tls", "quic"},
+		"routeOnly":    false,
+	}
+	sniffingJSON, err := json.MarshalIndent(sniffing, "", "  ")
+	if err != nil {
+		return nil, "", err
+	}
+
+	inbound := &model.Inbound{
+		UserId:         1,
+		Remark:         remark,
+		Enable:         true,
+		Port:           port,
+		Protocol:       model.VLESS,
+		Settings:       string(settingsJSON),
+		StreamSettings: string(streamJSON),
+		Tag:            fmt.Sprintf("inbound-%d-tcp", port),
+		Sniffing:       string(sniffingJSON),
+	}
+
+	created, _, err := s.AddInbound(inbound)
+	if err != nil {
+		return nil, "", err
+	}
+
+	link := fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=www.microsoft.com#%s",
+		clientUUID, host, port, pubKey, shortID, url.QueryEscape(remark))
+
+	return created, link, nil
 }
