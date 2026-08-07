@@ -19,7 +19,7 @@ RUN go build -ldflags "-w -s" -o build/makex-ui main.go
 RUN ./DockerInit.sh "$TARGETARCH"
 
 # ========================================================
-# ----->> Stage: Final Image of makemakex-ui
+# ----->> Stage: Final Image of makex-ui
 # ========================================================
 FROM alpine
 ENV TZ=Asia/Tehran
