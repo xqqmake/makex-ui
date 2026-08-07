@@ -1,9 +1,9 @@
 services:
-  x-panel:
+  makex-ui:
     build:
       context: .
       dockerfile: ./Dockerfile
-    container_name: x-panel_app
+    container_name: makex-ui_app
     # hostname: yourhostname <<--- optional
     volumes:
       - $PWD/db/:/etc/makex-ui/
