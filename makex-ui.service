@@ -1,6 +1,6 @@
 [Unit]
 Description=makex-ui Service
-Documentation=https://github.com/xeefei/X-Panel
+Documentation=https://github.com/xqqmake/makex-ui
 After=network.target
 Wants=network.target
 
