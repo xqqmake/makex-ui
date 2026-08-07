@@ -33,7 +33,7 @@ else
   RESET=""
 fi
 echo ""
-printf "%b\n\n" "${RED}〔X-Panel-Pro 面板〕专属 “服务器 DNS 检测”${RESET}"
+printf "%b\n\n" "${RED}〔makex-ui 面板〕专属 “服务器 DNS 检测”${RESET}"
 
 # extract valid IPs (IPv4 strict / IPv6 loose)
 extract_ips() {
