@@ -375,11 +375,17 @@ func (a *InboundController) updateClientTraffic(c *gin.Context) {
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
 }
 
-// oneClickConfig 一键配置：自动创建 VLESS Reality 入站+客户端并返回连接链接
+// oneClickConfig 一键配置：自动创建入站+客户端并返回连接链接
+// 支持协议: vless/vmess/trojan；安全: reality/tls/none；端口随机 20000-65535
 func (a *InboundController) oneClickConfig(c *gin.Context) {
 	type OneClickRequest struct {
-		Remark string `json:"remark"`
-		Host   string `json:"host"`
+		Remark   string `json:"remark"`
+		Email    string `json:"email"`
+		Host     string `json:"host"`
+		Protocol string `json:"protocol"`
+		Security string `json:"security"`
+		Target   string `json:"target"`
+		SNI      string `json:"sni"`
 	}
 	var req OneClickRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -390,7 +396,15 @@ func (a *InboundController) oneClickConfig(c *gin.Context) {
 		req.Host = c.Request.Host
 	}
 
-	inbound, link, err := a.inboundService.OneClickCreateInbound(req.Remark, req.Host)
+	inbound, link, err := a.inboundService.OneClickCreateInbound(service.OneClickOptions{
+		Remark:   req.Remark,
+		Email:    req.Email,
+		Host:     req.Host,
+		Protocol: req.Protocol,
+		Security: req.Security,
+		Target:   req.Target,
+		SNI:      req.SNI,
+	})
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
