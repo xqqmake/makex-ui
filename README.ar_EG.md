@@ -2,15 +2,15 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./media/makemakex-ui.png">
-    <img alt="3makex-ui" src="./media/makemakex-ui.png">
+    <source media="(prefers-color-scheme: dark)" srcset="./media/makex-ui.png">
+    <img alt="3makex-ui" src="./media/makex-ui.png">
   </picture>
 </p>
 
-[![](https://img.shields.io/github/v/release/xqqmake/makemakex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makemakex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makemakex-ui.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/xqqmake/makemakex-ui/total.svg?style=for-the-badge)](https://github.com/xqqmake/makemakex-ui/releases/latest)
+[![](https://img.shields.io/github/v/release/xqqmake/makex-ui.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xqqmake/makex-ui/release.yml.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/actions)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xqqmake/makex-ui.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/xqqmake/makex-ui/total.svg?style=for-the-badge)](https://github.com/xqqmake/makex-ui/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **3X-UI** — لوحة تحكم متقدمة مفتوحة المصدر تعتمد على الويب مصممة لإدارة خادم Xray-core. توفر واجهة سهلة الاستخدام لتكوين ومراقبة بروتوكولات VPN والوكيل المختلفة.
@@ -23,10 +23,10 @@
 ## البدء السريع
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/master/install.sh)
 ```
 
-للحصول على الوثائق الكاملة، يرجى زيارة [ويكي المشروع](https://github.com/xqqmake/makemakex-ui/wiki).
+للحصول على الوثائق الكاملة، يرجى زيارة [ويكي المشروع](https://github.com/xqqmake/makex-ui/wiki).
 
 ## شكر خاص إلى
 
@@ -53,4 +53,4 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makemakex-ui/master/in
 
 ## النجوم عبر الزمن
 
-[![Stargazers over time](https://starchart.cc/xqqmake/makemakex-ui.svg?variant=adaptive)](https://starchart.cc/xqqmake/makemakex-ui) 
+[![Stargazers over time](https://starchart.cc/xqqmake/makex-ui.svg?variant=adaptive)](https://starchart.cc/xqqmake/makex-ui) 
