@@ -455,6 +455,13 @@ func (s *XrayService) RestartXray(isForce bool) error {
 
 	p = xray.NewProcess(xrayConfig)
 	result = ""
+	// 应用 hysteria 端口跳跃 nft/iptables DNAT 规则：
+	// 服务端 xray 只监听主端口，跳跃范围由防火墙转发到主端口（避免展开监听导致 OOM）。
+	if n, applyErr := xray.ApplyHysteriaPortHoppingRules(xrayConfig); applyErr != nil {
+		logger.Warning("apply hysteria port hopping rules failed: ", applyErr)
+	} else if n > 0 {
+		logger.Info("applied hysteria port hopping rules: ", n)
+	}
 	err = p.Start()
 	if err != nil {
 		return err

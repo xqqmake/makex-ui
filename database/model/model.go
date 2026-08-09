@@ -93,11 +93,13 @@ func (i *Inbound) GenXrayInboundConfig() *xray.InboundConfig {
 		listen = fmt.Sprintf("\"%v\"", listen)
 	}
 	port := json_util.RawMessage(fmt.Sprintf("%d", i.Port))
-	// Hysteria port hopping: xray accepts a PortList like "443,10000-10005,12345".
+	// Hysteria port hopping: 服务端只监听主端口，跳跃范围由 nft/iptables DNAT 规则转发到主端口。
+	// 若把范围直接拼进 xray PortList（如 "48998,30000-45000"），xray 会为范围内每个端口各开
+	// 一个 UDP socket（app/proxyman/inbound/always.go 展开 PortList），大范围（如 15000 端口）
+	// 会耗尽内存导致 OOM 崩溃。跳跃范围仍保留在 streamSettings.hysteria.portHopping 供 UI 展示
+	// 与订阅链接生成（mport），并驱动 nft DNAT 规则（见 xray/nft.go）。
 	if IsHysteria(i.Protocol) {
-		if hopping := PortHoppingPorts(i.StreamSettings); hopping != "" {
-			port = json_util.RawMessage(fmt.Sprintf("\"%d,%s\"", i.Port, hopping))
-		}
+		_ = PortHoppingPorts(i.StreamSettings)
 	}
 	return &xray.InboundConfig{
 		Listen:         json_util.RawMessage(listen),
