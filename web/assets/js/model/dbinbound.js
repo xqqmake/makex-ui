@@ -48,6 +48,10 @@ class DBInbound {
         return this.protocol === Protocols.TROJAN;
     }
 
+    get isHysteria() {
+        return this.protocol === Protocols.HYSTERIA;
+    }
+
     get isSS() {
         return this.protocol === Protocols.SHADOWSOCKS;
     }

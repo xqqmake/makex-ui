@@ -1,13 +1,13 @@
 const Protocols = {
     VMESS: 'vmess',
     VLESS: 'vless',
+    HYSTERIA: 'hysteria',
     TROJAN: 'trojan',
     SHADOWSOCKS: 'shadowsocks',
     TUNNEL: 'tunnel',
     SOCKS: 'socks',
     HTTP: 'http',
     WIREGUARD: 'wireguard',
-    HYSTERIA: 'hysteria',
 };
 
 const SSMethods = {

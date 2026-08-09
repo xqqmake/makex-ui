@@ -362,7 +362,7 @@
                             <a-icon type="edit"></a-icon>
                             {{ i18n "edit" }}
                           </a-menu-item>
-                          <a-menu-item key="qrcode" v-if="(dbInbound.isSS && !dbInbound.toInbound().isSSMultiUser) || dbInbound.isWireguard">
+                          <a-menu-item key="qrcode" v-if="(dbInbound.isSS && !dbInbound.toInbound().isSSMultiUser) || dbInbound.isWireguard || dbInbound.isHysteria">
                             <a-icon type="qrcode"></a-icon>
                             {{ i18n "qrCode" }}
                           </a-menu-item>
@@ -422,7 +422,7 @@
                     </template>
                     <template slot="protocol" slot-scope="text, dbInbound">
                       <a-tag :style="{ margin: '0' }" color="purple">[[ dbInbound.protocol ]]</a-tag>
-                      <template v-if="dbInbound.isVMess || dbInbound.isVLess || dbInbound.isTrojan || dbInbound.isSS">
+                      <template v-if="dbInbound.isVMess || dbInbound.isVLess || dbInbound.isTrojan || dbInbound.isSS || dbInbound.isHysteria">
                         <a-tag :style="{ margin: '0' }" color="green">[[ dbInbound.toInbound().stream.network ]]</a-tag>
                         <a-tag :style="{ margin: '0' }" v-if="dbInbound.toInbound().stream.isTls" color="blue">TLS</a-tag>
                         <a-tag :style="{ margin: '0' }" v-if="dbInbound.toInbound().stream.isReality" color="blue">Reality</a-tag>
@@ -721,16 +721,25 @@
           <a-select v-model="oneClickProtocol" style="width: 100%">
             <a-select-option value="vless">VLESS</a-select-option>
             <a-select-option value="vmess">VMess</a-select-option>
+            <a-select-option value="hysteria">Hysteria</a-select-option>
             <a-select-option value="trojan">Trojan</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.securityLabel" }}`">
+        <a-form-item v-if="oneClickProtocol !== 'hysteria'" :label="`{{ i18n "pages.inbounds.oneClick.securityLabel" }}`">
           <a-select v-model="oneClickSecurity" style="width: 100%">
             <a-select-option value="reality">Reality</a-select-option>
             <a-select-option value="tls">TLS</a-select-option>
             <a-select-option value="none">无</a-select-option>
           </a-select>
         </a-form-item>
+        <template v-if="oneClickProtocol === 'hysteria'">
+          <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.hysteriaAuthLabel" }}`">
+            <a-input v-model="oneClickHysteriaAuth" :placeholder="`{{ i18n "pages.inbounds.oneClick.hysteriaAuthTip" }}`"></a-input>
+          </a-form-item>
+          <a-form-item>
+            <a-alert type="info" show-icon :message="`{{ i18n "pages.inbounds.oneClick.hysteriaTip" }}`"></a-alert>
+          </a-form-item>
+        </template>
         <template v-if="oneClickSecurity === 'reality'">
           <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.targetLabel" }}`">
             <a-input v-model="oneClickTarget" placeholder="1.1.1.1:443"></a-input>
@@ -939,6 +948,7 @@
             oneClickSecurity: 'reality',
             oneClickTarget: '1.1.1.1:443',
             oneClickSNI: 'www.yahu.com',
+            oneClickHysteriaAuth: '',
             oneClickHost: '',
             oneClickLink: '',
             oneClickPort: '',
@@ -1187,6 +1197,7 @@ async openPort(port) {
                 this.oneClickLink = '';
                 this.oneClickPort = '';
                 this.oneClickId = 0;
+                this.oneClickHysteriaAuth = '';
                 this.oneClickLoading = false;
             },
 
@@ -1196,6 +1207,7 @@ async openPort(port) {
                 this.oneClickLink = '';          // 关闭时清空链接，以便下次重新打开时显示选项
                 this.oneClickPort = '';
                 this.oneClickId = 0;
+                this.oneClickHysteriaAuth = '';
                 this.oneClickLoading = false;
             },
 
@@ -1216,7 +1228,8 @@ async openPort(port) {
                         protocol: this.oneClickProtocol,
                         security: this.oneClickSecurity,
                         target: target,
-                        sni: sni
+                        sni: sni,
+                        auth: this.oneClickHysteriaAuth.trim()
                     });
                     if (!msg.success) {
                         this.$message.error(msg.msg || '{{ i18n "somethingWentWrong" }}');

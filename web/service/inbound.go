@@ -2449,10 +2449,11 @@ func (s *InboundService) genShortID() (string, error) {
 type OneClickOptions struct {
 	Remark   string // 备注（用户自填）
 	Email    string // 电子邮件（用户自填）
-	Protocol string // 协议: vless / vmess / trojan（默认 vless）
-	Security string // 安全: reality / tls / none（默认 reality）
+	Protocol string // 协议: vless / vmess / trojan / hysteria（默认 vless）
+	Security string // 安全: reality / tls / none（默认 reality；hysteria 固定 tls）
 	Target   string // Reality Target，默认 1.1.1.1:443
 	SNI      string // Reality SNI，默认 www.yahu.com
+	Auth     string // Hysteria 认证密码（留空则随机生成）
 	Host     string // 用于生成链接的域名/IP（可带端口）
 }
 
@@ -2508,10 +2509,16 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		return nil, "", err
 	}
 
-	// Reality 模式：随机获取新证书保存到 /root/cert/oneclick-<port>/
-	if opts.Security == "reality" {
+	// Hysteria 认证密码：用户未填则随机生成（与 hy2-test 一致的随机 auth）
+	hysteriaAuth := opts.Auth
+	if opts.Protocol == "hysteria" && hysteriaAuth == "" {
+		hysteriaAuth = uuid.New().String()[:16]
+	}
+
+	// Reality 模式 / Hysteria(TLS) 模式：随机获取新证书保存到 /root/cert/oneclick-<port>/
+	if opts.Security == "reality" || opts.Protocol == "hysteria" {
 		if _, err := s.genRandomCert(fmt.Sprintf("/root/cert/oneclick-%d", port)); err != nil {
-			logger.Warning("一键配置: 随机证书生成失败(不影响Reality节点):", err)
+			logger.Warning("一键配置: 随机证书生成失败:", err)
 		}
 	}
 
@@ -2566,6 +2573,25 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 			"fallbacks": []any{},
 		}
 		settingsJSON, err = json.MarshalIndent(trojanSettings, "", "  ")
+	case "hysteria":
+		// 与 hy2-test 一致的 hysteria settings 结构（version 2 / hysteria2）
+		hysteriaSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"auth":       hysteriaAuth,
+					"email":      opts.Email,
+					"limitIp":    0,
+					"totalGB":    0,
+					"expiryTime": 0,
+					"enable":     true,
+					"tgId":       "",
+					"subId":      subID,
+					"reset":      0,
+				},
+			},
+			"version": 2,
+		}
+		settingsJSON, err = json.MarshalIndent(hysteriaSettings, "", "  ")
 	default: // vless
 		vlessSettings := model.VLESSSettings{
 			Clients:    []model.Client{client},
@@ -2580,6 +2606,26 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 
 	// 按安全协议构造 streamSettings
 	var streamSettings map[string]any
+	// Hysteria 固定使用 TLS（前端一键配置 hysteria 时隐藏了安全下拉）
+	if opts.Protocol == "hysteria" {
+		// 与 hy2-test 一致的 streamSettings：network=hysteria, security=tls,
+		// SNI 自动填当前 IP/域名（opts.Host），ALPN 加 h3,h2；不设置 portHopping = 端口跳跃关闭
+		streamSettings = map[string]any{
+			"network":  "hysteria",
+			"security": "tls",
+			"tlsSettings": map[string]any{
+				"serverName":  opts.Host,
+				"alpn":        []string{"h3", "h2"},
+				"fingerprint": "chrome",
+				"certificates": []map[string]any{
+					{
+						"certificateFile": fmt.Sprintf("/root/cert/oneclick-%d/fullchain.pem", port),
+						"keyFile":         fmt.Sprintf("/root/cert/oneclick-%d/privkey.pem", port),
+					},
+				},
+			},
+		}
+	} else {
 	switch opts.Security {
 	case "tls":
 		streamSettings = map[string]any{
@@ -2634,6 +2680,7 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 				"header": map[string]any{"type": "none"},
 			},
 		}
+	}
 	}
 	streamJSON, err := json.MarshalIndent(streamSettings, "", "  ")
 	if err != nil {
@@ -2711,6 +2758,11 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 			link = fmt.Sprintf("trojan://%s@%s:%d?type=tcp&headerType=none#%s",
 				clientUUID, opts.Host, port, url.QueryEscape(opts.Remark))
 		}
+	case "hysteria":
+		// 与 hy2-test 一致的 hysteria2 链接：sni 自动填 host，alpn h3,h2；
+		// insecure=1 因为 oneclick 使用随机自签证书
+		link = fmt.Sprintf("hysteria2://%s@%s:%d?sni=%s&alpn=h3,h2&insecure=1#%s",
+			hysteriaAuth, opts.Host, port, url.QueryEscape(opts.Host), url.QueryEscape(opts.Remark))
 	default: // vless
 		if opts.Security == "reality" {
 			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=%s&flow=xtls-rprx-vision#%s",

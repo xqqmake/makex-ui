@@ -386,6 +386,7 @@ func (a *InboundController) oneClickConfig(c *gin.Context) {
 		Security string `json:"security" form:"security"`
 		Target   string `json:"target" form:"target"`
 		SNI      string `json:"sni" form:"sni"`
+		Auth     string `json:"auth" form:"auth"`
 	}
 	var req OneClickRequest
 	// 前端 axios 拦截器会把 data 转为 form-urlencoded，因此必须用 ShouldBind（自动兼容 form/JSON），
@@ -406,6 +407,7 @@ func (a *InboundController) oneClickConfig(c *gin.Context) {
 		Security: req.Security,
 		Target:   req.Target,
 		SNI:      req.SNI,
+		Auth:     req.Auth,
 	})
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)

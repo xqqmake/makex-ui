@@ -500,6 +500,168 @@ bbr_menu() {
     esac
 }
 
+# ==========================================================
+# VPS状态显示（移植自 x-ui-yg install.sh 的 VPS状态如下 块）
+# ==========================================================
+show_vps_status() {
+    echo -e "${yellow}VPS状态如下：${plain}"
+    local op version cpu vi bbr v4 v6 v4dq v6dq w4 w6
+    op=$(cat /etc/redhat-release 2>/dev/null || cat /etc/os-release 2>/dev/null | grep -i pretty_name | cut -d '"' -f2)
+    version=$(uname -r | cut -d "-" -f1)
+    [[ -z $(systemd-detect-virt 2>/dev/null) ]] && vi=$(virt-what 2>/dev/null) || vi=$(systemd-detect-virt 2>/dev/null)
+    case $(uname -m) in
+        aarch64) cpu=arm64;;
+        x86_64) cpu=amd64;;
+        *) cpu=$(uname -m);;
+    esac
+    if [[ -n $(sysctl net.ipv4.tcp_congestion_control 2>/dev/null | awk -F ' ' '{print $3}') ]]; then
+        bbr=$(sysctl net.ipv4.tcp_congestion_control | awk -F ' ' '{print $3}')
+    elif [[ -n $(ping 10.0.0.2 -c 2 2>/dev/null | grep ttl) ]]; then
+        bbr="Openvz版bbr-plus"
+    else
+        bbr="Openvz/Lxc"
+    fi
+    v4=$(curl -s4m5 icanhazip.com -k)
+    v6=$(curl -s6m5 icanhazip.com -k)
+    v4dq=$(curl -s4m5 -k https://myip.ipip.net | awk -F'来自于：' '{print $2}' 2>/dev/null)
+    v6dq=$(curl -s6m5 -k https://ip.fm | sed -n 's/.*Location: //p' 2>/dev/null)
+    if [[ "$v6" == "2a09"* ]]; then w6="【WARP】"; fi
+    if [[ "$v4" == "104.28"* ]]; then w4="【WARP】"; fi
+    local vps_ipv4 vps_ipv6 location
+    if [[ -z $v4 ]]; then
+        vps_ipv4='无IPV4'
+        vps_ipv6="$v6"
+        location="$v6dq"
+    elif [[ -n $v4 && -n $v6 ]]; then
+        vps_ipv4="$v4"
+        vps_ipv6="$v6"
+        location="$v4dq"
+    else
+        vps_ipv4="$v4"
+        vps_ipv6='无IPV6'
+        location="$v4dq"
+    fi
+    echo -e "系统:${blue}$op${plain}  内核:${blue}$version${plain}  处理器:${blue}$cpu${plain}  虚拟化:${blue}$vi${plain}  BBR算法:${blue}$bbr${plain}"
+    echo -e "本地IPV4地址：${blue}$vps_ipv4$w4${plain}   本地IPV6地址：${blue}$vps_ipv6$w6${plain}"
+    echo -e "服务器地区：${blue}$location${plain}"
+}
+
+# ==========================================================
+# 端口跳跃（移植自 x-ui-yg 的“设置Hysteria2协议多端口跳跃”）
+# 通过 iptables/ip6tables DNAT 将 UDP 跳跃端口转发到 Hysteria2 主端口
+# ==========================================================
+hyjpport() {
+    read -p "指定已设置的Hysteria2协议的主端口：" hyport
+    read -p "设置该主端口转发的跳跃端口【格式：10000-10005,12345】：" hyjpt
+    while read -r rule; do
+        iptables -t nat ${rule/-A/-D}
+    done < <(iptables -t nat -S PREROUTING | grep "DNAT.*to-destination :$hyport$")
+    while read -r rule; do
+        ip6tables -t nat ${rule/-A/-D}
+    done < <(ip6tables -t nat -S PREROUTING | grep "DNAT.*to-destination :$hyport$")
+    for p in ${hyjpt//,/ }; do
+        iptables -t nat -C PREROUTING -p udp --dport "${p//-/:}" -j DNAT --to-destination :$hyport 2>/dev/null || iptables -t nat -A PREROUTING -p udp --dport "${p//-/:}" -j DNAT --to-destination :$hyport
+        ip6tables -t nat -C PREROUTING -p udp --dport "${p//-/:}" -j DNAT --to-destination :$hyport 2>/dev/null || ip6tables -t nat -A PREROUTING -p udp --dport "${p//-/:}" -j DNAT --to-destination :$hyport
+    done
+    netfilter-persistent save >/dev/null 2>&1
+    if command -v rc-service >/dev/null 2>&1 && command -v rc-update >/dev/null 2>&1; then
+        rc-update show default 2>/dev/null | grep -q 'iptables' || rc-update add iptables >/dev/null 2>&1
+        rc-update show default 2>/dev/null | grep -q 'ip6tables' || rc-update add ip6tables >/dev/null 2>&1
+        rc-service iptables save >/dev/null 2>&1
+        rc-service ip6tables save >/dev/null 2>&1
+    fi
+    echo -e "${green}已设置Hysteria2协议主端口 $hyport 转发的跳跃端口：$hyjpt${plain}"
+    read -p "按回车键返回主菜单" _
+    show_menu
+}
+
+# ==========================================================
+# 本地IP订阅分享链接（移植自 x-ui-yg 的“设置本地IP订阅分享链接”）
+# 通过 busybox httpd / python3 http.server 在本地端口分享订阅文件
+# 路径已适配 makex-ui（/usr/local/makex-ui/）
+# ==========================================================
+ipsub() {
+    subtokenipsub() {
+        echo
+        read -p "输入订阅链接路径密码（回车表示使用面板登录根路径）：" menu
+        if [ -z "$menu" ]; then
+            subtoken="$(/usr/local/makex-ui/makex-ui setting -show 2>/dev/null | awk -F': ' 'NR==4{print $2}' | tr -d '/')"
+        else
+            subtoken="$menu"
+        fi
+        rm -rf /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"
+        echo $subtoken > /usr/local/makex-ui/subtoken.log
+        echo -e "${green}订阅链接路径密码：$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)${plain}"
+    }
+    subportipsub() {
+        echo
+        read -p "输入未被占用且可用的订阅链接端口（回车表示随机端口）：" menu
+        if [ -z "$menu" ]; then
+            subport=$(shuf -i 10000-65535 -n 1)
+        else
+            subport="$menu"
+        fi
+        echo $subport > /usr/local/makex-ui/subport.log
+        echo -e "${green}订阅链接端口：$(cat /usr/local/makex-ui/subport.log 2>/dev/null)${plain}"
+    }
+    echo
+    echo -e "${green}注意：目前订阅仅支持分享 /usr/local/makex-ui/bin/ 下的 clmi.yaml、sbox.json、jhsub.txt 订阅文件${plain}"
+    echo -e "${yellow}（本面板为 Xray 内核，若 bin 目录下无对应文件，请自行放置后重试）${plain}"
+    echo
+    echo -e "${yellow}1：重置安装本地IP订阅链接${plain}"
+    echo -e "${yellow}2：更换订阅链接路径密码${plain}"
+    echo -e "${yellow}3：更换订阅链接端口${plain}"
+    echo -e "${yellow}4：卸载本地IP订阅链接${plain}"
+    echo -e "${yellow}0：返回上层${plain}"
+    read -p "请选择【0-4】：" menu
+    if [ "$menu" = "1" ]; then
+        subtokenipsub && subportipsub
+    elif [ "$menu" = "2" ]; then
+        subtokenipsub
+    elif [ "$menu" = "3" ]; then
+        subportipsub
+    elif [ "$menu" = "4" ]; then
+        kill -15 $(pgrep -f 'webxui' 2>/dev/null) >/dev/null 2>&1
+        crontab -l 2>/dev/null > /tmp/crontab.tmp
+        sed -i '/webxui/d' /tmp/crontab.tmp
+        crontab /tmp/crontab.tmp >/dev/null 2>&1
+        rm /tmp/crontab.tmp
+        rm -rf /root/webxui
+        rm -rf /etc/local.d/alpinesub.start
+        echo -e "${green}本地IP订阅链接已卸载完成${plain}" && exit
+    else
+        show_menu
+    fi
+    echo
+    echo -e "${green}请稍后…………${plain}"
+    kill -15 $(pgrep -f 'webxui' 2>/dev/null) >/dev/null 2>&1
+    mkdir -p /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"
+    [ -f /usr/local/makex-ui/bin/clmi.yaml ] && ln -sf /usr/local/makex-ui/bin/clmi.yaml /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"/clmi.yaml
+    [ -f /usr/local/makex-ui/bin/sbox.json ] && ln -sf /usr/local/makex-ui/bin/sbox.json /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"/sbox.json
+    [ -f /usr/local/makex-ui/bin/jhsub.txt ] && ln -sf /usr/local/makex-ui/bin/jhsub.txt /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"/jhsub.txt
+    if command -v busybox >/dev/null 2>&1 && busybox --list 2>/dev/null | grep -q httpd; then
+        busybox httpd -f -p "$(cat /usr/local/makex-ui/subport.log 2>/dev/null)" -h /root/webxui > /dev/null 2>&1 &
+        httpd_cmd='busybox httpd -f -p $(cat /usr/local/makex-ui/subport.log 2>/dev/null) -h /root/webxui > /dev/null 2>&1 &'
+    elif command -v python3 >/dev/null 2>&1; then
+        cd /root/webxui && nohup python3 -m http.server "$(cat /usr/local/makex-ui/subport.log 2>/dev/null)" --bind 0.0.0.0 > /dev/null 2>&1 &
+        httpd_cmd='cd /root/webxui && nohup python3 -m http.server $(cat /usr/local/makex-ui/subport.log 2>/dev/null) --bind 0.0.0.0 > /dev/null 2>&1 &'
+    else
+        echo -e "${red}未找到 busybox httpd 或 python3，无法启动本地订阅服务${plain}"
+    fi
+    sleep 2
+    crontab -l 2>/dev/null > /tmp/crontab.tmp
+    sed -i '/webxui/d' /tmp/crontab.tmp
+    echo "@reboot sleep 10 && /bin/bash -c \"$httpd_cmd\"" >> /tmp/crontab.tmp
+    crontab /tmp/crontab.tmp >/dev/null 2>&1
+    rm /tmp/crontab.tmp
+    subport=$(cat /usr/local/makex-ui/subport.log 2>/dev/null)
+    subtoken=$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)
+    echo -e "${green}本地IP订阅链接已更新完成${plain}"
+    echo -e "${green}订阅链接：http://$(curl -s4m5 icanhazip.com -k):$subport/$subtoken/${plain}"
+    read -p "按回车键返回主菜单" _
+    show_menu
+}
+
 disable_bbr() {
     if ! grep -q "net.core.default_qdisc=fq" /etc/sysctl.conf || ! grep -q "net.ipv4.tcp_congestion_control=bbr" /etc/sysctl.conf; then
         echo -e "${yellow}BBR 当前未启用${plain}"
@@ -1031,6 +1193,7 @@ ssl_cert_issue_main() {
     echo -e "${green}\t5.${plain} 备用方式申请证书" 
     echo -e "${green}\t6.${plain} 显示现有域名" 
     echo -e "${green}\t7.${plain} 为面板设置证书路径" 
+    echo -e "${green}\t8.${plain} 获取 IP 临时证书 (Let's Encrypt shortlived)" 
     echo -e "${green}\t0.${plain} 返回主菜单"
     echo "" 
  
@@ -1201,14 +1364,259 @@ ssl_cert_issue_main() {
                 echo "输入的域名无效。" 
             fi 
         fi 
-        ssl_cert_issue_main 
-        ;; 
- 
-    *) 
+        ssl_cert_issue_main
+        ;;
+
+    8)
+        # 【功能：获取 IP 临时证书 (Let's Encrypt shortlived)】
+        setup_ip_certificate_menu
+        ssl_cert_issue_main
+        ;;
+
+    *)
         echo -e "${red}无效选项，请选择有效的数字。${plain}\n" 
         ssl_cert_issue_main 
         ;; 
     esac 
+}
+
+# ==========================================================
+# 辅助函数（移植自 install.sh，供 setup_ip_certificate 使用）
+# ==========================================================
+is_ipv4() {
+    [[ "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] && return 0 || return 1
+}
+is_ipv6() {
+    [[ "$1" =~ : ]] && return 0 || return 1
+}
+is_port_in_use() {
+    local port="$1"
+    if command -v ss > /dev/null 2>&1; then
+        ss -ltn 2> /dev/null | awk -v p=":${port}$" '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v netstat > /dev/null 2>&1; then
+        netstat -lnt 2> /dev/null | awk -v p=":${port} " '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v lsof > /dev/null 2>&1; then
+        lsof -nP -iTCP:${port} -sTCP:LISTEN > /dev/null 2>&1 && return 0
+    fi
+    return 1
+}
+# prompt_or_default VARNAME "prompt text" "default"
+# 交互模式: 读入 VARNAME。非交互模式: VARNAME = ${VARNAME:-default}。
+prompt_or_default() {
+    local __var="$1" __prompt="$2" __default="$3"
+    if [[ "$NONINTERACTIVE" == "1" ]]; then
+        printf -v "$__var" '%s' "${!__var:-$__default}"
+    else
+        read -rp "$__prompt" "$__var"
+    fi
+}
+
+# ==========================================================
+# IP 临时证书（移植自 install.sh 的选项2“Let's Encrypt IP 临时证书”）
+# 签发 shortlived profile 的 IP 证书（约6天有效），安装到 /root/cert/ip 并配置面板
+# ==========================================================
+setup_ip_certificate() {
+    local ipv4="$1"
+    local ipv6="$2" # optional
+
+    echo -e "${green}正在签发 Let's Encrypt IP 临时证书 (shortlived profile)...${plain}"
+    echo -e "${yellow}注意：IP 证书有效期约 6 天，会自动续期。${plain}"
+    echo -e "${yellow}默认监听 80 端口；若选择其他端口，需确保外部 80 端口转发到该端口。${plain}"
+
+    # Check for acme.sh
+    if ! command -v ~/.acme.sh/acme.sh &> /dev/null; then
+        install_acme
+        if [ $? -ne 0 ]; then
+            echo -e "${red}acme.sh 安装失败${plain}"
+            return 1
+        fi
+    fi
+
+    # Validate IP address
+    if [[ -z "$ipv4" ]]; then
+        echo -e "${red}需要提供 IPv4 地址${plain}"
+        return 1
+    fi
+
+    if ! is_ipv4 "$ipv4"; then
+        echo -e "${red}无效的 IPv4 地址: $ipv4${plain}"
+        return 1
+    fi
+
+    # Create certificate directory
+    local certDir="/root/cert/ip"
+    mkdir -p "$certDir"
+
+    # Build domain arguments
+    local domain_args="-d ${ipv4}"
+    if [[ -n "$ipv6" ]] && is_ipv6 "$ipv6"; then
+        domain_args="${domain_args} -d ${ipv6}"
+        echo -e "${green}包含 IPv6 地址: ${ipv6}${plain}"
+    fi
+
+    # Set reload command for auto-renewal (add || true so it doesn't fail during first install)
+    local reloadCmd="systemctl restart makex-ui 2>/dev/null || rc-service makex-ui restart 2>/dev/null || true"
+
+    # Choose port for HTTP-01 listener (default 80, prompt override)
+    local WebPort=""
+    prompt_or_default WebPort "用于 ACME HTTP-01 验证的端口 (默认 80): " "80"
+    WebPort="${WebPort:-80}"
+    if ! [[ "${WebPort}" =~ ^[0-9]+$ ]] || ((WebPort < 1 || WebPort > 65535)); then
+        echo -e "${red}端口无效，回退到 80。${plain}"
+        WebPort=80
+    fi
+    echo -e "${green}将使用端口 ${WebPort} 进行 standalone 验证。${plain}"
+    if [[ "${WebPort}" -ne 80 ]]; then
+        echo -e "${yellow}提醒：Let's Encrypt 仍连接 80 端口；请将外部 80 端口转发到 ${WebPort}。${plain}"
+    fi
+
+    # Ensure chosen port is available
+    while true; do
+        if is_port_in_use "${WebPort}"; then
+            echo -e "${yellow}端口 ${WebPort} 已被占用。${plain}"
+
+            local alt_port=""
+            if [[ "$NONINTERACTIVE" == "1" ]]; then
+                echo -e "${red}端口 ${WebPort} 忙；非交互模式下无法继续。${plain}"
+                return 1
+            fi
+            read -rp "输入 acme.sh standalone 监听的其他端口 (留空则中止): " alt_port
+            alt_port="${alt_port// /}"
+            if [[ -z "${alt_port}" ]]; then
+                echo -e "${red}端口 ${WebPort} 忙；无法继续。${plain}"
+                return 1
+            fi
+            if ! [[ "${alt_port}" =~ ^[0-9]+$ ]] || ((alt_port < 1 || alt_port > 65535)); then
+                echo -e "${red}无效端口。${plain}"
+                return 1
+            fi
+            WebPort="${alt_port}"
+            continue
+        else
+            echo -e "${green}端口 ${WebPort} 空闲，可进行 standalone 验证。${plain}"
+            break
+        fi
+    done
+
+    # Issue certificate with shortlived profile
+    echo -e "${green}正在为 ${ipv4} 签发 IP 证书...${plain}"
+    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt --force > /dev/null 2>&1
+
+    ~/.acme.sh/acme.sh --issue \
+        ${domain_args} \
+        --standalone \
+        --server letsencrypt \
+        --certificate-profile shortlived \
+        --days 6 \
+        --httpport ${WebPort} \
+        --force
+
+    if [ $? -ne 0 ]; then
+        echo -e "${red}IP 证书签发失败${plain}"
+        echo -e "${yellow}请确保端口 ${WebPort} 可访问（或从外部 80 端口转发）${plain}"
+        rm -rf ~/.acme.sh/${ipv4} ~/.acme.sh/${ipv4}_ecc 2> /dev/null
+        [[ -n "$ipv6" ]] && rm -rf ~/.acme.sh/${ipv6} ~/.acme.sh/${ipv6}_ecc 2> /dev/null
+        rm -rf ${certDir} 2> /dev/null
+        return 1
+    fi
+
+    echo -e "${green}证书签发成功，正在安装...${plain}"
+
+    # Install certificate
+    ~/.acme.sh/acme.sh --installcert --force -d ${ipv4} \
+        --key-file "${certDir}/privkey.pem" \
+        --fullchain-file "${certDir}/fullchain.pem" \
+        --reloadcmd "${reloadCmd}" 2>&1 || true
+
+    # Verify certificate files exist
+    if [[ ! -f "${certDir}/fullchain.pem" || ! -f "${certDir}/privkey.pem" ]]; then
+        echo -e "${red}安装后未找到证书文件${plain}"
+        rm -rf ~/.acme.sh/${ipv4} ~/.acme.sh/${ipv4}_ecc 2> /dev/null
+        [[ -n "$ipv6" ]] && rm -rf ~/.acme.sh/${ipv6} ~/.acme.sh/${ipv6}_ecc 2> /dev/null
+        rm -rf ${certDir} 2> /dev/null
+        return 1
+    fi
+
+    echo -e "${green}证书文件安装成功${plain}"
+
+    # Enable auto-upgrade for acme.sh (ensures cron job runs)
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade > /dev/null 2>&1
+
+    # Secure permissions
+    chmod 600 ${certDir}/privkey.pem 2> /dev/null
+    chmod 644 ${certDir}/fullchain.pem 2> /dev/null
+
+    # Configure panel to use the certificate
+    echo -e "${green}正在为面板配置证书路径...${plain}"
+    /usr/local/makex-ui/makex-ui cert -webCert "${certDir}/fullchain.pem" -webCertKey "${certDir}/privkey.pem"
+
+    if [ $? -ne 0 ]; then
+        echo -e "${yellow}警告：无法自动设置证书路径${plain}"
+        echo -e "${yellow}证书文件位于：${plain}"
+        echo -e "  Cert: ${certDir}/fullchain.pem"
+        echo -e "  Key:  ${certDir}/privkey.pem"
+    else
+        echo -e "${green}证书路径配置成功${plain}"
+    fi
+
+    echo -e "${green}IP 临时证书安装并配置成功！${plain}"
+}
+
+# ==========================================================
+# 菜单8：获取 IP 临时证书（自动获取公网 IP → 停面板 → 签发 → 启动面板）
+# ==========================================================
+setup_ip_certificate_menu() {
+    echo -e "${green}开始获取公网 IP 并申请 Let's Encrypt IP 临时证书...${plain}"
+
+    local server_ip=""
+    server_ip=$(curl -s4m5 icanhazip.com -k)
+    if [[ -z "$server_ip" || ! "$server_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo -e "${red}自动获取公网 IPv4 失败，请手动输入。${plain}"
+        read -rp "请输入您服务器的公网 IPv4 地址: " server_ip
+        server_ip="${server_ip// /}"
+        if [[ ! "$server_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo -e "${red}无效的 IPv4 地址。${plain}"
+            return 1
+        fi
+    else
+        read -rp "${server_ip} 是本服务器的正确公网 IPv4 地址吗? [默认 y]: " ip_confirm
+        if [[ -n "$ip_confirm" && "$ip_confirm" != "y" && "$ip_confirm" != "Y" ]]; then
+            server_ip=""
+            while [[ -z "$server_ip" ]]; do
+                read -rp "请输入您服务器的公网 IPv4 地址: " server_ip
+                server_ip="${server_ip// /}"
+                if [[ ! "$server_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                    echo -e "${red}无效的 IPv4 地址，请重试。${plain}"
+                    server_ip=""
+                fi
+            done
+        fi
+    fi
+
+    # Ask for optional IPv6
+    local ipv6_addr=""
+    read -rp "是否包含 IPv6 地址? (留空跳过): " ipv6_addr
+    ipv6_addr="${ipv6_addr// /}"
+
+    # Stop panel if running (port 80 needed)
+    echo -e "${yellow}正在停止面板以释放 80 端口...${plain}"
+    systemctl stop makex-ui > /dev/null 2>&1
+
+    setup_ip_certificate "${server_ip}" "${ipv6_addr}"
+    local rc=$?
+
+    # Restart panel
+    systemctl start makex-ui > /dev/null 2>&1
+
+    if [ $rc -eq 0 ]; then
+        echo -e "${green}✓ Let's Encrypt IP 临时证书配置成功${plain}"
+    else
+        echo -e "${red}✗ IP 临时证书配置失败，请检查上方日志。${plain}"
+    fi
 }
 
 ssl_cert_issue() {
@@ -2089,9 +2497,11 @@ show_menu() {
   ${green}21.${plain} 防火墙管理
 ——————————————————————
   ${green}22.${plain} 启用 BBR 
-  ${green}23.${plain} 更新 Geo 文件
-  ${green}24.${plain} Speedtest by Ookla
-  ${green}25.${plain} 安装订阅转换 
+  ${green}23.${plain} 端口跳跃
+  ${green}24.${plain} 设置本地IP订阅分享链接
+  ${green}25.${plain} 更新 Geo 文件
+  ${green}26.${plain} Speedtest by Ookla
+  ${green}27.${plain} 安装订阅转换 
 ——————————————————————
   ${green}若在使用过程中有任何问题${plain}
   ${yellow}请在项目地址提交 Issue 反馈${plain}
@@ -2102,8 +2512,9 @@ show_menu() {
 ——————————————————————
 
 "
+    show_vps_status
     show_status
-    echo && read -p "请输入选项 [0-25]: " num
+    echo && read -p "请输入选项 [0-27]: " num
 
     case "${num}" in
     0)
@@ -2176,16 +2587,22 @@ show_menu() {
         bbr_menu
         ;;
     23)
-        update_geo
+        hyjpport
         ;;
     24)
-        run_speedtest
+        ipsub
         ;;
     25)
+        update_geo
+        ;;
+    26)
+        run_speedtest
+        ;;
+    27)
         subconverter
         ;;
     *)
-        LOGE "请输入正确的数字选项 [0-25]"
+        LOGE "请输入正确的数字选项 [0-27]"
         ;;
     esac
 }

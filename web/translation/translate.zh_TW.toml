@@ -335,8 +335,11 @@
 "sniLabel" = "Reality SNI"
 "hostLabel" = "連結主機 (域名/IP)"
 "hostTip" = "預設使用當前面板訪問地址；如使用 CDN 或需要指定 IP 請手動填寫"
-"create" = "🚀 一鍵建立"
-"successTitle" = "配置成功，節點已建立！"
+"create" = "🚀 一鍵創建"
+"successTitle" = "配置成功，節點已創建！"
+"hysteriaAuthLabel" = "Hysteria 認證密碼 (auth)"
+"hysteriaAuthTip" = "留空將自動隨機生成"
+"hysteriaTip" = "Hysteria 固定使用 TLS：SNI 自動填寫當前 IP 或域名，ALPN 自動添加 h3、h2，端口跳躍關閉"
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
 "vless_xhttp_reality" = "VLESS + XHTTP + Reality"

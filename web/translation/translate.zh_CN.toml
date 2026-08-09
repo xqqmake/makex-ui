@@ -341,6 +341,9 @@
 "hostTip" = "默认使用当前面板访问地址；如使用 CDN 或需要指定 IP 请手动填写"
 "create" = "🚀 一键创建"
 "successTitle" = "配置成功，节点已创建！"
+"hysteriaAuthLabel" = "Hysteria 认证密码 (auth)"
+"hysteriaAuthTip" = "留空将自动随机生成"
+"hysteriaTip" = "Hysteria 固定使用 TLS：SNI 自动填写当前 IP 或域名，ALPN 自动添加 h3、h2，端口跳跃关闭"
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
 "vless_xhttp_reality" = "VLESS + XHTTP + Reality"
