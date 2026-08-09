@@ -339,7 +339,7 @@
 "successTitle" = "配置成功，節點已創建！"
 "hysteriaAuthLabel" = "Hysteria 認證密碼 (auth)"
 "hysteriaAuthTip" = "留空將自動隨機生成"
-"hysteriaTip" = "Hysteria 固定使用 TLS：SNI 自動填寫當前 IP 或域名，ALPN 自動添加 h3、h2，端口跳躍關閉"
+"hysteriaTip" = "Hysteria 固定使用 TLS：認證密碼自動隨機生成，SNI 自動填寫當前 IP 或域名，ALPN 自動添加 h3、h2，端口跳躍關閉"
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
 "vless_xhttp_reality" = "VLESS + XHTTP + Reality"

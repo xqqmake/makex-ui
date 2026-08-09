@@ -2549,8 +2549,28 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		hysteriaAuth = uuid.New().String()[:16]
 	}
 
-	// Reality 模式 / Hysteria(TLS) 模式：随机获取新证书保存到 /root/cert/oneclick-<port>/
-	if opts.Security == "reality" || opts.Protocol == "hysteria" {
+	// Hysteria(TLS) 模式：优先用面板设置证书 (webCertFile/webKeyFile)，无则回退随机自签
+	var certFile, keyFile string
+	usePanelCert := false
+	if opts.Protocol == "hysteria" {
+		settingService := &SettingService{}
+		if cf, err := settingService.GetCertFile(); err == nil && cf != "" {
+			if kf, err2 := settingService.GetKeyFile(); err2 == nil && kf != "" {
+				certFile, keyFile = cf, kf
+				usePanelCert = true
+			}
+		}
+		if certFile == "" || keyFile == "" {
+			if _, err := s.genRandomCert(fmt.Sprintf("/root/cert/oneclick-%d", port)); err != nil {
+				logger.Warning("一键配置: 随机证书生成失败:", err)
+			} else {
+				certFile = fmt.Sprintf("/root/cert/oneclick-%d/fullchain.pem", port)
+				keyFile = fmt.Sprintf("/root/cert/oneclick-%d/privkey.pem", port)
+			}
+		}
+	}
+	// Reality 模式：随机获取新证书保存到 /root/cert/oneclick-<port>/
+	if opts.Security == "reality" {
 		if _, err := s.genRandomCert(fmt.Sprintf("/root/cert/oneclick-%d", port)); err != nil {
 			logger.Warning("一键配置: 随机证书生成失败:", err)
 		}
@@ -2653,8 +2673,8 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 				"fingerprint": "chrome",
 				"certificates": []map[string]any{
 					{
-						"certificateFile": fmt.Sprintf("/root/cert/oneclick-%d/fullchain.pem", port),
-						"keyFile":         fmt.Sprintf("/root/cert/oneclick-%d/privkey.pem", port),
+						"certificateFile": certFile,
+						"keyFile":         keyFile,
 					},
 				},
 			},
@@ -2794,9 +2814,13 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		}
 	case "hysteria":
 		// 与 hy2-test 一致的 hysteria2 链接：sni 自动填 host，alpn h3,h2；
-		// insecure=1 因为 oneclick 使用随机自签证书
-		link = fmt.Sprintf("hysteria2://%s@%s:%d?sni=%s&alpn=h3,h2&insecure=1#%s",
-			hysteriaAuth, opts.Host, port, url.QueryEscape(opts.Host), url.QueryEscape(opts.Remark))
+		// 面板证书(正式)不加 insecure；随机自签证书才加 insecure=1
+		insecure := "&insecure=1"
+		if usePanelCert {
+			insecure = ""
+		}
+		link = fmt.Sprintf("hysteria2://%s@%s:%d?sni=%s&alpn=h3,h2%s#%s",
+			hysteriaAuth, opts.Host, port, url.QueryEscape(opts.Host), insecure, url.QueryEscape(opts.Remark))
 	default: // vless
 		if opts.Security == "reality" {
 			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=%s&flow=xtls-rprx-vision#%s",

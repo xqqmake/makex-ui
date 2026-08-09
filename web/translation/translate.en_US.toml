@@ -334,7 +334,7 @@
 "successTitle" = "Success! Node created."
 "hysteriaAuthLabel" = "Hysteria Auth Password"
 "hysteriaAuthTip" = "Leave blank to auto-generate"
-"hysteriaTip" = "Hysteria always uses TLS: SNI auto-fills current IP/domain, ALPN adds h3,h2, port hopping disabled"
+"hysteriaTip" = "Hysteria always uses TLS: auth auto-randomized, SNI auto-fills current IP/domain, ALPN adds h3,h2, port hopping disabled"
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
 "vless_xhttp_reality" = "VLESS + XHTTP + Reality"
