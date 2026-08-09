@@ -194,6 +194,8 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 				s.genVnext(inbound, streamSettings, client, vlessSettings.Encryption))
 		case "trojan", "shadowsocks":
 			newOutbounds = append(newOutbounds, s.genServer(inbound, streamSettings, client))
+		case "hysteria", "hysteria2":
+			newOutbounds = append(newOutbounds, s.genHy(inbound, newStream, client))
 		}
 
 		newOutbounds = append(newOutbounds, s.defaultOutbounds...)
@@ -361,6 +363,49 @@ func (s *SubJsonService) genServer(inbound *model.Inbound, streamSettings json_u
 	return result
 }
 
+func (s *SubJsonService) genHy(inbound *model.Inbound, newStream map[string]any, client model.Client) json_util.RawMessage {
+	outbound := Outbound{}
+
+	outbound.Protocol = string(inbound.Protocol)
+	outbound.Tag = "proxy"
+
+	if s.mux != "" {
+		outbound.Mux = json_util.RawMessage(s.mux)
+	}
+
+	var settings, stream map[string]any
+	json.Unmarshal([]byte(inbound.Settings), &settings)
+	version, _ := settings["version"].(float64)
+	outbound.Settings = OutboundSettings{
+		HyVersion: int(version),
+		HyAddress: inbound.Listen,
+		HyPort:    inbound.Port,
+	}
+
+	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	hyStream, _ := stream["hysteriaSettings"].(map[string]any)
+	outHyStream := map[string]any{
+		"version": int(version),
+		"auth":    client.Auth,
+	}
+	if udpIdleTimeout, ok := hyStream["udpIdleTimeout"].(float64); ok {
+		outHyStream["udpIdleTimeout"] = int(udpIdleTimeout)
+	}
+	newStream["hysteriaSettings"] = outHyStream
+
+	if finalmask, ok := hyStream["finalmask"].(map[string]any); ok {
+		newStream["finalmask"] = finalmask
+	}
+
+	newStream["network"] = "hysteria"
+	newStream["security"] = "tls"
+
+	outbound.StreamSettings, _ = json.MarshalIndent(newStream, "", "  ")
+
+	result, _ := json.MarshalIndent(outbound, "", "  ")
+	return result
+}
+
 type Outbound struct {
 	Protocol       string               `json:"protocol"`
 	Tag            string               `json:"tag"`
@@ -373,6 +418,11 @@ type Outbound struct {
 type OutboundSettings struct {
 	Vnext   []VnextSetting  `json:"vnext,omitempty"`
 	Servers []ServerSetting `json:"servers,omitempty"`
+
+	// Hysteria v1/v2 outbound (settings are flat version/address/port).
+	HyVersion int    `json:"version,omitempty"`
+	HyAddress string `json:"address,omitempty"`
+	HyPort    int    `json:"port,omitempty"`
 }
 
 type VnextSetting struct {

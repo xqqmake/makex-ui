@@ -12,6 +12,7 @@
             <a-select-option value="grpc">gRPC</a-select-option>
             <a-select-option value="httpupgrade">HTTPUpgrade</a-select-option>
             <a-select-option value="xhttp">XHTTP</a-select-option>
+            <a-select-option value="hysteria">Hysteria</a-select-option>
         </a-select>
     </a-form-item>
 </a-form>
@@ -44,6 +45,10 @@
 <!-- xhttp -->
 <template v-if="inbound.stream.network === 'xhttp'">
     {{template "form/streamXHTTP"}}
+</template>
+
+<template v-if="inbound.stream.network === 'hysteria'">
+    {{template "form/streamHysteria"}}
 </template>
 
 <!-- sockopt -->

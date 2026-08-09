@@ -1028,7 +1028,7 @@
                     to_inbound = dbInbound.toInbound()
                     this.inbounds.push(to_inbound);
                     this.dbInbounds.push(dbInbound);
-                    if ([Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
+                    if ([Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS, Protocols.HYSTERIA].includes(inbound.protocol)) {
                         if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
                             continue;
                         }
@@ -1676,6 +1676,8 @@ async openPort(port) {
                     case Protocols.TROJAN:
                     case Protocols.SHADOWSOCKS:
                         return clients.findIndex(item => item.password === client.password && item.email === client.email);
+                    case Protocols.HYSTERIA:
+                        return clients.findIndex(item => item.auth === client.auth && item.email === client.email);
                     default: return clients.findIndex(item => item.id === client.id && item.email === client.email);
                 }
             },
@@ -1769,6 +1771,7 @@ async openPort(port) {
                 switch (protocol) {
                     case Protocols.TROJAN: return client.password;
                     case Protocols.SHADOWSOCKS: return client.email;
+                    case Protocols.HYSTERIA: return client.auth;
                     default: return client.id;
                 }
             },

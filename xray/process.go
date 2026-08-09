@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -174,7 +175,9 @@ func (p *Process) GetUptime() uint64 {
 func (p *process) refreshAPIPort() {
 	for _, inbound := range p.config.InboundConfigs {
 		if inbound.Tag == "api" {
-			p.apiPort = inbound.Port
+			if len(inbound.Port) > 0 {
+				p.apiPort, _ = strconv.Atoi(string(inbound.Port))
+			}
 			break
 		}
 	}

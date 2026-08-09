@@ -484,6 +484,9 @@ install_free_version() {
     install_x-ui $1
     echo ""
     echo -e "----------------------------------------------"
+    show_vps_status
+    echo ""
+    echo -e "----------------------------------------------"
     sleep 4
     info=$(/usr/local/makex-ui/makex-ui setting -show true)
     echo -e "${info}${plain}"
@@ -505,6 +508,52 @@ install_free_version() {
     echo ""
     echo -e "${green}【提示】安装完成后可运行 makex-ui 命令，选择证书相关选项为面板配置 SSL 证书${plain}"
     echo ""
+}
+
+# ==========================================================
+# VPS状态显示（移植自 x-ui-yg install.sh 的 VPS状态如下 块）
+# ==========================================================
+show_vps_status() {
+    echo -e "${yellow}VPS状态如下：${plain}"
+    local op version cpu vi bbr v4 v6 v4dq v6dq w4 w6
+    op=$(cat /etc/redhat-release 2>/dev/null || cat /etc/os-release 2>/dev/null | grep -i pretty_name | cut -d '"' -f2)
+    version=$(uname -r | cut -d "-" -f1)
+    [[ -z $(systemd-detect-virt 2>/dev/null) ]] && vi=$(virt-what 2>/dev/null) || vi=$(systemd-detect-virt 2>/dev/null)
+    case $(uname -m) in
+        aarch64) cpu=arm64;;
+        x86_64) cpu=amd64;;
+        *) cpu=$(uname -m);;
+    esac
+    if [[ -n $(sysctl net.ipv4.tcp_congestion_control 2>/dev/null | awk -F ' ' '{print $3}') ]]; then
+        bbr=$(sysctl net.ipv4.tcp_congestion_control | awk -F ' ' '{print $3}')
+    elif [[ -n $(ping 10.0.0.2 -c 2 2>/dev/null | grep ttl) ]]; then
+        bbr="Openvz版bbr-plus"
+    else
+        bbr="Openvz/Lxc"
+    fi
+    v4=$(curl -s4m5 icanhazip.com -k)
+    v6=$(curl -s6m5 icanhazip.com -k)
+    v4dq=$(curl -s4m5 -k https://myip.ipip.net | awk -F'来自于：' '{print $2}' 2>/dev/null)
+    v6dq=$(curl -s6m5 -k https://ip.fm | sed -n 's/.*Location: //p' 2>/dev/null)
+    if [[ "$v6" == "2a09"* ]]; then w6="【WARP】"; fi
+    if [[ "$v4" == "104.28"* ]]; then w4="【WARP】"; fi
+    local vps_ipv4 vps_ipv6 location
+    if [[ -z $v4 ]]; then
+        vps_ipv4='无IPV4'
+        vps_ipv6="$v6"
+        location="$v6dq"
+    elif [[ -n $v4 && -n $v6 ]]; then
+        vps_ipv4="$v4"
+        vps_ipv6="$v6"
+        location="$v4dq"
+    else
+        vps_ipv4="$v4"
+        vps_ipv6='无IPV6'
+        location="$v4dq"
+    fi
+    echo -e "系统:${blue}$op${plain}  内核:${blue}$version${plain}  处理器:${blue}$cpu${plain}  虚拟化:${blue}$vi${plain}  BBR算法:${blue}$bbr${plain}"
+    echo -e "本地IPV4地址：${blue}$vps_ipv4$w4${plain}   本地IPV6地址：${blue}$vps_ipv6$w6${plain}"
+    echo -e "服务器地区：${blue}$location${plain}"
 }
 
 # 免费版安装逻辑函数 (install_free_version) 结束

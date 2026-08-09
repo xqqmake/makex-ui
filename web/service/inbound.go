@@ -236,6 +236,10 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 			if client.Email == "" {
 				return inbound, false, common.NewError("empty client ID")
 			}
+		case "hysteria", "hysteria2":
+			if client.Auth == "" {
+				return inbound, false, common.NewError("empty client ID")
+			}
 		default:
 			if client.ID == "" {
 				return inbound, false, common.NewError("empty client ID")
@@ -613,6 +617,10 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 			if client.Email == "" {
 				return false, common.NewError("empty client ID")
 			}
+		case "hysteria", "hysteria2":
+			if client.Auth == "" {
+				return false, common.NewError("empty client ID")
+			}
 		default:
 			if client.ID == "" {
 				return false, common.NewError("empty client ID")
@@ -709,6 +717,9 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 	}
 	if oldInbound.Protocol == "shadowsocks" {
 		client_key = "email"
+	}
+	if oldInbound.Protocol == "hysteria" || oldInbound.Protocol == "hysteria2" {
+		client_key = "auth"
 	}
 
 	interfaceClients := settings["clients"].([]any)
@@ -814,6 +825,9 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		case "shadowsocks":
 			oldClientId = oldClient.Email
 			newClientId = clients[0].Email
+		case "hysteria", "hysteria2":
+			oldClientId = oldClient.Auth
+			newClientId = clients[0].Auth
 		default:
 			oldClientId = oldClient.ID
 			newClientId = clients[0].ID
@@ -1468,6 +1482,8 @@ func (s *InboundService) SetClientTelegramUserID(trafficId int, tgId int64) (boo
 				clientId = oldClient.Password
 			case "shadowsocks":
 				clientId = oldClient.Email
+			case "hysteria", "hysteria2":
+				clientId = oldClient.Auth
 			default:
 				clientId = oldClient.ID
 			}
@@ -1554,6 +1570,8 @@ func (s *InboundService) ToggleClientEnableByEmail(clientEmail string) (bool, bo
 				clientId = oldClient.Password
 			case "shadowsocks":
 				clientId = oldClient.Email
+			case "hysteria", "hysteria2":
+				clientId = oldClient.Auth
 			default:
 				clientId = oldClient.ID
 			}
@@ -1619,6 +1637,8 @@ func (s *InboundService) ResetClientIpLimitByEmail(clientEmail string, count int
 				clientId = oldClient.Password
 			case "shadowsocks":
 				clientId = oldClient.Email
+			case "hysteria", "hysteria2":
+				clientId = oldClient.Auth
 			default:
 				clientId = oldClient.ID
 			}
@@ -1678,6 +1698,8 @@ func (s *InboundService) ResetClientExpiryTimeByEmail(clientEmail string, expiry
 				clientId = oldClient.Password
 			case "shadowsocks":
 				clientId = oldClient.Email
+			case "hysteria", "hysteria2":
+				clientId = oldClient.Auth
 			default:
 				clientId = oldClient.ID
 			}
@@ -1740,6 +1762,8 @@ func (s *InboundService) ResetClientTrafficLimitByEmail(clientEmail string, tota
 				clientId = oldClient.Password
 			case "shadowsocks":
 				clientId = oldClient.Email
+			case "hysteria", "hysteria2":
+				clientId = oldClient.Auth
 			default:
 				clientId = oldClient.ID
 			}

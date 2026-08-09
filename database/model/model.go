@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"x-ui/util/json_util"
@@ -18,7 +19,21 @@ const (
 	Shadowsocks Protocol = "shadowsocks"
 	Socks       Protocol = "socks"
 	WireGuard   Protocol = "wireguard"
+
+	// UI stores Hysteria v1 and v2 both as "hysteria" and uses
+	// settings.version to discriminate. Imports from outside the panel
+	// can carry the literal "hysteria2" string, so IsHysteria below
+	// accepts both.
+	Hysteria  Protocol = "hysteria"
+	Hysteria2 Protocol = "hysteria2"
 )
+
+// IsHysteria returns true for both "hysteria" and "hysteria2".
+// Use instead of a bare ==model.Hysteria check: a v2 inbound stored
+// with the literal v2 string would otherwise fall through.
+func IsHysteria(p Protocol) bool {
+	return p == Hysteria || p == Hysteria2
+}
 
 type User struct {
 	Id       int    `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -77,15 +92,46 @@ func (i *Inbound) GenXrayInboundConfig() *xray.InboundConfig {
 	if listen != "" {
 		listen = fmt.Sprintf("\"%v\"", listen)
 	}
+	port := json_util.RawMessage(fmt.Sprintf("%d", i.Port))
+	// Hysteria port hopping: xray accepts a PortList like "443,10000-10005,12345".
+	if IsHysteria(i.Protocol) {
+		if hopping := PortHoppingPorts(i.StreamSettings); hopping != "" {
+			port = json_util.RawMessage(fmt.Sprintf("\"%d,%s\"", i.Port, hopping))
+		}
+	}
 	return &xray.InboundConfig{
 		Listen:         json_util.RawMessage(listen),
-		Port:           i.Port,
+		Port:           port,
 		Protocol:       string(i.Protocol),
 		Settings:       json_util.RawMessage(i.Settings),
 		StreamSettings: json_util.RawMessage(i.StreamSettings),
 		Tag:            i.Tag,
 		Sniffing:       json_util.RawMessage(i.Sniffing),
 	}
+}
+
+// PortHoppingPorts extracts the Hysteria port-hopping range list from the
+// inbound streamSettings JSON (key: streamSettings.hysteria.portHopping).
+// Returns "" when disabled or missing.
+func PortHoppingPorts(streamSettings string) string {
+	var stream map[string]any
+	if err := json.Unmarshal([]byte(streamSettings), &stream); err != nil {
+		return ""
+	}
+	hysteria, ok := stream["hysteria"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	portHopping, ok := hysteria["portHopping"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	enabled, _ := portHopping["enabled"].(bool)
+	if !enabled {
+		return ""
+	}
+	ports, _ := portHopping["ports"].(string)
+	return ports
 }
 
 type Setting struct {
@@ -98,7 +144,8 @@ type Client struct {
 	ID         string `json:"id"`
 	Security   string `json:"security"`
 	Password   string `json:"password"`
-	
+	Auth       string `json:"auth,omitempty"` // Hysteria/Hysteria2 入站认证密码
+
 	// 中文注释: 新增“限速”字段，单位 KB/s，0 表示不限速。
     SpeedLimit   int           `json:"speedLimit" form:"speedLimit"`
 	

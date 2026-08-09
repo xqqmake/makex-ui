@@ -8,7 +8,7 @@ import (
 
 type InboundConfig struct {
 	Listen         json_util.RawMessage `json:"listen"` // listen cannot be an empty string
-	Port           int                  `json:"port"`
+	Port           json_util.RawMessage `json:"port"`   // int, or range string for Hysteria port hopping
 	Protocol       string               `json:"protocol"`
 	Settings       json_util.RawMessage `json:"settings"`
 	StreamSettings json_util.RawMessage `json:"streamSettings"`
@@ -20,7 +20,7 @@ func (c *InboundConfig) Equals(other *InboundConfig) bool {
 	if !bytes.Equal(c.Listen, other.Listen) {
 		return false
 	}
-	if c.Port != other.Port {
+	if !bytes.Equal(c.Port, other.Port) {
 		return false
 	}
 	if c.Protocol != other.Protocol {

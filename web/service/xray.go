@@ -11,6 +11,7 @@ import (
 	"x-ui/xray"
 	json_util "x-ui/util/json_util"
 
+	"x-ui/database/model"
 	"go.uber.org/atomic"
 )
 
@@ -265,11 +266,15 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				// -----------------------------------------------------------------
 				// 中文注释: 用户过滤 - 1) settings 中的 enable 字段检查
 				// -----------------------------------------------------------------
-				if en, ok := c["enable"].(bool); ok && !en {
-					if em, _ := c["email"].(string); em != "" {
-						logger.Infof("已从Xray配置中移除被settings标记为禁用的用户: %s", em)
+				// hysteria 的 xray client 无 enable 概念，跳过该过滤（否则 enable=false
+				// 的历史/导入客户端会被全部剔除导致 settings.clients 变 null）
+				if !model.IsHysteria(model.Protocol(inbound.Protocol)) {
+					if en, ok := c["enable"].(bool); ok && !en {
+						if em, _ := c["email"].(string); em != "" {
+							logger.Infof("已从Xray配置中移除被settings标记为禁用的用户: %s", em)
+						}
+						continue
 					}
-					continue
 				}
 
 				// -----------------------------------------------------------------
@@ -306,6 +311,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				}
 				if password, ok := c["password"]; ok { xrayClient["password"] = password }
 				if method, ok := c["method"]; ok { xrayClient["method"] = method }
+				// hysteria: auth 是唯一认证凭据，必须透传给 xray
+				if auth, ok := c["auth"]; ok { xrayClient["auth"] = auth }
 
 				// ⚠️ security 字段已移除，不再加入到 xrayClient
 
