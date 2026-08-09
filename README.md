@@ -74,13 +74,8 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.
 ```
 apt update -y&&apt install -y curl&&apt install -y socat
 ```
-
-- 若要对版本进行升级，可直接通过脚本选择【2】，如下图：
-![8](./media/8.png)
-![10](./media/10.png)
-- 在到这一步必须要注意：要保留旧设置的话，需要输入【n】
-![11](./media/11.png)
-
+apt update -y && apt install curl wget -y
+```
 
 ## 安装指定版本
 
