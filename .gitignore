@@ -13,7 +13,8 @@ tmp/
 
 # Ignore build and distribution directories
 backup/
-bin/
+bin/*
+!bin/xray-linux-amd64
 dist/
 release/
 node_modules/

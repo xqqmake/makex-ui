@@ -89,7 +89,11 @@ jobs:
           
           # Download dependencies
           Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v26.6.1/"
-          if [ "${{ matrix.platform }}" == "amd64" ]; then
+          # amd64 优先使用仓库内置 fork 版 Xray（支持 Hysteria2）
+          if [ "${{ matrix.platform }}" == "amd64" ] && [ -f ../../bin/xray-linux-amd64 ]; then
+            echo "使用仓库内置 fork Xray（支持 Hysteria2）"
+            cp ../../bin/xray-linux-amd64 xray
+          elif [ "${{ matrix.platform }}" == "amd64" ]; then
             wget -q ${Xray_URL}Xray-linux-64.zip
             unzip Xray-linux-64.zip
             rm -f Xray-linux-64.zip
