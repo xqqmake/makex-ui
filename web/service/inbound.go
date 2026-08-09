@@ -287,6 +287,8 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		if err == nil {
 			// 中文注释：如果没有错误，提交事务
 			tx.Commit()
+			// 提交后重建 hysteria 端口跳跃 nft 规则 (此时 DB 已含新 inbound)
+			s.rebuildPortHoppingRules()
 		} else {
 			// 中文注释：如果出现错误，回滚事务
 			tx.Rollback()
@@ -369,7 +371,37 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 		}
 	}
 
-	return needRestart, db.Delete(model.Inbound{}, id).Error
+	// 删除 DB 记录后重建 hysteria 端口跳跃 nft 规则 (清理已删节点的跳跃范围)
+	if err := db.Delete(model.Inbound{}, id).Error; err != nil {
+		return needRestart, err
+	}
+	s.rebuildPortHoppingRules()
+	return needRestart, nil
+}
+
+// rebuildPortHoppingRules 从 DB 全量重建 hysteria 端口跳跃 nft/iptables DNAT 规则。
+// 热加载(AddInbound/UpdateInbound/DelInbound 走 xray API)不触发 RestartXray,
+// 需在此手动同步, 否则新节点跳跃范围不会转发到主端口、删除节点的范围残留。
+func (s *InboundService) rebuildPortHoppingRules() {
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	if err := db.Where("protocol = ? AND enable = ?", "hysteria", true).Find(&inbounds).Error; err != nil {
+		logger.Warning("rebuild port hopping rules: query inbounds failed:", err)
+		return
+	}
+	rules := make([]xray.HysteriaPortHoppingRule, 0, len(inbounds))
+	for _, in := range inbounds {
+		ports := model.PortHoppingPorts(in.StreamSettings)
+		if ports == "" {
+			continue
+		}
+		rules = append(rules, xray.HysteriaPortHoppingRule{Ports: ports, MainPort: in.Port})
+	}
+	if n, err := xray.ApplyRules(rules); err != nil {
+		logger.Warning("rebuild port hopping rules failed:", err)
+	} else if n > 0 {
+		logger.Info("rebuilt hysteria port hopping rules:", n)
+	}
 }
 
 func (s *InboundService) GetInbound(id int) (*model.Inbound, error) {
@@ -406,6 +438,8 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 			tx.Rollback()
 		} else {
 			tx.Commit()
+			// 提交后重建 hysteria 端口跳跃 nft 规则 (DB 已是新配置, 同步热更新后的跳跃范围)
+			s.rebuildPortHoppingRules()
 		}
 	}()
 

@@ -58,6 +58,12 @@ func ExtractHysteriaPortHoppingRules(cfg *Config) []HysteriaPortHoppingRule {
 // 防火墙工具不可用时返回 0,nil（不阻塞 xray 启动）。
 func ApplyHysteriaPortHoppingRules(cfg *Config) (int, error) {
 	rules := ExtractHysteriaPortHoppingRules(cfg)
+	return ApplyRules(rules)
+}
+
+// ApplyRules 全量重建 hysteria 端口跳跃 DNAT 规则（从任意规则来源，如 DB）。
+// 无规则时返回 0,nil；防火墙工具不可用时返回 0,nil（不阻塞调用方）。
+func ApplyRules(rules []HysteriaPortHoppingRule) (int, error) {
 	if len(rules) == 0 {
 		return 0, nil
 	}
