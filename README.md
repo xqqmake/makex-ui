@@ -74,6 +74,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xqqmake/makex-ui/main/install.
 ```
 apt update -y&&apt install -y curl&&apt install -y socat
 ```
+```
 apt update -y && apt install curl wget -y
 ```
 
