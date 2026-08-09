@@ -719,8 +719,8 @@
         </a-form-item>
         <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.protocolLabel" }}`">
           <a-select v-model="oneClickProtocol" style="width: 100%">
-            <a-select-option value="vless">VLESS</a-select-option>
             <a-select-option value="vmess">VMess</a-select-option>
+            <a-select-option value="vless">VLESS</a-select-option>
             <a-select-option value="hysteria">Hysteria</a-select-option>
             <a-select-option value="trojan">Trojan</a-select-option>
           </a-select>
@@ -733,9 +733,6 @@
           </a-select>
         </a-form-item>
         <template v-if="oneClickProtocol === 'hysteria'">
-          <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.hysteriaAuthLabel" }}`">
-            <a-input v-model="oneClickHysteriaAuth" :placeholder="`{{ i18n "pages.inbounds.oneClick.hysteriaAuthTip" }}`"></a-input>
-          </a-form-item>
           <a-form-item>
             <a-alert type="info" show-icon :message="`{{ i18n "pages.inbounds.oneClick.hysteriaTip" }}`"></a-alert>
           </a-form-item>
