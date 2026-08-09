@@ -482,6 +482,26 @@ install_free_version() {
 
     install_base
     install_x-ui $1
+
+    # ============ 安装完成，自动进入【SSL 证书申请】流程（申请完才进菜单）============
+    echo ""
+    echo -e "${yellow}======================================================${plain}"
+    echo -e "${yellow}    安装完成！现在为您配置面板 SSL 证书${plain}"
+    echo -e "${yellow}    (默认选择 2 = Let's Encrypt IP 临时证书)${plain}"
+    echo -e "${yellow}======================================================${plain}"
+    local panel_port=$(${xui_folder}/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local web_base_path=$(${xui_folder}/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local server_ip=$(curl -s4m8 ip.sb -k | head -n 1)
+    prompt_and_setup_ssl "${panel_port}" "${web_base_path}" "${server_ip}"
+    # 确保面板已启动（IP 证书流程会临时停止面板释放 80 端口）
+    if [[ $release == "alpine" ]]; then
+        rc-service makex-ui start > /dev/null 2>&1
+    else
+        systemctl start makex-ui > /dev/null 2>&1
+    fi
+    echo -e "${green}SSL 证书配置流程结束，面板已就绪。${plain}"
+    echo ""
+
     echo ""
     echo -e "----------------------------------------------"
     show_vps_status
@@ -800,6 +820,15 @@ setup_ip_certificate() {
     echo -e "${green}IP 临时证书安装并配置成功！${plain}"
     echo -e "${green}证书有效期约 6 天，通过 acme.sh 定时任务自动续期。${plain}"
     echo -e "${yellow}acme.sh 将在到期前自动续期并重载 makex-ui。${plain}"
+
+    # 证书路径写入 DB 后必须重启面板才能加载新证书（否则面板继续用旧配置）
+    echo -e "${green}正在重启面板以加载证书...${plain}"
+    if [[ $release == "alpine" ]]; then
+        rc-service makex-ui restart > /dev/null 2>&1
+    else
+        systemctl restart makex-ui > /dev/null 2>&1
+    fi
+    sleep 2
     return 0
 }
 
@@ -1116,6 +1145,12 @@ prompt_and_setup_ssl() {
                 echo -e "${red}✗ IP 临时证书配置失败。请检查 80 端口是否开放。${plain}"
                 SSL_HOST="${server_ip}"
             fi
+            # 确保面板恢复运行（上述流程可能临时停止面板释放 80 端口）
+            if [[ $release == "alpine" ]]; then
+                rc-service makex-ui start > /dev/null 2>&1
+            else
+                systemctl start makex-ui > /dev/null 2>&1
+            fi
             ;;
         3)
             # User chose Custom Paths (User Provided) option
@@ -1206,19 +1241,10 @@ main_menu() {
         1)
             # 安装/更新免费版
             install_free_version
-            # 安装完成后询问是否配置 SSL
+            # SSL 证书申请已在安装流程末尾自动完成（见 install_free_version）
             echo ""
-            if [[ "$NONINTERACTIVE" == "1" ]]; then
-                ssl_after="n"
-            else
-                read -rp "$(echo -e "${green}是否立即配置 SSL 证书?${plain} [y/n]: ")" ssl_after
-            fi
-            if [[ "$ssl_after" == "y" || "$ssl_after" == "Y" ]]; then
-                local panel_port=$(${xui_folder}/makex-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
-                local web_base_path=$(${xui_folder}/makex-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-                local server_ip=$(curl -s4m8 ip.sb -k | head -n 1)
-                prompt_and_setup_ssl "${panel_port}" "${web_base_path}" "${server_ip}"
-            fi
+            echo -e "${green}SSL 证书申请已在安装过程中完成。${plain}"
+            echo -e "${yellow}如需重新配置 SSL，请运行 makex-ui 进入菜单选择 SSL 相关选项。${plain}"
             ;;
         2)
             # 配置 SSL 证书
