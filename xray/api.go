@@ -218,9 +218,6 @@ func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 		return nil, nil, common.NewError("xray api is not initialized")
 	}
 
-	trafficRegex := regexp.MustCompile(`(inbound|outbound)>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
-	clientTrafficRegex := regexp.MustCompile(`user>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -234,17 +231,27 @@ func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 		return nil, nil, err
 	}
 
+	inboundTraffics, clientTraffics := ParseTraffic(resp.GetStat())
+	return inboundTraffics, clientTraffics, nil
+}
+
+// ParseTraffic 将 stats 计数器列表解析为入站/出站流量与用户流量。
+// 计数器命名格式与 sing-box 的 v2ray_api 完全一致
+// (inbound>>>tag>>>traffic>>>uplink/downlink、user>>>email>>>traffic>>>uplink/downlink),
+// 因此 xray 与 sing-box 两套内核的统计可共用此解析。
+func ParseTraffic(stats []*statsService.Stat) ([]*Traffic, []*ClientTraffic) {
+	trafficRegex := regexp.MustCompile(`(inbound|outbound)>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
+	clientTrafficRegex := regexp.MustCompile(`user>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
 	tagTrafficMap := make(map[string]*Traffic)
 	emailTrafficMap := make(map[string]*ClientTraffic)
-
-	for _, stat := range resp.GetStat() {
+	for _, stat := range stats {
 		if matches := trafficRegex.FindStringSubmatch(stat.Name); len(matches) == 4 {
 			processTraffic(matches, stat.Value, tagTrafficMap)
 		} else if matches := clientTrafficRegex.FindStringSubmatch(stat.Name); len(matches) == 3 {
 			processClientTraffic(matches, stat.Value, emailTrafficMap)
 		}
 	}
-	return mapToSlice(tagTrafficMap), mapToSlice(emailTrafficMap), nil
+	return mapToSlice(tagTrafficMap), mapToSlice(emailTrafficMap)
 }
 
 func processTraffic(matches []string, value int64, trafficMap map[string]*Traffic) {

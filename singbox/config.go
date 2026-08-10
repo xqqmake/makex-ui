@@ -11,9 +11,10 @@ import (
 // maps by the service layer (web/service/singbox.go) because sing-box
 // inbound schemas differ per protocol (anytls/tuic/naive).
 type Config struct {
-	Log       json_util.RawMessage `json:"log"`
-	Inbounds  []map[string]any     `json:"inbounds"`
-	Outbounds json_util.RawMessage `json:"outbounds"`
+	Log          json_util.RawMessage `json:"log"`
+	Inbounds     []map[string]any     `json:"inbounds"`
+	Outbounds    json_util.RawMessage `json:"outbounds"`
+	Experimental json_util.RawMessage `json:"experimental,omitempty"`
 }
 
 // Equals reports whether two configs produce the same singbox.json.

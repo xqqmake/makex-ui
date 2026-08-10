@@ -341,6 +341,8 @@ func (s *Server) startTask() {
 		time.Sleep(time.Second * 5)
 		// Statistics every 10 seconds, start the delay for 5 seconds for the first time, and staggered with the time to restart xray
 		s.cron.AddJob("@every 10s", job.NewXrayTrafficJob())
+		// 双内核：sing-box(anytls/tuic/naive) 流量统计，与 xray 统计错开间隔
+		s.cron.AddJob("@every 10s", job.NewSingBoxTrafficJob())
 	}()
 
 	// check client ips from log file every 10 sec

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"go.uber.org/atomic"
 
@@ -15,7 +17,12 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/singbox"
+	"x-ui/xray"
 	json_util "x-ui/util/json_util"
+
+	statsService "github.com/xtls/xray-core/app/stats/command"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -85,6 +92,12 @@ func (s *SingBoxService) GetSingBoxConfig() (*singbox.Config, error) {
 	})
 	sbConfig.Outbounds = json_util.RawMessage(outboundJSON)
 
+	// 流量统计：sing-box experimental.v2ray_api 提供与 xray 兼容的
+	// StatsService，面板的 XrayTrafficJob 逻辑可复用。必须显式列出要
+	// 统计的入站 tag 和用户 email，否则 sing-box 不产生任何统计。
+	sbInboundTags := []string{}
+	sbUserEmails := []string{}
+
 	for _, inbound := range inbounds {
 		if !model.IsSingBoxProtocol(inbound.Protocol) || !inbound.Enable {
 			continue
@@ -95,9 +108,60 @@ func (s *SingBoxService) GetSingBoxConfig() (*singbox.Config, error) {
 			continue
 		}
 		sbConfig.Inbounds = append(sbConfig.Inbounds, sbInbound)
+		sbInboundTags = append(sbInboundTags, inbound.Tag)
+		sbUserEmails = append(sbUserEmails, s.collectUserEmails(inbound)...)
+	}
+
+	// 注入 experimental.v2ray_api 统计配置（端口固定，与 xray api 端口错开）。
+	if len(sbInboundTags) > 0 {
+		expJSON, _ := json.Marshal(map[string]any{
+			"v2ray_api": map[string]any{
+				"listen": "127.0.0.1:62788",
+				"stats": map[string]any{
+					"enabled":  true,
+					"inbounds": sbInboundTags,
+					"users":    sbUserEmails,
+				},
+			},
+		})
+		sbConfig.Experimental = json_util.RawMessage(expJSON)
 	}
 
 	return sbConfig, nil
+}
+
+// SingBoxStatsAPIPort is the fixed listen port for sing-box's
+// experimental.v2ray_api stats service (injected in GetSingBoxConfig).
+// Deliberately different from the xray api port (62789) to avoid clashes.
+const SingBoxStatsAPIPort = 62788
+
+// GetSingBoxTraffic queries traffic counters from the running sing-box
+// process via its experimental.v2ray_api StatsService. sing-box's gRPC
+// service name is the legacy proto package "v2ray.core.app.stats.command.
+// StatsService", whereas the panel's xray-core (v1.260327.0) client uses
+// "xray.app.stats.command.StatsService" — the wire format is identical
+// (same field numbers), so we invoke the legacy service name directly.
+// Returns per-inbound and per-user (email) counters.
+func (s *SingBoxService) GetSingBoxTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
+	if !s.IsSingBoxRunning() {
+		return nil, nil, errors.New("sing-box is not running")
+	}
+	conn, err := grpc.NewClient("127.0.0.1:62788", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Debug("Failed to connect sing-box stats API:", err)
+		return nil, nil, err
+	}
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req := &statsService.QueryStatsRequest{Reset_: true}
+	resp := new(statsService.QueryStatsResponse)
+	if err := conn.Invoke(ctx, "/v2ray.core.app.stats.command.StatsService/QueryStats", req, resp); err != nil {
+		logger.Debug("Failed to query sing-box stats:", err)
+		return nil, nil, err
+	}
+	inboundTraffics, clientTraffics := xray.ParseTraffic(resp.GetStat())
+	return inboundTraffics, clientTraffics, nil
 }
 
 // buildSingBoxInbound converts one q-ui inbound row into a sing-box
@@ -211,6 +275,45 @@ func (s *SingBoxService) buildSingBoxUsers(inbound *model.Inbound) ([]map[string
 		}
 	}
 	return users, nil
+}
+
+// collectUserEmails returns the emails (sing-box user name fields) of all
+// active clients of a sing-box inbound. These names are what sing-box's
+// v2ray_api stats reports as `user>>>{name}>>>traffic>>>...`, matching the
+// panel's client traffic rows keyed by email.
+func (s *SingBoxService) collectUserEmails(inbound *model.Inbound) []string {
+	var settings map[string]any
+	if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+		return nil
+	}
+	rawClients, ok := settings["clients"].([]any)
+	if !ok {
+		return nil
+	}
+	disabledByStat := map[string]bool{}
+	for _, stat := range inbound.ClientStats {
+		if !stat.Enable {
+			disabledByStat[stat.Email] = true
+		}
+	}
+	emails := []string{}
+	seen := map[string]bool{}
+	for _, raw := range rawClients {
+		c, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if en, ok := c["enable"].(bool); ok && !en {
+			continue
+		}
+		email, _ := c["email"].(string)
+		if email == "" || disabledByStat[email] || seen[email] {
+			continue
+		}
+		seen[email] = true
+		emails = append(emails, email)
+	}
+	return emails
 }
 
 // buildSingBoxTLS builds the sing-box tls block from streamSettings.
