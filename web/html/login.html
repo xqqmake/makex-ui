@@ -1,5 +1,34 @@
 {{ template "page/head_start" .}}
 <style>
+  /* 动态网络背景：深色底 + 粒子连线网络（网络元素风） */
+  body {
+    background: linear-gradient(-45deg, #0b1e3a, #12294f, #0e2a3a, #1a2a6c, #0b1e3a, #143a54);
+    background-size: 400% 400%;
+    animation: gradientBG 18s ease infinite;
+  }
+
+  @keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  #net-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .85;
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+  }
+
   html * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -448,6 +477,7 @@
 {{ template "page/head_end" .}}
 
 {{ template "page/body_start" .}}
+<canvas id="net-bg"></canvas>
 <a-layout id="app" v-cloak :class="themeSwitcher.currentTheme">
   <transition name="list" appear>
     <a-layout-content class="under" :style="{ minHeight: '0' }">
@@ -640,5 +670,75 @@
       newWord.classList.add('is-visible');
     }
   });
+</script>
+<script>
+    /* === 动态网络背景：粒子连线动画（网络元素风） === */
+    (function () {
+        var canvas = document.getElementById('net-bg');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var W = 0, H = 0, particles = [];
+        var COUNT = 55, LINK = 130;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+
+        function spawn() {
+            particles = [];
+            for (var i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: (Math.random() - 0.5) * 0.6
+                });
+            }
+        }
+
+        function frame() {
+            ctx.clearRect(0, 0, W, H);
+            var i, j, p, q, dx, dy, d, a;
+            for (i = 0; i < COUNT; i++) {
+                p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0 || p.x > W) p.vx *= -1;
+                if (p.y < 0 || p.y > H) p.vy *= -1;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 229, 255, .9)';
+                ctx.fill();
+            }
+            for (i = 0; i < COUNT; i++) {
+                p = particles[i];
+                for (j = i + 1; j < COUNT; j++) {
+                    q = particles[j];
+                    dx = p.x - q.x;
+                    dy = p.y - q.y;
+                    d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < LINK) {
+                        a = (1 - d / LINK) * 0.55;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(q.x, q.y);
+                        ctx.strokeStyle = 'rgba(0, 229, 255, ' + a + ')';
+                        ctx.lineWidth = 0.7;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(frame);
+        }
+
+        resize();
+        spawn();
+        frame();
+        window.addEventListener('resize', function () {
+            resize();
+            spawn();
+        });
+    })();
 </script>
 {{ template "page/body_end" .}}

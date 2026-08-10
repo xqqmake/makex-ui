@@ -615,7 +615,7 @@
 "report" = "🕰 Relatórios agendados: {{ .RunTime }}\r\n"
 "datetime" = "⏰ Data&Hora: {{ .DateTime }}\r\n"
 "hostname" = "💻 Host: {{ .Hostname }}\r\n"
-"version" = "🚀 Versão X-Panel: {{ .Version }}\r\n"
+"version" = "🚀 Versão MakeX-ui: {{ .Version }}\r\n"
 "xrayVersion" = "📡 Versão Xray: {{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6: {{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4: {{ .IPv4 }}\r\n"

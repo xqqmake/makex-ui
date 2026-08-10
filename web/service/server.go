@@ -67,6 +67,11 @@ type Status struct {
 		ErrorMsg string       `json:"errorMsg"`
 		Version  string       `json:"version"`
 	} `json:"xray"`
+	SingBox struct {
+		State    ProcessState `json:"state"`
+		ErrorMsg string       `json:"errorMsg"`
+		Version  string       `json:"version"`
+	} `json:"singbox"`
 	Uptime   uint64    `json:"uptime"`
 	Loads    []float64 `json:"loads"`
 	TcpCount int       `json:"tcpCount"`
@@ -98,14 +103,30 @@ type ServerService struct {
 	xrayService    XrayService
 	inboundService InboundService
 	tgService      TelegramService
+	singboxService SingBoxService
 	cachedIPv4     string
 	cachedIPv6     string
 	noIPv6         bool
 }
 
+// 【新增方法】: 用于从外部注入 SingBoxService 实例
+func (s *ServerService) SetSingBoxService(sbService SingBoxService) {
+	s.singboxService = sbService
+}
+
 // 【新增方法】: 用于从外部注入 TelegramService 实例
 func (s *ServerService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
+}
+
+// StopSingBoxService 转发: 停止 sing-box 内核
+func (s *ServerService) StopSingBoxService() error {
+	return s.singboxService.StopSingBox()
+}
+
+// RestartSingBoxService 转发: 重启 sing-box 内核
+func (s *ServerService) RestartSingBoxService() error {
+	return s.singboxService.RestartSingBox(true)
 }
 
 func getPublicIP(url string) string {
@@ -300,6 +321,21 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
 	}
 	status.Xray.Version = s.xrayService.GetXrayVersion()
+
+	// sing-box 状态（双内核）
+	if s.singboxService.IsSingBoxRunning() {
+		status.SingBox.State = Running
+		status.SingBox.ErrorMsg = ""
+	} else {
+		err := s.singboxService.GetSingBoxErr()
+		if err != nil {
+			status.SingBox.State = Error
+		} else {
+			status.SingBox.State = Stop
+		}
+		status.SingBox.ErrorMsg = s.singboxService.GetSingBoxResult()
+	}
+	status.SingBox.Version = s.singboxService.GetSingBoxVersion()
 
 	// Application stats
 	var rtm runtime.MemStats

@@ -53,6 +53,8 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 
 	g.POST("/stopXrayService", a.stopXrayService)
 	g.POST("/restartXrayService", a.restartXrayService)
+	g.POST("/stopSingBoxService", a.stopSingBoxService)
+	g.POST("/restartSingBoxService", a.restartSingBoxService)
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
@@ -131,6 +133,25 @@ func (a *ServerController) stopXrayService(c *gin.Context) {
 
 func (a *ServerController) restartXrayService(c *gin.Context) {
 	err := a.serverService.RestartXrayService()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.xray.restartError"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.xray.restartSuccess"), err)
+}
+
+func (a *ServerController) stopSingBoxService(c *gin.Context) {
+	a.lastGetStatusTime = time.Now()
+	err := a.serverService.StopSingBoxService()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.xray.stopError"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.xray.stopSuccess"), err)
+}
+
+func (a *ServerController) restartSingBoxService(c *gin.Context) {
+	err := a.serverService.RestartSingBoxService()
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.xray.restartError"), err)
 		return

@@ -1,17 +1,34 @@
 {{ template "page/head_start" .}}
 <style id="cool-theme-styles">
 
-    /* 【通用】动态流光背景，作为所有主题的底色，增加炫酷感 */
+    /* 【通用】动态网络背景：深色底 + 粒子连线网络（网络元素风） */
     body {
-        background: linear-gradient(-45deg, #EB5C20, #ABA0D9, #23a6d5, #23d5ab, #F0C9CF, #A9CD71, #00ffff);
+        background: linear-gradient(-45deg, #0b1e3a, #12294f, #0e2a3a, #1a2a6c, #0b1e3a, #143a54);
         background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
+        animation: gradientBG 18s ease infinite;
     }
 
     @keyframes gradientBG {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
+    }
+
+    /* 网络粒子画布：固定铺满，位于内容之下 */
+    #net-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+        opacity: .85;
+    }
+
+    #app {
+        position: relative;
+        z-index: 1;
     }
 
     /* 【通用】让内容区透明，以透出动态背景 */
@@ -385,6 +402,7 @@
 {{ template "page/head_end" .}}
 
 {{ template "page/body_start" .}}
+<canvas id="net-bg"></canvas>
 <a-layout id="app" v-cloak :class="themeSwitcher.currentTheme">
 	<a-sidebar></a-sidebar>
 	<a-layout id="content-layout">
@@ -506,9 +524,40 @@
 												<a-icon type="tool"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.xraySwitch" }}</span>
 											</a-space>
 										</template>
-									</a-card>
+										</a-card>
 
-									<a-card title='{{ i18n "menu.link" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+										<a-card title='{{ i18n "pages.index.singboxStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+										<template #extra>
+											<template v-if="status.singbox.state != 'error'">
+												<a-badge status="processing" class="running-animation" :text="status.singbox.stateMsg" :color="status.singbox.color"/>
+											</template>
+											<template v-else>
+												<a-popover :overlay-class-name="themeSwitcher.currentTheme">
+													<span slot="title">
+														<a-row type="flex" align="middle" justify="space-between">
+															<a-col><span>{{ i18n "pages.index.xrayErrorPopoverTitle" }}</span></a-col>
+															<a-col><a-icon type="bars" :style="{ cursor: 'pointer', float: 'right' }" @click="openLogs()"></a-icon></a-col>
+														</a-row>
+													</span>
+													<template slot="content">
+														<span :style="{ maxWidth: '400px' }" v-for="line in status.singbox.errorMsg.split('\n')">[[ line ]]</span>
+													</template>
+													<a-badge :text="status.singbox.stateMsg" :color="status.singbox.color"/>
+												</a-popover>
+											</template>
+										</template>
+										<a-tag v-if="status.singbox.version != 'Unknown'" color="green">v[[ status.singbox.version ]]</a-tag>
+										<template #actions>
+											<a-space direction="horizontal" @click="stopSingBoxService" :style="{ justifyContent: 'center' }">
+												<a-icon type="poweroff"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.stopSingbox" }}</span>
+											</a-space>
+											<a-space direction="horizontal" @click="restartSingBoxService" :style="{ justifyContent: 'center' }">
+												<a-icon type="reload"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.restartSingbox" }}</span>
+											</a-space>
+										</template>
+										</a-card>
+
+										<a-card title='{{ i18n "menu.link" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<template #actions>
 											<a-space direction="horizontal" @click="openLogs()" :style="{ justifyContent: 'center' }">
 												<a-icon type="bars"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.logs" }}</span>
@@ -913,6 +962,7 @@
             this.appStats = {threads: 0, mem: 0, uptime: 0};
 
             this.xray = { state: 'stop', stateMsg: "", errorMsg: "", version: "", color: "" };
+            this.singbox = { state: 'stop', stateMsg: "", errorMsg: "", version: "", color: "" };
 
             if (data == null) {
               return;
@@ -951,6 +1001,25 @@
                 default:
                     this.xray.color = "gray";
                     this.xray.stateMsg = '{{ i18n "pages.index.xrayStatusUnknown" }}';
+                    break;
+            }
+            this.singbox = data.singbox;
+            switch (this.singbox.state) {
+                case 'running':
+                    this.singbox.color = "green";
+                    this.singbox.stateMsg = '{{ i18n "pages.index.singboxStatusRunning" }}';
+                    break;
+                case 'stop':
+                    this.singbox.color = "orange";
+                    this.singbox.stateMsg = '{{ i18n "pages.index.singboxStatusStop" }}';
+                    break;
+                case 'error':
+                    this.singbox.color = "red";
+                    this.singbox.stateMsg = '{{ i18n "pages.index.singboxStatusError" }}';
+                    break;
+                default:
+                    this.singbox.color = "gray";
+                    this.singbox.stateMsg = '{{ i18n "pages.index.singboxStatusUnknown" }}';
                     break;
             }
         }
@@ -1193,6 +1262,22 @@ ${dateTime}
                     return;
                 }
             },
+            async stopSingBoxService() {
+                this.loading(true);
+                const msg = await HttpUtil.post('/panel/api/server/stopSingBoxService');
+                this.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+            },
+            async restartSingBoxService() {
+                this.loading(true);
+                const msg = await HttpUtil.post('/panel/api/server/restartSingBoxService');
+                this.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+            },
             async openLogs(){
                 logModal.loading = true;
                 const msg = await HttpUtil.post('/panel/api/server/logs/'+logModal.rows,{level: logModal.level, syslog: logModal.syslog});
@@ -1322,5 +1407,75 @@ ${dateTime}
             }
         },
     });
+</script>
+<script>
+    /* === 动态网络背景：粒子连线动画（网络元素风） === */
+    (function () {
+        var canvas = document.getElementById('net-bg');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var W = 0, H = 0, particles = [];
+        var COUNT = 55, LINK = 130;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+
+        function spawn() {
+            particles = [];
+            for (var i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: (Math.random() - 0.5) * 0.6
+                });
+            }
+        }
+
+        function frame() {
+            ctx.clearRect(0, 0, W, H);
+            var i, j, p, q, dx, dy, d, a;
+            for (i = 0; i < COUNT; i++) {
+                p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0 || p.x > W) p.vx *= -1;
+                if (p.y < 0 || p.y > H) p.vy *= -1;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 229, 255, .9)';
+                ctx.fill();
+            }
+            for (i = 0; i < COUNT; i++) {
+                p = particles[i];
+                for (j = i + 1; j < COUNT; j++) {
+                    q = particles[j];
+                    dx = p.x - q.x;
+                    dy = p.y - q.y;
+                    d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < LINK) {
+                        a = (1 - d / LINK) * 0.55;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(q.x, q.y);
+                        ctx.strokeStyle = 'rgba(0, 229, 255, ' + a + ')';
+                        ctx.lineWidth = 0.7;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(frame);
+        }
+
+        resize();
+        spawn();
+        frame();
+        window.addEventListener('resize', function () {
+            resize();
+            spawn();
+        });
+    })();
 </script>
 {{ template "page/body_end" .}}

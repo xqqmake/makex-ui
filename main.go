@@ -88,6 +88,8 @@ func runWebServer() {
 	serverService.SetTelegramService(tgBotService)
 	//    同理，也为 InboundService 注入
 	inboundService.SetTelegramService(tgBotService)
+	//    注入 SingBoxService（面板启动时 web.NewServer 内部会用它拉起 sing-box 双内核）
+	serverService.SetSingBoxService(service.SingBoxService{})
 	
 	var server *web.Server
 	
