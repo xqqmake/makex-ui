@@ -365,6 +365,14 @@ install_free_version() {
         fi
         chmod +x makex-ui bin/xray-linux-$(arch)
 
+        # sing-box 二进制(anytls/tuic/naive 协议依赖)
+        if [[ -f bin/sing-box-linux-$(arch) ]]; then
+            chmod +x bin/sing-box-linux-$(arch)
+        fi
+        if [[ -f bin/sing-box-linux-arm ]]; then
+            chmod +x bin/sing-box-linux-arm
+        fi
+
         # Update makex-ui cli and se set permission
         mv -f /usr/bin/makex-ui-temp /usr/bin/makex-ui
         chmod +x /usr/bin/makex-ui

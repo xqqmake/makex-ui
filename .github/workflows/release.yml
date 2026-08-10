@@ -130,6 +130,25 @@ jobs:
           wget -q -O geoip_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat
           wget -q -O geosite_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat
           mv xray xray-linux-${{ matrix.platform }}
+          # 下载 sing-box(anytls/tuic/naive 协议依赖, sing-box 1.13.18)
+          SING_BOX_VERSION="v1.13.18"
+          case "${{ matrix.platform }}" in
+            armv5|s390x) SING_BOX_ARCH="" ;;  # 官方无对应资产,跳过
+            *) SING_BOX_ARCH="${{ matrix.platform }}" ;;
+          esac
+          if [ -n "$SING_BOX_ARCH" ]; then
+            wget -q https://github.com/SAGANetwork/sing-box/releases/download/${SING_BOX_VERSION}/sing-box-1.13.18-linux-${SING_BOX_ARCH}.tar.gz
+            tar zxf sing-box-1.13.18-linux-${SING_BOX_ARCH}.tar.gz
+            # Go 的 arm 架构 GOARCH=arm → 二进制名必须为 sing-box-linux-arm
+            if [ "${{ matrix.platform }}" == "armv7" ] || [ "${{ matrix.platform }}" == "armv6" ]; then
+              mv sing-box-*/sing-box sing-box-linux-arm
+            else
+              mv sing-box-*/sing-box sing-box-linux-${{ matrix.platform }}
+            fi
+            chmod +x sing-box-linux-*
+            rm -f sing-box-1.13.18-linux-${SING_BOX_ARCH}.tar.gz
+            rm -rf sing-box-*/
+          fi
           cd ../..
 
       - name: Package

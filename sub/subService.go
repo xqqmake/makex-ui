@@ -112,7 +112,7 @@ func (s *SubService) getInboundsBySubId(subId string) ([]*model.Inbound, error) 
 		FROM inbounds,
 			JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client 
 		WHERE
-			protocol in ('vmess','vless','trojan','shadowsocks')
+			protocol in ('vmess','vless','trojan','shadowsocks','anytls','tuic','naive')
 			AND JSON_EXTRACT(client.value, '$.subId') = ? AND enable = ?
 	)`, subId, true).Find(&inbounds).Error
 	if err != nil {
@@ -165,9 +165,187 @@ func (s *SubService) getLink(inbound *model.Inbound, email string) string {
 		return s.genShadowsocksLink(inbound, email)
 	case "hysteria", "hysteria2":
 		return s.genHysteriaLink(inbound, email)
+	case "anytls":
+		return s.genAnyTLSLink(inbound, email)
+	case "tuic":
+		return s.genTuicLink(inbound, email)
+	case "naive":
+		return s.genNaiveLink(inbound, email)
 	}
 	return ""
 }
+
+func (s *SubService) genAnyTLSLink(inbound *model.Inbound, email string) string {
+	if inbound.Protocol != model.AnyTLS {
+		return ""
+	}
+	address := s.address
+	var stream map[string]any
+	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	clients, _ := s.inboundService.GetClients(inbound)
+	clientIndex := -1
+	for i, client := range clients {
+		if client.Email == email {
+			clientIndex = i
+			break
+		}
+	}
+	if clientIndex == -1 || len(clients) == 0 {
+		return ""
+	}
+	password := clients[clientIndex].Password
+	params := make(map[string]string)
+
+	security, _ := stream["security"].(string)
+	if security == "reality" {
+		params["security"] = "reality"
+		reality, _ := stream["realitySettings"].(map[string]any)
+		if reality != nil {
+			if pbk, ok := searchKey(reality, "publicKey"); ok {
+				params["pbk"], _ = pbk.(string)
+			}
+			if fp, ok := searchKey(reality, "fingerprint"); ok {
+				params["fp"], _ = fp.(string)
+			}
+			if sni, ok := searchKey(reality, "serverNames"); ok {
+				names, _ := sni.(string)
+				params["sni"] = strings.Split(names, ",")[0]
+			}
+			if sid, ok := searchKey(reality, "shortIds"); ok {
+				ids, _ := sid.(string)
+				params["sid"] = strings.Split(ids, ",")[0]
+			}
+			if spx, ok := searchKey(reality, "spiderX"); ok {
+				params["spx"], _ = spx.(string)
+			}
+		}
+	} else if security == "tls" {
+		params["security"] = "tls"
+		tlsSetting, _ := stream["tlsSettings"].(map[string]any)
+		if tlsSetting != nil {
+			alpns, _ := tlsSetting["alpn"].([]any)
+			var alpn []string
+			for _, a := range alpns {
+				if s, ok := a.(string); ok {
+					alpn = append(alpn, s)
+				}
+			}
+			if len(alpn) > 0 {
+				params["alpn"] = strings.Join(alpn, ",")
+			}
+			if sniValue, ok := searchKey(tlsSetting, "serverName"); ok {
+				params["sni"], _ = sniValue.(string)
+			}
+			tlsSettingsVal, _ := searchKey(tlsSetting, "settings")
+			if fpValue, ok := searchKey(tlsSettingsVal, "fingerprint"); ok {
+				params["fp"], _ = fpValue.(string)
+			}
+		}
+	} else {
+		params["security"] = "none"
+	}
+
+	link := fmt.Sprintf("anytls://%s@%s:%d", password, address, inbound.Port)
+	u, _ := url.Parse(link)
+	q := u.Query()
+	for k, v := range params {
+		q.Set(k, v)
+	}
+	u.RawQuery = q.Encode()
+	u.Fragment = s.genRemark(inbound, email, "")
+	return u.String()
+}
+
+func (s *SubService) genTuicLink(inbound *model.Inbound, email string) string {
+	if inbound.Protocol != model.Tuic {
+		return ""
+	}
+	address := s.address
+	var stream map[string]any
+	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	clients, _ := s.inboundService.GetClients(inbound)
+	clientIndex := -1
+	for i, client := range clients {
+		if client.Email == email {
+			clientIndex = i
+			break
+		}
+	}
+	if clientIndex == -1 || len(clients) == 0 {
+		return ""
+	}
+	client := clients[clientIndex]
+	params := make(map[string]string)
+
+	var settings map[string]any
+	json.Unmarshal([]byte(inbound.Settings), &settings)
+	if cc, ok := settings["congestionControl"].(string); ok && cc != "" {
+		params["congestion_control"] = cc
+	} else {
+		params["congestion_control"] = "bbr"
+	}
+	if urm, ok := settings["udpRelayMode"].(string); ok && urm != "" {
+		params["udp_relay_mode"] = urm
+	} else {
+		params["udp_relay_mode"] = "native"
+	}
+
+	params["security"] = "tls"
+	tlsSetting, _ := stream["tlsSettings"].(map[string]any)
+	if tlsSetting != nil {
+		alpns, _ := tlsSetting["alpn"].([]any)
+		var alpn []string
+		for _, a := range alpns {
+			if s, ok := a.(string); ok {
+				alpn = append(alpn, s)
+			}
+		}
+		if len(alpn) > 0 {
+			params["alpn"] = strings.Join(alpn, ",")
+		}
+		if sniValue, ok := searchKey(tlsSetting, "serverName"); ok {
+			params["sni"], _ = sniValue.(string)
+		}
+		tlsSettingsVal, _ := searchKey(tlsSetting, "settings")
+		if fpValue, ok := searchKey(tlsSettingsVal, "fingerprint"); ok {
+			params["fp"], _ = fpValue.(string)
+		}
+	}
+
+	link := fmt.Sprintf("tuic://%s:%s@%s:%d", client.ID, client.Password, address, inbound.Port)
+	u, _ := url.Parse(link)
+	q := u.Query()
+	for k, v := range params {
+		q.Set(k, v)
+	}
+	u.RawQuery = q.Encode()
+	u.Fragment = s.genRemark(inbound, email, "")
+	return u.String()
+}
+
+func (s *SubService) genNaiveLink(inbound *model.Inbound, email string) string {
+	if inbound.Protocol != model.Naive {
+		return ""
+	}
+	address := s.address
+	clients, _ := s.inboundService.GetClients(inbound)
+	clientIndex := -1
+	for i, client := range clients {
+		if client.Email == email {
+			clientIndex = i
+			break
+		}
+	}
+	if clientIndex == -1 || len(clients) == 0 {
+		return ""
+	}
+	client := clients[clientIndex]
+	link := fmt.Sprintf("naive://%s:%s@%s:%d?encryption=none", client.Username, client.Password, address, inbound.Port)
+	u, _ := url.Parse(link)
+	u.Fragment = s.genRemark(inbound, email, "")
+	return u.String()
+}
+
 
 func (s *SubService) genVmessLink(inbound *model.Inbound, email string) string {
 	if inbound.Protocol != model.VMESS {

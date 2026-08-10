@@ -150,6 +150,21 @@
     {{template "form/hysteria"}}
 </template>
 
+<!-- anytls (sing-box) -->
+<template v-if="inbound.protocol === Protocols.ANYTLS">
+    {{template "form/anytls"}}
+</template>
+
+<!-- tuic (sing-box) -->
+<template v-if="inbound.protocol === Protocols.TUIC">
+    {{template "form/tuic"}}
+</template>
+
+<!-- naive (sing-box) -->
+<template v-if="inbound.protocol === Protocols.NAIVE">
+    {{template "form/naive"}}
+</template>
+
 <!-- stream settings -->
 <template v-if="inbound.canEnableStream()">
     {{template "form/streamSettings"}}

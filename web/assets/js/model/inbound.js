@@ -8,6 +8,9 @@ const Protocols = {
     SOCKS: 'socks',
     HTTP: 'http',
     WIREGUARD: 'wireguard',
+    ANYTLS: 'anytls',
+    TUIC: 'tuic',
+    NAIVE: 'naive',
 };
 
 const SSMethods = {
@@ -1104,6 +1107,8 @@ class StreamSettings extends XrayCommonClass {
         this.hysteria = hysteria;
         this.finalmask = finalmask;
         this.sockopt = sockopt;
+        // Argo 隧道开关(仅 vmess/vless + ws 传输有意义)
+        this.argo = { enabled: false };
     }
 
     addUdpMask(type = 'salamander') {
@@ -1154,7 +1159,7 @@ class StreamSettings extends XrayCommonClass {
     }
 
     static fromJson(json = {}) {
-        return new StreamSettings(
+        const newStream = new StreamSettings(
             json.network,
             json.security,
             json.externalProxy,
@@ -1170,6 +1175,11 @@ class StreamSettings extends XrayCommonClass {
             FinalMaskStreamSettings.fromJson(json.finalmask),
             SockoptStreamSettings.fromJson(json.sockopt),
         );
+        // Argo 隧道开关(仅 vmess/vless + ws 传输有意义)
+        if (json.argo && json.argo.enabled) {
+            newStream.argo = { enabled: true };
+        }
+        return newStream;
     }
 
     toJson() {
@@ -1189,6 +1199,7 @@ class StreamSettings extends XrayCommonClass {
             hysteria: network === 'hysteria' ? this.hysteria.toJson() : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
+            argo: this.argo && this.argo.enabled ? { enabled: true } : undefined,
         };
     }
 }
@@ -1254,6 +1265,9 @@ class Inbound extends XrayCommonClass {
             case Protocols.TROJAN: return this.settings.trojans;
             case Protocols.SHADOWSOCKS: return this.isSSMultiUser ? this.settings.shadowsockses : null;
             case Protocols.HYSTERIA: return this.settings.clients;
+            case Protocols.ANYTLS: return this.settings.clients;
+            case Protocols.TUIC: return this.settings.clients;
+            case Protocols.NAIVE: return this.settings.clients;
             default: return null;
         }
     }
@@ -1267,6 +1281,10 @@ class Inbound extends XrayCommonClass {
         this.settings = Inbound.Settings.getSettings(protocol);
         if (protocol === Protocols.TROJAN) {
             this.tls = false;
+        }
+        // sing-box 的 tuic/naive 强制 TLS（与 vless 创建条件一致）
+        if (protocol === Protocols.TUIC || protocol === Protocols.NAIVE) {
+            this.stream.security = 'tls';
         }
     }
 
@@ -1388,7 +1406,12 @@ class Inbound extends XrayCommonClass {
         return exp > 0 ? exp < new Date().getTime() : false;
     }
 
+    isSingBoxProtocol() {
+        return [Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE].includes(this.protocol);
+    }
+
     canEnableTls() {
+        if (this.isSingBoxProtocol()) return true; // sing-box 协议必须 TLS（anytls 可用 reality）
         if (![Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS, Protocols.HYSTERIA].includes(this.protocol)) return false;
         return ["tcp", "ws", "http", "grpc", "httpupgrade", "xhttp", "hysteria"].includes(this.network);
     }
@@ -1402,11 +1425,13 @@ class Inbound extends XrayCommonClass {
     }
 
     canEnableReality() {
+        if (this.protocol === Protocols.ANYTLS) return true; // anytls 支持 Any-Reality
         if (![Protocols.VLESS, Protocols.TROJAN].includes(this.protocol)) return false;
         return ["tcp", "http", "grpc", "xhttp"].includes(this.network);
     }
 
     canEnableStream() {
+        if (this.isSingBoxProtocol()) return true; // 与 vless 一致，展示传输/TLS 设置区
         return [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS, Protocols.HYSTERIA].includes(this.protocol);
     }
 
@@ -1804,6 +1829,82 @@ class Inbound extends XrayCommonClass {
         return url.toString();
     }
 
+    genAnyTLSLink(address = '', port = this.port, forceTls, remark = '', clientPassword) {
+        const security = forceTls == 'same' ? this.stream.security : forceTls;
+        const params = new Map();
+        if (security === 'reality') {
+            const reality = this.stream.reality;
+            params.set("security", "reality");
+            params.set("pbk", reality.settings.publicKey);
+            params.set("fp", reality.settings.fingerprint);
+            if (!ObjectUtil.isArrEmpty(reality.serverNames)) {
+                params.set("sni", reality.serverNames.split(",")[0]);
+            }
+            if (reality.shortIds && reality.shortIds.length > 0) {
+                params.set("sid", reality.shortIds.split(",")[0]);
+            }
+            if (!ObjectUtil.isEmpty(reality.settings.spiderX)) {
+                params.set("spx", reality.settings.spiderX);
+            }
+        } else if (security === 'tls') {
+            params.set("security", "tls");
+            if (this.stream.isTls) {
+                params.set("fp", this.stream.tls.settings.fingerprint);
+                if (!ObjectUtil.isArrEmpty(this.stream.tls.alpn)) {
+                    params.set("alpn", this.stream.tls.alpn.join(","));
+                }
+                if (!ObjectUtil.isEmpty(this.stream.tls.sni)) {
+                    params.set("sni", this.stream.tls.sni);
+                }
+            }
+        } else {
+            params.set("security", "none");
+        }
+        const link = `anytls://${clientPassword}@${address}:${port}`;
+        const url = new URL(link);
+        for (const [key, value] of params) {
+            url.searchParams.set(key, value);
+        }
+        url.hash = encodeURIComponent(remark);
+        return url.toString();
+    }
+
+    genTuicLink(address = '', port = this.port, forceTls, remark = '', clientId, clientPassword) {
+        const params = new Map();
+        params.set("congestion_control", this.settings.congestionControl || 'bbr');
+        params.set("udp_relay_mode", this.settings.udpRelayMode || 'native');
+        if (this.stream.isTls) {
+            if (!ObjectUtil.isArrEmpty(this.stream.tls.alpn)) {
+                params.set("alpn", this.stream.tls.alpn.join(","));
+            }
+            if (!ObjectUtil.isEmpty(this.stream.tls.sni)) {
+                params.set("sni", this.stream.tls.sni);
+            }
+            if (this.stream.tls.settings.fingerprint) {
+                params.set("fp", this.stream.tls.settings.fingerprint);
+            }
+        }
+        const link = `tuic://${clientId}:${clientPassword}@${address}:${port}`;
+        const url = new URL(link);
+        for (const [key, value] of params) {
+            url.searchParams.set(key, value);
+        }
+        url.hash = encodeURIComponent(remark);
+        return url.toString();
+    }
+
+    genNaiveLink(address = '', port = this.port, forceTls, remark = '', clientUsername, clientPassword) {
+        const params = new Map();
+        params.set("encryption", "none");
+        const link = `naive://${clientUsername}:${clientPassword}@${address}:${port}`;
+        const url = new URL(link);
+        for (const [key, value] of params) {
+            url.searchParams.set(key, value);
+        }
+        url.hash = encodeURIComponent(remark);
+        return url.toString();
+    }
+
     genLink(address = '', port = this.port, forceTls = 'same', remark = '', client) {
         switch (this.protocol) {
             case Protocols.VMESS:
@@ -1816,6 +1917,12 @@ class Inbound extends XrayCommonClass {
                 return this.genTrojanLink(address, port, forceTls, remark, client.password);
             case Protocols.HYSTERIA:
                 return this.genHysteriaLink(address, port, forceTls, remark, client.auth);
+            case Protocols.ANYTLS:
+                return this.genAnyTLSLink(address, port, forceTls, remark, client.password);
+            case Protocols.TUIC:
+                return this.genTuicLink(address, port, forceTls, remark, client.id, client.password);
+            case Protocols.NAIVE:
+                return this.genNaiveLink(address, port, forceTls, remark, client.username, client.password);
             default: return '';
         }
     }
@@ -1922,6 +2029,9 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.HTTP: return new Inbound.HttpSettings(protocol);
             case Protocols.WIREGUARD: return new Inbound.WireguardSettings(protocol);
             case Protocols.HYSTERIA: return new Inbound.HysteriaSettings(protocol);
+            case Protocols.ANYTLS: return new Inbound.AnyTLSSettings(protocol);
+            case Protocols.TUIC: return new Inbound.TuicSettings(protocol);
+            case Protocols.NAIVE: return new Inbound.NaiveSettings(protocol);
             default: return null;
         }
     }
@@ -1937,6 +2047,9 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.HTTP: return Inbound.HttpSettings.fromJson(json);
             case Protocols.WIREGUARD: return Inbound.WireguardSettings.fromJson(json);
             case Protocols.HYSTERIA: return Inbound.HysteriaSettings.fromJson(json);
+            case Protocols.ANYTLS: return Inbound.AnyTLSSettings.fromJson(json);
+            case Protocols.TUIC: return Inbound.TuicSettings.fromJson(json);
+            case Protocols.NAIVE: return Inbound.NaiveSettings.fromJson(json);
             default: return null;
         }
     }
@@ -2125,6 +2238,205 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.totalGB = NumberFormatter.toFixed(gb * SizeFormatter.ONE_GB, 0);
     }
 
+};
+
+Inbound.AnyTLSSettings = class extends Inbound.Settings {
+    constructor(protocol, clients = [new Inbound.AnyTLSSettings.Client()], paddingScheme = '') {
+        super(protocol);
+        this.clients = clients;
+        this.paddingScheme = paddingScheme;
+    }
+
+    static fromJson(json = {}) {
+        const clients = Array.isArray(json.clients) && json.clients.length > 0
+            ? json.clients.map(client => Inbound.AnyTLSSettings.Client.fromJson(client))
+            : [new Inbound.AnyTLSSettings.Client()];
+        return new Inbound.AnyTLSSettings(
+            Protocols.ANYTLS,
+            clients,
+            json.paddingScheme || '',
+        );
+    }
+
+    toJson() {
+        const json = {
+            clients: Inbound.AnyTLSSettings.toJsonArray(this.clients),
+        };
+        if (this.paddingScheme) {
+            json.paddingScheme = this.paddingScheme;
+        }
+        return json;
+    }
+};
+
+Inbound.AnyTLSSettings.Client = class extends XrayCommonClass {
+    constructor(password = RandomUtil.randomSeq(16), email = RandomUtil.randomLowerAndNum(8), enable = true) {
+        super();
+        this.password = password;
+        this.email = email;
+        this.enable = enable;
+    }
+
+    refreshPassword() {
+        this.password = RandomUtil.randomSeq(16);
+    }
+
+    refreshEmail() {
+        this.email = RandomUtil.randomLowerAndNum(8);
+    }
+
+    toJson() {
+        return {
+            password: this.password,
+            email: this.email,
+            enable: this.enable,
+        };
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.AnyTLSSettings.Client(
+            json.password,
+            json.email,
+            ObjectUtil.isEmpty(json.enable) ? true : json.enable,
+        );
+    }
+};
+
+Inbound.TuicSettings = class extends Inbound.Settings {
+    constructor(protocol, clients = [new Inbound.TuicSettings.Client()], congestionControl = 'bbr', udpRelayMode = 'native') {
+        super(protocol);
+        this.clients = clients;
+        this.congestionControl = congestionControl;
+        this.udpRelayMode = udpRelayMode;
+    }
+
+    static fromJson(json = {}) {
+        const clients = Array.isArray(json.clients) && json.clients.length > 0
+            ? json.clients.map(client => Inbound.TuicSettings.Client.fromJson(client))
+            : [new Inbound.TuicSettings.Client()];
+        return new Inbound.TuicSettings(
+            Protocols.TUIC,
+            clients,
+            json.congestionControl || 'bbr',
+            json.udpRelayMode || 'native',
+        );
+    }
+
+    toJson() {
+        const json = {
+            clients: Inbound.TuicSettings.toJsonArray(this.clients),
+        };
+        if (this.congestionControl) {
+            json.congestionControl = this.congestionControl;
+        }
+        if (this.udpRelayMode) {
+            json.udpRelayMode = this.udpRelayMode;
+        }
+        return json;
+    }
+};
+
+Inbound.TuicSettings.Client = class extends XrayCommonClass {
+    constructor(id = RandomUtil.randomUUID(), password = RandomUtil.randomSeq(16), email = RandomUtil.randomLowerAndNum(8), enable = true) {
+        super();
+        this.id = id;
+        this.password = password;
+        this.email = email;
+        this.enable = enable;
+    }
+
+    refreshId() {
+        this.id = RandomUtil.randomUUID();
+    }
+
+    refreshPassword() {
+        this.password = RandomUtil.randomSeq(16);
+    }
+
+    refreshEmail() {
+        this.email = RandomUtil.randomLowerAndNum(8);
+    }
+
+    toJson() {
+        return {
+            id: this.id,
+            password: this.password,
+            email: this.email,
+            enable: this.enable,
+        };
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.TuicSettings.Client(
+            json.id,
+            json.password,
+            json.email,
+            ObjectUtil.isEmpty(json.enable) ? true : json.enable,
+        );
+    }
+};
+
+Inbound.NaiveSettings = class extends Inbound.Settings {
+    constructor(protocol, clients = [new Inbound.NaiveSettings.Client()]) {
+        super(protocol);
+        this.clients = clients;
+    }
+
+    static fromJson(json = {}) {
+        const clients = Array.isArray(json.clients) && json.clients.length > 0
+            ? json.clients.map(client => Inbound.NaiveSettings.Client.fromJson(client))
+            : [new Inbound.NaiveSettings.Client()];
+        return new Inbound.NaiveSettings(
+            Protocols.NAIVE,
+            clients,
+        );
+    }
+
+    toJson() {
+        return {
+            clients: Inbound.NaiveSettings.toJsonArray(this.clients),
+        };
+    }
+};
+
+Inbound.NaiveSettings.Client = class extends XrayCommonClass {
+    constructor(username = RandomUtil.randomLowerAndNum(8), password = RandomUtil.randomSeq(16), email = `${RandomUtil.randomLowerAndNum(10)}@xray.com`, enable = true) {
+        super();
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.enable = enable;
+    }
+
+    refreshUsername() {
+        this.username = RandomUtil.randomLowerAndNum(8);
+    }
+
+    refreshPassword() {
+        this.password = RandomUtil.randomSeq(16);
+    }
+
+    refreshEmail() {
+        this.email = `${RandomUtil.randomLowerAndNum(10)}@xray.com`;
+    }
+
+    toJson() {
+        return {
+            username: this.username,
+            password: this.password,
+            email: this.email,
+            enable: this.enable,
+        };
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.NaiveSettings.Client(
+            json.username,
+            json.password,
+            json.email,
+            ObjectUtil.isEmpty(json.enable) ? true : json.enable,
+        );
+    }
 };
 
 Inbound.VLESSSettings = class extends Inbound.Settings {

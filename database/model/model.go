@@ -26,6 +26,12 @@ const (
 	// accepts both.
 	Hysteria  Protocol = "hysteria"
 	Hysteria2 Protocol = "hysteria2"
+
+	// sing-box core protocols (dual-core). AnyTLS / Tuic / Naive are
+	// served by the sing-box process, everything else by xray.
+	AnyTLS Protocol = "anytls"
+	Tuic   Protocol = "tuic"
+	Naive  Protocol = "naive"
 )
 
 // IsHysteria returns true for both "hysteria" and "hysteria2".
@@ -33,6 +39,13 @@ const (
 // with the literal v2 string would otherwise fall through.
 func IsHysteria(p Protocol) bool {
 	return p == Hysteria || p == Hysteria2
+}
+
+// IsSingBoxProtocol returns true for protocols served by the sing-box
+// core (anytls/tuic/naive). These inbounds are excluded from the xray
+// config and rendered into singbox.json instead.
+func IsSingBoxProtocol(p Protocol) bool {
+	return p == AnyTLS || p == Tuic || p == Naive
 }
 
 type User struct {
@@ -147,6 +160,7 @@ type Client struct {
 	Security   string `json:"security"`
 	Password   string `json:"password"`
 	Auth       string `json:"auth,omitempty"` // Hysteria/Hysteria2 入站认证密码
+	Username   string `json:"username,omitempty"` // Naiveproxy 入站用户名
 
 	// 中文注释: 新增“限速”字段，单位 KB/s，0 表示不限速。
     SpeedLimit   int           `json:"speedLimit" form:"speedLimit"`

@@ -127,6 +127,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		if !inbound.Enable {
 			continue
 		}
+		// sing-box 协议由 sing-box 内核处理，不参与 xray 限速策略
+		if model.IsSingBoxProtocol(inbound.Protocol) {
+			continue
+		}
 		
         // 获取该入站下的所有客户端设置
 		dbClients, _ := s.inboundService.GetClients(inbound)
@@ -225,6 +229,13 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
+			continue
+		}
+
+		// 双内核：anytls/tuic/naive 由 sing-box 内核承载，
+		// 不生成 xray 入站配置（否则 xray 报 unknown config id）
+		if model.IsSingBoxProtocol(inbound.Protocol) {
+			logger.Infof("协议 %s 由 sing-box 内核处理，跳过 xray 配置生成", inbound.Protocol)
 			continue
 		}
 

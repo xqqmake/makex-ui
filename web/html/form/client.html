@@ -15,7 +15,7 @@
         </template>
         <a-input v-model.trim="client.email"></a-input>
     </a-form-item>
-    <a-form-item v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.SHADOWSOCKS">
+    <a-form-item v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.SHADOWSOCKS || inbound.protocol === Protocols.ANYTLS || inbound.protocol === Protocols.TUIC || inbound.protocol === Protocols.NAIVE">
         <template slot="label">
             <a-tooltip>
                 <template slot="title">
@@ -24,9 +24,32 @@
                 {{ i18n "password" }}
                 <a-icon v-if="inbound.protocol === Protocols.SHADOWSOCKS" @click="client.password = RandomUtil.randomShadowsocksPassword(inbound.settings.method)" type="sync"></a-icon>
                 <a-icon v-if="inbound.protocol === Protocols.TROJAN" @click="client.password = RandomUtil.randomSeq(10)"type="sync"> </a-icon>
+                <a-icon v-if="inbound.protocol === Protocols.ANYTLS || inbound.protocol === Protocols.TUIC || inbound.protocol === Protocols.NAIVE" @click="client.password = RandomUtil.randomSeq(16)" type="sync"></a-icon>
             </a-tooltip>
         </template>
         <a-input v-model.trim="client.password"></a-input>
+    </a-form-item>
+    <a-form-item v-if="inbound.protocol === Protocols.TUIC">
+        <template slot="label">
+            <a-tooltip>
+                <template slot="title">
+                    <span>{{ i18n "reset" }}</span>
+                </template>
+                ID <a-icon @click="client.id = RandomUtil.randomUUID()" type="sync"></a-icon>
+            </a-tooltip>
+        </template>
+        <a-input v-model.trim="client.id"></a-input>
+    </a-form-item>
+    <a-form-item v-if="inbound.protocol === Protocols.NAIVE">
+        <template slot="label">
+            <a-tooltip>
+                <template slot="title">
+                    <span>{{ i18n "reset" }}</span>
+                </template>
+                Username <a-icon @click="client.username = RandomUtil.randomLowerAndNum(8)" type="sync"></a-icon>
+            </a-tooltip>
+        </template>
+        <a-input v-model.trim="client.username"></a-input>
     </a-form-item>
     <a-form-item v-if="inbound.protocol === Protocols.VMESS || inbound.protocol === Protocols.VLESS">
         <template slot="label">

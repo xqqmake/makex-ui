@@ -29,13 +29,19 @@ import (
 )
 
 type InboundService struct {
-	xrayApi xray.XrayAPI
-	tgService TelegramService
+	xrayApi       xray.XrayAPI
+	tgService     TelegramService
+	singboxService *SingBoxService
 }
 
 // 【新增方法】: 用于从外部注入 XrayAPI 实例
 func (s *InboundService) SetXrayAPI(api xray.XrayAPI) {
     s.xrayApi = api
+}
+
+// 【新增方法】: 用于从外部注入 sing-box 服务(双内核)
+func (s *InboundService) SetSingBoxService(sb *SingBoxService) {
+	s.singboxService = sb
 }
 
 // 【新增方法】: 用于从外部注入 TelegramService 实例
@@ -240,6 +246,18 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 			if client.Auth == "" {
 				return inbound, false, common.NewError("empty client ID")
 			}
+		case "anytls":
+			if client.Password == "" {
+				return inbound, false, common.NewError("empty client password")
+			}
+		case "tuic":
+			if client.ID == "" {
+				return inbound, false, common.NewError("empty client ID")
+			}
+		case "naive":
+			if client.Username == "" || client.Password == "" {
+				return inbound, false, common.NewError("empty client username")
+			}
 		default:
 			if client.ID == "" {
 				return inbound, false, common.NewError("empty client ID")
@@ -309,22 +327,30 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 	// 中文注释：如果入站规则是启用的，则尝试通过 API 热加载到 Xray-core
 	needRestart := false
+	// Argo 隧道：入站变更后同步 cloudflared(幂等, 30s 内扫描启停)
+	MarkArgoNeedRestart()
 	if inbound.Enable {
-		s.xrayApi.Init(p.GetAPIPort())
-		inboundJson, err1 := json.MarshalIndent(inbound.GenXrayInboundConfig(), "", "  ")
-		if err1 != nil {
-			logger.Debug("Unable to marshal inbound config:", err1)
-		}
-
-		err1 = s.xrayApi.AddInbound(inboundJson)
-		if err1 == nil {
-			logger.Debug("New inbound added by api:", inbound.Tag)
+		if model.IsSingBoxProtocol(inbound.Protocol) {
+			// 双内核：anytls/tuic/naive 由 sing-box 内核承载，标记需要重启 sing-box
+			logger.Debug("New sing-box inbound added, mark sing-box restart:", inbound.Tag)
+			MarkSingBoxNeedRestart()
 		} else {
-			// 中文注释：如果 API 调用失败，则标记需要重启面板以应用更改
-			logger.Debug("Unable to add inbound by api:", err1)
-			needRestart = true
+			s.xrayApi.Init(p.GetAPIPort())
+			inboundJson, err1 := json.MarshalIndent(inbound.GenXrayInboundConfig(), "", "  ")
+			if err1 != nil {
+				logger.Debug("Unable to marshal inbound config:", err1)
+			}
+
+			err1 = s.xrayApi.AddInbound(inboundJson)
+			if err1 == nil {
+				logger.Debug("New inbound added by api:", inbound.Tag)
+			} else {
+				// 中文注释：如果 API 调用失败，则标记需要重启面板以应用更改
+				logger.Debug("Unable to add inbound by api:", err1)
+				needRestart = true
+			}
+			s.xrayApi.Close()
 		}
-		s.xrayApi.Close()
 	}
 
 	// 中文注释：返回创建好的入站对象、是否需要重启以及错误信息
@@ -336,17 +362,31 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 
 	var tag string
 	needRestart := false
-	result := db.Model(model.Inbound{}).Select("tag").Where("id = ? and enable = ?", id, true).First(&tag)
-	if result.Error == nil {
-		s.xrayApi.Init(p.GetAPIPort())
-		err1 := s.xrayApi.DelInbound(tag)
-		if err1 == nil {
-			logger.Debug("Inbound deleted by api:", tag)
+	// Argo 隧道：入站变更后同步 cloudflared(幂等, 30s 内扫描启停)
+	MarkArgoNeedRestart()
+	// 双内核：同时取协议，sing-box 协议的入站不经过 xray API 删除
+	var row struct {
+		Tag      string
+		Protocol string
+	}
+	result := db.Model(model.Inbound{}).Select("tag, protocol").Where("id = ? and enable = ?", id, true).Scan(&row)
+	if result.Error == nil && row.Tag != "" {
+		tag = row.Tag
+		if model.IsSingBoxProtocol(model.Protocol(row.Protocol)) {
+			// 双内核：标记需要重启 sing-box
+			logger.Debug("sing-box inbound deleted, mark sing-box restart:", tag)
+			MarkSingBoxNeedRestart()
 		} else {
-			logger.Debug("Unable to delete inbound by api:", err1)
-			needRestart = true
+			s.xrayApi.Init(p.GetAPIPort())
+			err1 := s.xrayApi.DelInbound(tag)
+			if err1 == nil {
+				logger.Debug("Inbound deleted by api:", tag)
+			} else {
+				logger.Debug("Unable to delete inbound by api:", err1)
+				needRestart = true
+			}
+			s.xrayApi.Close()
 		}
-		s.xrayApi.Close()
 	} else {
 		logger.Debug("No enabled inbound founded to removing by api", tag)
 	}
@@ -528,26 +568,34 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	needRestart := false
-	s.xrayApi.Init(p.GetAPIPort())
-	if s.xrayApi.DelInbound(tag) == nil {
-		logger.Debug("Old inbound deleted by api:", tag)
-	}
-	if inbound.Enable {
-		inboundJson, err2 := json.MarshalIndent(oldInbound.GenXrayInboundConfig(), "", "  ")
-		if err2 != nil {
-			logger.Debug("Unable to marshal updated inbound config:", err2)
-			needRestart = true
-		} else {
-			err2 = s.xrayApi.AddInbound(inboundJson)
-			if err2 == nil {
-				logger.Debug("Updated inbound added by api:", oldInbound.Tag)
-			} else {
-				logger.Debug("Unable to update inbound by api:", err2)
+	// Argo 隧道：入站变更后同步 cloudflared(幂等, 30s 内扫描启停)
+	MarkArgoNeedRestart()
+	if model.IsSingBoxProtocol(oldInbound.Protocol) {
+		// 双内核：anytls/tuic/naive 由 sing-box 内核承载
+		logger.Debug("sing-box inbound updated, mark sing-box restart:", oldInbound.Tag)
+		MarkSingBoxNeedRestart()
+	} else {
+		s.xrayApi.Init(p.GetAPIPort())
+		if s.xrayApi.DelInbound(tag) == nil {
+			logger.Debug("Old inbound deleted by api:", tag)
+		}
+		if inbound.Enable {
+			inboundJson, err2 := json.MarshalIndent(oldInbound.GenXrayInboundConfig(), "", "  ")
+			if err2 != nil {
+				logger.Debug("Unable to marshal updated inbound config:", err2)
 				needRestart = true
+			} else {
+				err2 = s.xrayApi.AddInbound(inboundJson)
+				if err2 == nil {
+					logger.Debug("Updated inbound added by api:", oldInbound.Tag)
+				} else {
+					logger.Debug("Unable to update inbound by api:", err2)
+					needRestart = true
+				}
 			}
 		}
+		s.xrayApi.Close()
 	}
-	s.xrayApi.Close()
 
 	return inbound, needRestart, tx.Save(oldInbound).Error
 }

@@ -203,6 +203,8 @@
 "targetAddress" = "目标地址"
 "monitorDesc" = "留空表示监听所有 IP"
 "meansNoLimit" = "= 无限制（单位：GB)"
+"argoHint" = "将本入站映射到 Cloudflare 免费域名，客户端经 CF CDN 连接（隐藏真实 IP）。保存后约 1-2 分钟完成隧道申请，域名显示在入站列表。"
+"argoAddress" = "Argo 地址"
 "totalFlow" = "总流量"
 "leaveBlankToNeverExpire" = "留空表示永不过期"
 "noRecommendKeepDefault" = "建议保留默认值"

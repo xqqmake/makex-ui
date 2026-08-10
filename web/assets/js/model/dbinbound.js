@@ -130,6 +130,9 @@ class DBInbound {
             case Protocols.VLESS:
             case Protocols.TROJAN:
             case Protocols.HYSTERIA:
+            case Protocols.ANYTLS:
+            case Protocols.TUIC:
+            case Protocols.NAIVE:
                 return true;
             case Protocols.SHADOWSOCKS:
                 return this.toInbound().isSSMultiUser;
@@ -145,6 +148,9 @@ class DBInbound {
             case Protocols.TROJAN:
             case Protocols.SHADOWSOCKS:
             case Protocols.HYSTERIA:
+            case Protocols.ANYTLS:
+            case Protocols.TUIC:
+            case Protocols.NAIVE:
                 return true;
             default:
                 return false;
