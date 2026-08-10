@@ -70,7 +70,12 @@ func (s *SingBoxService) GetSingBoxVersion() string {
 	if sp == nil {
 		return "Unknown"
 	}
-	return sp.GetVersion()
+	v := sp.GetVersion()
+	if v == "" || strings.Contains(strings.ToLower(v), "unknown") {
+		// 自定义构建未注入版本号时 sing-box version 输出 "unknown\n\nEnvironment:", 统一为 Unknown 以便前端隐藏版本 tag
+		return "Unknown"
+	}
+	return v
 }
 
 // GetSingBoxConfig renders the sing-box configuration from all enabled

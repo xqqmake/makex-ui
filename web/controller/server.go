@@ -144,19 +144,19 @@ func (a *ServerController) stopSingBoxService(c *gin.Context) {
 	a.lastGetStatusTime = time.Now()
 	err := a.serverService.StopSingBoxService()
 	if err != nil {
-		jsonMsg(c, I18nWeb(c, "pages.xray.stopError"), err)
+		jsonMsg(c, I18nWeb(c, "pages.xray.singboxStopError"), err)
 		return
 	}
-	jsonMsg(c, I18nWeb(c, "pages.xray.stopSuccess"), err)
+	jsonMsg(c, I18nWeb(c, "pages.xray.singboxStopSuccess"), err)
 }
 
 func (a *ServerController) restartSingBoxService(c *gin.Context) {
 	err := a.serverService.RestartSingBoxService()
 	if err != nil {
-		jsonMsg(c, I18nWeb(c, "pages.xray.restartError"), err)
+		jsonMsg(c, I18nWeb(c, "pages.xray.singboxRestartError"), err)
 		return
 	}
-	jsonMsg(c, I18nWeb(c, "pages.xray.restartSuccess"), err)
+	jsonMsg(c, I18nWeb(c, "pages.xray.singboxRestartSuccess"), err)
 }
 
 func (a *ServerController) getLogs(c *gin.Context) {
