@@ -137,7 +137,7 @@ jobs:
             *) SING_BOX_ARCH="${{ matrix.platform }}" ;;
           esac
           if [ -n "$SING_BOX_ARCH" ]; then
-            wget -q https://github.com/SAGANetwork/sing-box/releases/download/${SING_BOX_VERSION}/sing-box-1.13.18-linux-${SING_BOX_ARCH}.tar.gz
+            wget -q https://github.com/SagerNet/sing-box/releases/download/${SING_BOX_VERSION}/sing-box-1.13.18-linux-${SING_BOX_ARCH}.tar.gz
             tar zxf sing-box-1.13.18-linux-${SING_BOX_ARCH}.tar.gz
             # Go 的 arm 架构 GOARCH=arm → 二进制名必须为 sing-box-linux-arm
             if [ "${{ matrix.platform }}" == "armv7" ] || [ "${{ matrix.platform }}" == "armv6" ]; then
