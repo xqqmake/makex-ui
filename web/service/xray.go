@@ -263,6 +263,14 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			continue
 		}
 
+		// vless reality 兼容性修复：删除 settings 顶层的 testseed/selectedAuth
+		// （xray-core v1.260327.0 新增 reality 特性字段，旧前端/DB 可能写入；
+		//   客户端 sing-box/xray 均不兼容，会导致 reality 握手失败 tls: internal error）
+		if model.Protocol(inbound.Protocol) == model.VLESS {
+			delete(settings, "testseed")
+			delete(settings, "selectedAuth")
+		}
+
 		originalClients, ok := settings["clients"].([]interface{})
 		if ok {
 			// shadowsocks 特例: 面板前端把 method/password 存在 settings 顶层

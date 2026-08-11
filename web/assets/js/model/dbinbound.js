@@ -36,6 +36,25 @@ class DBInbound {
         this.total = NumberFormatter.toFixed(gb * SizeFormatter.ONE_GB, 0);
     }
 
+    get isAnyTls() {
+        return this.protocol === Protocols.ANYTLS;
+    }
+
+    get isTuic() {
+        return this.protocol === Protocols.TUIC;
+    }
+
+    get isNaive() {
+        return this.protocol === Protocols.NAIVE;
+    }
+
+    // 有传输层/安全层组合可展示的协议（含 sing-box 承载的 anytls/tuic/naive）
+    hasStreamProtocol() {
+        return [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS,
+                Protocols.HYSTERIA, Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE]
+            .includes(this.protocol);
+    }
+
     get isVMess() {
         return this.protocol === Protocols.VMESS;
     }

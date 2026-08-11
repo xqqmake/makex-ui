@@ -2439,14 +2439,14 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
         decryption = "none",
         encryption = "",
         fallbacks = [],
-        testseed = [900, 500, 900, 256],
+        testseed = [],
     ) {
         super(protocol);
         this.vlesses = vlesses;
         this.decryption = decryption;
         this.encryption = encryption;
         this.fallbacks = fallbacks;
-        this.selectedAuth = "X25519, not Post-Quantum";
+        this.selectedAuth = "";
         this.testseed = testseed;
     }
 
@@ -2460,21 +2460,16 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
 
     // decryption should be set to static value
     static fromJson(json = {}) {
-        // Ensure testseed is always initialized as an array
-        let testseed = [900, 500, 900, 256];
-        if (json.testseed && Array.isArray(json.testseed) && json.testseed.length >= 4) {
-            testseed = json.testseed;
-        }
-        
+        // testseed/selectedAuth 是 xray-core v1.260327.0 新增 reality 特性字段，
+        // 客户端(sing-box/xray)均不兼容 → 一律不读取不写入，避免握手失败
         const obj = new Inbound.VLESSSettings(
             Protocols.VLESS,
             (json.clients || []).map(client => Inbound.VLESSSettings.VLESS.fromJson(client)),
             json.decryption,
             json.encryption,
             Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks || []),
-            testseed
+            []
         );
-        obj.selectedAuth = json.selectedAuth || "X25519, not Post-Quantum";
         return obj;
     }
 
@@ -2493,15 +2488,6 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
 
         if (this.fallbacks && this.fallbacks.length > 0) {
             json.fallbacks = Inbound.VLESSSettings.toJsonArray(this.fallbacks);
-        }
-        if (this.selectedAuth) {
-            json.selectedAuth = this.selectedAuth;
-        }
-
-        // Only include testseed if at least one client has a flow set
-        const hasFlow = this.vlesses && this.vlesses.some(vless => vless.flow && vless.flow !== '');
-        if (hasFlow && this.testseed && this.testseed.length >= 4) {
-            json.testseed = this.testseed;
         }
 
         return json;
