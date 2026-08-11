@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -107,7 +108,8 @@ func (p *process) refreshVersion() {
 		if len(datas) <= 2 {
 			p.version = "Unknown"
 		} else {
-			p.version = string(datas[2])
+			// 截断换行尾巴(如 "1.13.18\n\nEnvironment:...")
+			p.version = strings.TrimSpace(strings.SplitN(string(datas[2]), "\n", 2)[0])
 		}
 	}
 }

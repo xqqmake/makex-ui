@@ -528,25 +528,31 @@
 
 										<a-card title='{{ i18n "pages.index.singboxStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<template slot="extra">
-											<template v-if="status.singbox.state != 'error'">
-												<a-badge status="processing" class="running-animation" :text="status.singbox.stateMsg" :color="status.singbox.color"/>
-											</template>
-											<template v-else>
-												<a-popover :overlay-class-name="themeSwitcher.currentTheme">
-													<span slot="title">
-														<a-row type="flex" align="middle" justify="space-between">
-															<a-col><span>{{ i18n "pages.index.xrayErrorPopoverTitle" }}</span></a-col>
-															<a-col><a-icon type="bars" :style="{ cursor: 'pointer', float: 'right' }" @click="openLogs()"></a-icon></a-col>
-														</a-row>
-													</span>
-													<template slot="content">
-														<span :style="{ maxWidth: '400px' }" v-for="line in status.singbox.errorMsg.split('\n')">[[ line ]]</span>
-													</template>
-													<a-badge :text="status.singbox.stateMsg" :color="status.singbox.color"/>
-												</a-popover>
-											</template>
+											<div :style="{ textAlign: 'right' }">
+												<template v-if="status.singbox.state != 'error'">
+													<a-badge status="processing" class="running-animation" :text="status.singbox.stateMsg" :color="status.singbox.color"/>
+												</template>
+												<template v-else>
+													<a-popover :overlay-class-name="themeSwitcher.currentTheme">
+														<span slot="title">
+															<a-row type="flex" align="middle" justify="space-between">
+																<a-col><span>{{ i18n "pages.index.xrayErrorPopoverTitle" }}</span></a-col>
+																<a-col><a-icon type="bars" :style="{ cursor: 'pointer', float: 'right' }" @click="openLogs()"></a-icon></a-col>
+															</a-row>
+														</span>
+														<template slot="content">
+															<span :style="{ maxWidth: '400px' }" v-for="line in status.singbox.errorMsg.split('\n')">[[ line ]]</span>
+														</template>
+														<a-badge :text="status.singbox.stateMsg" :color="status.singbox.color"/>
+													</a-popover>
+												</template>
+												<!-- 运行状态下方显示 sing-box 版本号 -->
+												<div v-if="status.singbox.version && status.singbox.version != 'Unknown'"
+													:style="{ fontSize: '12px', color: '#4ecfff', marginTop: '2px', fontWeight: '500' }">
+													v[[ status.singbox.version ]]
+												</div>
+											</div>
 										</template>
-										<a-tag v-if="status.singbox.version != 'Unknown'" color="green">v[[ status.singbox.version ]]</a-tag>
 										<template slot="actions">
 											<a-space direction="horizontal" @click="openLogs()" :style="{ justifyContent: 'center' }">
 												<a-icon type="bars"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.logs" }}</span>

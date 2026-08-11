@@ -78,6 +78,10 @@ func html(c *gin.Context, name string, title string, data gin.H) {
 	data["host"] = host
 	data["request_uri"] = c.Request.RequestURI
 	data["base_path"] = c.GetString("base_path")
+	// 禁止浏览器缓存 HTML 页面,确保 UI 更新后立即生效(旧页面会被浏览器启发式缓存)
+	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
 	c.HTML(http.StatusOK, name, getContext(data))
 }
 
