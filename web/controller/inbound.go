@@ -46,23 +46,6 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.POST("/lastOnline", a.lastOnline)
 	g.POST("/updateClientTraffic/:email", a.updateClientTraffic)
 	g.POST("/oneclick", a.oneClickConfig)
-
-	// Argo 隧道：状态与域名查询
-	g.GET("/argo/status", a.getArgoStatuses)
-	g.GET("/argo/domain/:tag", a.getArgoDomain)
-}
-
-func (a *InboundController) getArgoStatuses(c *gin.Context) {
-	argoService := service.ArgoService{}
-	statuses := argoService.GetArgoStatuses()
-	jsonObj(c, statuses, nil)
-}
-
-func (a *InboundController) getArgoDomain(c *gin.Context) {
-	tag := c.Param("tag")
-	argoService := service.ArgoService{}
-	domain := argoService.GetArgoDomain(tag)
-	jsonObj(c, gin.H{"tag": tag, "domain": domain}, nil)
 }
 
 func (a *InboundController) getInbounds(c *gin.Context) {

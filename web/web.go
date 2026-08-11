@@ -118,7 +118,6 @@ type Server struct {
 
 	xrayService    service.XrayService
 	singboxService service.SingBoxService
-	argoService    service.ArgoService
 	settingService service.SettingService
 	tgbotService    service.TelegramService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
@@ -301,17 +300,10 @@ func (s *Server) startTask() {
 	if err != nil {
 		logger.Warning("start sing-box failed:", err)
 	}
-	// Argo 隧道：启动 cloudflared 快速隧道（无启用 Argo 的 ws 入站时自动跳过）
-	err = s.argoService.RestartArgo()
-	if err != nil {
-		logger.Warning("start argo tunnel failed:", err)
-	}
 	// Check whether xray is running every second
 	s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob())
 	// 双内核：检查 sing-box 进程是否在运行
 	s.cron.AddJob("@every 1s", job.NewCheckSingBoxRunningJob())
-	// Argo：检查 cloudflared 隧道进程是否在运行
-	s.cron.AddJob("@every 1s", job.NewCheckArgoRunningJob())
 
 	// Check if xray needs to be restarted every 30 seconds
 	s.cron.AddFunc("@every 30s", func() {
@@ -326,13 +318,6 @@ func (s *Server) startTask() {
 			err := s.singboxService.RestartSingBox(false)
 			if err != nil {
 				logger.Error("restart sing-box failed:", err)
-			}
-		}
-		// Argo：入站变更后同步 cloudflared 隧道
-		if s.argoService.IsNeedRestartAndSetFalse() {
-			err := s.argoService.RestartArgo()
-			if err != nil {
-				logger.Error("restart argo tunnel failed:", err)
 			}
 		}
 	})
@@ -511,7 +496,6 @@ func (s *Server) Stop() error {
 	s.cancel()
 	s.xrayService.StopXray()
 	s.singboxService.StopSingBox()
-	s.argoService.StopArgo()
 	if s.cron != nil {
 		s.cron.Stop()
 	}

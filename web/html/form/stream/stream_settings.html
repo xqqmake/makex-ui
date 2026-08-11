@@ -35,19 +35,6 @@
     {{template "form/streamWS"}}
 </template>
 
-<!-- Argo 隧道 (cloudflared quick tunnel, 仅 vmess/vless + ws 传输) -->
-<template
-    v-if="inbound.stream.network === 'ws' && (inbound.protocol === Protocols.VMESS || inbound.protocol === Protocols.VLESS)">
-    <a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
-        <a-form-item label="Argo 隧道 (Cloudflare)">
-            <a-switch v-model="inbound.stream.argo.enabled" checked-children="开" un-checked-children="关"></a-switch>
-            <div v-if="inbound.stream.argo.enabled" style="margin-top:6px;color:#888;font-size:12px;">
-                {{ i18n "pages.inbounds.argoHint" }}
-            </div>
-        </a-form-item>
-    </a-form>
-</template>
-
 <!-- grpc -->
 <template v-if="inbound.stream.network === 'grpc'">
     {{template "form/streamGRPC"}}

@@ -1107,8 +1107,6 @@ class StreamSettings extends XrayCommonClass {
         this.hysteria = hysteria;
         this.finalmask = finalmask;
         this.sockopt = sockopt;
-        // Argo 隧道开关(仅 vmess/vless + ws 传输有意义)
-        this.argo = { enabled: false };
     }
 
     addUdpMask(type = 'salamander') {
@@ -1175,10 +1173,6 @@ class StreamSettings extends XrayCommonClass {
             FinalMaskStreamSettings.fromJson(json.finalmask),
             SockoptStreamSettings.fromJson(json.sockopt),
         );
-        // Argo 隧道开关(仅 vmess/vless + ws 传输有意义)
-        if (json.argo && json.argo.enabled) {
-            newStream.argo = { enabled: true };
-        }
         return newStream;
     }
 
@@ -1199,7 +1193,6 @@ class StreamSettings extends XrayCommonClass {
             hysteria: network === 'hysteria' ? this.hysteria.toJson() : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
-            argo: this.argo && this.argo.enabled ? { enabled: true } : undefined,
         };
     }
 }

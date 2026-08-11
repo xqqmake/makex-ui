@@ -327,8 +327,6 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 	// 中文注释：如果入站规则是启用的，则尝试通过 API 热加载到 Xray-core
 	needRestart := false
-	// Argo 隧道：入站变更后同步 cloudflared(幂等, 30s 内扫描启停)
-	MarkArgoNeedRestart()
 	if inbound.Enable {
 		if model.IsSingBoxProtocol(inbound.Protocol) {
 			// 双内核：anytls/tuic/naive 由 sing-box 内核承载，标记需要重启 sing-box
@@ -362,8 +360,6 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 
 	var tag string
 	needRestart := false
-	// Argo 隧道：入站变更后同步 cloudflared(幂等, 30s 内扫描启停)
-	MarkArgoNeedRestart()
 	// 双内核：同时取协议，sing-box 协议的入站不经过 xray API 删除
 	var row struct {
 		Tag      string
@@ -568,8 +564,6 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	needRestart := false
-	// Argo 隧道：入站变更后同步 cloudflared(幂等, 30s 内扫描启停)
-	MarkArgoNeedRestart()
 	if model.IsSingBoxProtocol(oldInbound.Protocol) {
 		// 双内核：anytls/tuic/naive 由 sing-box 内核承载
 		logger.Debug("sing-box inbound updated, mark sing-box restart:", oldInbound.Tag)

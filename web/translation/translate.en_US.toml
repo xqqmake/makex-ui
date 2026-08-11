@@ -207,8 +207,6 @@
 "targetAddress" = "Target Address"
 "monitorDesc" = "Leave blank to listen on all IPs"
 "meansNoLimit" = "= No limit (GB)"
-"argoHint" = "Expose this inbound via Cloudflare free quick tunnel (hide real IP). After saving, the tunnel takes ~1-2 minutes; the domain shows in the inbound list."
-"argoAddress" = "Argo Address"
 "totalFlow" = "Total Flow"
 "leaveBlankToNeverExpire" = "Leave blank to never expire"
 "noRecommendKeepDefault" = "It is recommended to keep the default"
