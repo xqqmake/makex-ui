@@ -16,6 +16,37 @@ xui_folder="${XUI_MAIN_FOLDER:=/usr/local/makex-ui}"
 
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
+# ==========【通用依赖安装 开始】==========
+install_deps() {
+    echo -e "${green}>>> 检测系统包管理器，安装 curl、socat${plain}"
+    local ret=0
+    
+    if command -v apt &> /dev/null; then
+        apt update -y
+        apt install -y curl socat
+    elif command -v dnf &> /dev/null; then
+        dnf makecache -y
+        dnf install -y curl socat
+    elif command -v yum &> /dev/null; then
+        yum makecache -y
+        yum install -y curl socat
+    elif command -v apk &> /dev/null; then
+        apk update
+        apk add curl socat
+        ret=$?
+    else
+        echo -e "${red}>>> 不识别当前系统包管理器，请手动安装 curl socat${plain}"
+        exit 1
+    fi
+
+    if [ $? -ne 0 ]; then
+        echo -e "${red}>>> 依赖包安装失败，脚本终止${plain}"
+        exit 1
+    fi
+    echo -e "${green}>>> curl socat 安装/校验完成${plain}"
+}
+install_deps
+# ==========【通用依赖安装 结束】==========
 
 # 非交互模式支持
 if [[ "${XUI_NONINTERACTIVE:-0}" == "1" ]] || [[ ! -t 0 ]]; then
