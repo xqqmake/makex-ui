@@ -265,6 +265,25 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 
 		originalClients, ok := settings["clients"].([]interface{})
 		if ok {
+			// shadowsocks 特例: 面板前端把 method/password 存在 settings 顶层
+			// (settings.method / settings.password)，clients 里只有 email/enable。
+			// xray fork 的 ss 入站要求 method/password 在客户端上，必须合并。
+			if model.Protocol(inbound.Protocol) == model.Shadowsocks {
+				ssMethod, _ := settings["method"].(string)
+				ssPass, _ := settings["password"].(string)
+				if ssMethod != "" || ssPass != "" {
+					for _, cr := range originalClients {
+						if cm, ok := cr.(map[string]interface{}); ok {
+							if _, has := cm["method"]; !has && ssMethod != "" {
+								cm["method"] = ssMethod
+							}
+							if _, has := cm["password"]; !has && ssPass != "" {
+								cm["password"] = ssPass
+							}
+						}
+					}
+				}
+			}
 			clientStats := inbound.ClientStats
 
 			var xrayClients []interface{}
