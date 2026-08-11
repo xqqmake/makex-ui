@@ -39,3 +39,6 @@ docker-compose.override.yml
 
 # Ignore .env (Environment Variables) file
 .env/makex-ui
+
+# Ignore root compiled binary (CI builds its own)
+/makex-ui
