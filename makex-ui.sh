@@ -802,6 +802,7 @@ show_status() {
         ;;
     esac
     show_xray_status
+    show_singbox_status
 }
 
 show_enable_status() {
@@ -828,6 +829,24 @@ show_xray_status() {
         echo -e "Xray状态: ${green}运行中${plain}"
     else
         echo -e "Xray状态: ${red}未运行${plain}"
+    fi
+}
+
+check_singbox_status() {
+    count=$(ps -ef | grep "sing-box" | grep -v "grep" | wc -l)
+    if [[ count -ne 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+show_singbox_status() {
+    check_singbox_status
+    if [[ $? == 0 ]]; then
+        echo -e "SingBox状态: ${green}运行中${plain}"
+    else
+        echo -e "SingBox状态: ${red}未运行${plain}"
     fi
 }
 
