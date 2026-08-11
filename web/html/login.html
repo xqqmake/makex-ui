@@ -686,42 +686,67 @@ var WORLD_LAND=[[[-59.57,-80.04],[-60.16,-81.0],[-64.49,-80.92],[-65.74,-80.55],
 
         function P(lon, lat) { return [(lon + 180) / 360 * W, (90 - lat) / 180 * H]; }
 
-        /* 被攻击目标（服务器所在城市） */
-        var TARGETS = [ [104.0, 35.0], [-97.5, 37.5], [13.4, 52.5] ];
-        /* 全球攻击源 */
-        var SOURCES = [ [-60, -12], [35, 28], [120, -25], [-122, 47], [30, 2], [75, 42], [139, 35], [-46, -23], [18, 33], [105, 38], [-70, 20], [12, 56] ];
+        /* 被攻击目标（服务器集群） */
+        var TARGETS = [ [104.0, 35.0], [-97.5, 37.5], [13.4, 52.5], [139.7, 35.6], [-0.13, 51.5] ];
+        /* 全球攻击源节点（更多节点） */
+        var SOURCES = [
+            [-60, -12], [35, 28], [120, -25], [-122, 47], [30, 2], [75, 42], [139, 35],
+            [-46, -23], [18, 33], [105, 38], [-70, 20], [12, 56], [-99, 19], [55, -4],
+            [-10, 38], [150, -34], [-25, 55], [85, 22], [-120, 50], [42, -15],
+            [-78, -8], [100, 13], [22, 48], [-30, 62], [145, -38]
+        ];
 
+        /* 攻击弧线池 */
         var arcs = [];
+        var MAX_ARCS = 32;
         function spawn() {
+            if (arcs.length >= MAX_ARCS) return;
             var s = SOURCES[(Math.random() * SOURCES.length) | 0];
             var t = TARGETS[(Math.random() * TARGETS.length) | 0];
             var p1 = P(s[0], s[1]), p2 = P(t[0], t[1]);
             var mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2;
             var d = Math.sqrt((p2[0]-p1[0])*(p2[0]-p1[0]) + (p2[1]-p1[1])*(p2[1]-p1[1]));
-            arcs.push({ p1: p1, p2: p2, c: [mx, my - d * 0.28], t: 0, sp: 0.0016 + Math.random() * 0.0028 });
+            arcs.push({ p1: p1, p2: p2, c: [mx, my - d * 0.35], t: 0, sp: 0.002 + Math.random() * 0.004 });
         }
         function bez(p1, c, p2, t) {
             var u = 1 - t;
             return [u*u*p1[0]+2*u*t*c[0]+t*t*p2[0], u*u*p1[1]+2*u*t*c[1]+t*t*p2[1]];
         }
 
+        /* 轨迹粒子 */
+        var particles = [];
+        function spawnParticle(arc) {
+            var p = bez(arc.p1, arc.c, arc.p2, Math.random());
+            var vx = (Math.random() - 0.5) * 0.6;
+            var vy = (Math.random() - 0.5) * 0.6;
+            particles.push({ x: p[0], y: p[1], vx: vx, vy: vy, life: 1, decay: 0.02 + Math.random() * 0.04 });
+        }
+
+        var scanLineY = 0;
         function frame() {
+            /* 深色网络背景 */
             var g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#0e2442');
-            g.addColorStop(0.6, '#123157');
-            g.addColorStop(1, '#0a1e3a');
+            g.addColorStop(0, '#0a1630');
+            g.addColorStop(0.4, '#0f2045');
+            g.addColorStop(0.7, '#0d1e3d');
+            g.addColorStop(1, '#08142a');
             ctx.fillStyle = g;
             ctx.fillRect(0, 0, W, H);
 
-            ctx.strokeStyle = 'rgba(70, 160, 220, 0.14)';
-            ctx.lineWidth = 0.6;
+            /* 网格线 — 更明显的网络安全网格 */
+            ctx.strokeStyle = 'rgba(60, 150, 220, 0.18)';
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
-            for (var gx = 0; gx <= W; gx += 80) { ctx.moveTo(gx, 0); ctx.lineTo(gx, H); }
-            for (var gy = 0; gy <= H; gy += 80) { ctx.moveTo(0, gy); ctx.lineTo(W, gy); }
+            for (var gx = 0; gx <= W; gx += 60) { ctx.moveTo(gx, 0); ctx.lineTo(gx, H); }
+            for (var gy = 0; gy <= H; gy += 60) { ctx.moveTo(0, gy); ctx.lineTo(W, gy); }
             ctx.stroke();
 
-            ctx.strokeStyle = 'rgba(90, 200, 255, 0.65)';
-            ctx.lineWidth = 1.3;
+            /* 世界地图 — 双层绘制：粗模糊光晕 + 细亮轮廓 */
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 200, 255, 0.7)';
+            ctx.shadowBlur = 6;
+            ctx.strokeStyle = 'rgba(0, 190, 255, 0.55)';
+            ctx.lineWidth = 2.2;
             ctx.beginPath();
             for (var r = 0; r < WORLD_LAND.length; r++) {
                 var ring = WORLD_LAND[r];
@@ -733,57 +758,141 @@ var WORLD_LAND=[[[-59.57,-80.04],[-60.16,-81.0],[-64.49,-80.92],[-65.74,-80.55],
                 }
             }
             ctx.stroke();
+            ctx.restore();
 
+            /* 第二层：细亮线 */
+            ctx.strokeStyle = 'rgba(100, 220, 255, 0.85)';
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            for (var r2 = 0; r2 < WORLD_LAND.length; r2++) {
+                var ring2 = WORLD_LAND[r2];
+                var f2 = P(ring2[0][0], ring2[0][1]);
+                ctx.moveTo(f2[0], f2[1]);
+                for (var k2 = 1; k2 < ring2.length; k2++) {
+                    var pt2 = P(ring2[k2][0], ring2[k2][1]);
+                    ctx.lineTo(pt2[0], pt2[1]);
+                }
+            }
+            ctx.stroke();
+
+            /* 更新弧线 */
             for (var i = arcs.length - 1; i >= 0; i--) {
                 var a = arcs[i];
                 a.t += a.sp;
-                ctx.strokeStyle = 'rgba(0, 210, 255, 0.42)';
-                ctx.lineWidth = 1.3;
+
+                /* 轨迹主体 — 更亮更宽 */
+                ctx.strokeStyle = 'rgba(0, 220, 255, 0.55)';
+                ctx.lineWidth = 1.8;
                 ctx.beginPath();
-                for (var s = 0; s <= 24; s++) {
-                    var bp = bez(a.p1, a.c, a.p2, s / 24);
+                for (var s = 0; s <= 30; s++) {
+                    var bp = bez(a.p1, a.c, a.p2, s / 30);
                     if (s === 0) ctx.moveTo(bp[0], bp[1]); else ctx.lineTo(bp[0], bp[1]);
                 }
                 ctx.stroke();
+
+                /* 发光头部 */
                 var hp = bez(a.p1, a.c, a.p2, Math.min(a.t, 1));
-                var tp = bez(a.p1, a.c, a.p2, Math.max(0, a.t - 0.10));
+                var tp = bez(a.p1, a.c, a.p2, Math.max(0, a.t - 0.08));
                 var gr = ctx.createLinearGradient(tp[0], tp[1], hp[0], hp[1]);
-                gr.addColorStop(0, 'rgba(0, 230, 255, 0)');
-                gr.addColorStop(1, 'rgba(140, 245, 255, 1)');
+                gr.addColorStop(0, 'rgba(0, 240, 255, 0)');
+                gr.addColorStop(0.5, 'rgba(120, 245, 255, 0.7)');
+                gr.addColorStop(1, 'rgba(200, 255, 255, 1)');
                 ctx.strokeStyle = gr;
-                ctx.lineWidth = 2.2;
+                ctx.lineWidth = 3.2;
                 ctx.beginPath();
                 ctx.moveTo(tp[0], tp[1]); ctx.lineTo(hp[0], hp[1]);
                 ctx.stroke();
+
+                /* 头部光晕 */
+                ctx.beginPath();
+                ctx.arc(hp[0], hp[1], 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(180, 255, 255, 0.8)';
+                ctx.fill();
+
+                /* 轨迹粒子 */
+                if (Math.random() < 0.35) spawnParticle(a);
+
                 if (a.t >= 1) { arcs.splice(i, 1); spawn(); }
             }
 
+            /* 维持弧线数量 */
+            while (arcs.length < MAX_ARCS) spawn();
+
+            /* 绘制+更新粒子 */
+            for (var pi = particles.length - 1; pi >= 0; pi--) {
+                var pp = particles[pi];
+                pp.x += pp.vx;
+                pp.y += pp.vy;
+                pp.life -= pp.decay;
+                if (pp.life <= 0) { particles.splice(pi, 1); continue; }
+                ctx.beginPath();
+                ctx.arc(pp.x, pp.y, 1.2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(100, 255, 255, ' + pp.life + ')';
+                ctx.fill();
+            }
+            /* 清理过多粒子 */
+            while (particles.length > 200) particles.shift();
+
+            /* 攻击源节点 — 脉冲光点 */
+            var now = Date.now();
             for (var m = 0; m < SOURCES.length; m++) {
                 var sp2 = P(SOURCES[m][0], SOURCES[m][1]);
+                var spulse = (now / 600 + m * 0.3) % 1;
+                /* 光晕 */
                 ctx.beginPath();
-                ctx.arc(sp2[0], sp2[1], 3, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(0, 235, 255, 0.95)';
+                ctx.arc(sp2[0], sp2[1], 2 + spulse * 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 220, 255, ' + (0.3 * (1 - spulse)) + ')';
+                ctx.fill();
+                /* 核心 */
+                ctx.beginPath();
+                ctx.arc(sp2[0], sp2[1], 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(100, 255, 255, 0.95)';
                 ctx.fill();
             }
 
-            var now = Date.now();
+            /* 攻击目标 — 多重冲击波 + 红核 */
             for (var j = 0; j < TARGETS.length; j++) {
-                var tp2 = P(TARGETS[j][0], TARGETS[j][1]);
-                var pulse = (now / 300) % 1;
+                var tp3 = P(TARGETS[j][0], TARGETS[j][1]);
+                var pulse1 = (now / 250 + j * 0.7) % 1;
+                var pulse2 = (now / 250 + j * 0.7 + 0.5) % 1;
+
+                /* 冲击波 1 */
                 ctx.beginPath();
-                ctx.arc(tp2[0], tp2[1], 3 + pulse * 18, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255, 100, 80, ' + (0.7 * (1 - pulse)) + ')';
-                ctx.lineWidth = 1.6;
+                ctx.arc(tp3[0], tp3[1], 3 + pulse1 * 22, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 80, 60, ' + (0.9 * (1 - pulse1)) + ')';
+                ctx.lineWidth = 2.0;
                 ctx.stroke();
+                /* 冲击波 2 */
                 ctx.beginPath();
-                ctx.arc(tp2[0], tp2[1], 4.2, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 90, 70, 0.95)';
+                ctx.arc(tp3[0], tp3[1], 3 + pulse2 * 22, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 140, 60, ' + (0.5 * (1 - pulse2)) + ')';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+                /* 核心光晕 */
+                ctx.beginPath();
+                ctx.arc(tp3[0], tp3[1], 8, 0, Math.PI * 2);
+                var coreGrad = ctx.createRadialGradient(tp3[0], tp3[1], 0, tp3[0], tp3[1], 8);
+                coreGrad.addColorStop(0, 'rgba(255, 60, 40, 1)');
+                coreGrad.addColorStop(0.4, 'rgba(255, 100, 60, 0.7)');
+                coreGrad.addColorStop(1, 'rgba(255, 30, 10, 0)');
+                ctx.fillStyle = coreGrad;
+                ctx.fill();
+                /* 核心亮点 */
+                ctx.beginPath();
+                ctx.arc(tp3[0], tp3[1], 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 220, 200, 1)';
                 ctx.fill();
             }
+
+            /* 扫描线 */
+            scanLineY = (scanLineY + 1.8) % H;
+            ctx.fillStyle = 'rgba(0, 200, 255, 0.04)';
+            ctx.fillRect(0, scanLineY, W, 2);
 
             requestAnimationFrame(frame);
         }
-        for (var i = 0; i < 20; i++) spawn();
+        /* 初始弧线 */
+        for (var i = 0; i < MAX_ARCS; i++) spawn();
         frame();
     })();
 </script>

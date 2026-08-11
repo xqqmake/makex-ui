@@ -21,6 +21,19 @@
                 </div>
 
                 <div class="sidebar-copyright-wrapper" v-show="!collapsed">
+                    <!-- 服务运行状态 -->
+                    <div class="sidebar-status-bar">
+                        <div class="status-item" :class="xrayStatus.state">
+                            <span class="status-dot"></span>
+                            <span class="status-name">Xray</span>
+                            <span class="status-text">[[ xrayStatus.stateMsg ]]</span>
+                        </div>
+                        <div class="status-item" :class="singboxStatus.state">
+                            <span class="status-dot"></span>
+                            <span class="status-name">SingBox</span>
+                            <span class="status-text">[[ singboxStatus.stateMsg ]]</span>
+                        </div>
+                    </div>
                     <div class="copyright-content">
                         <div class="brand-row">
                             <a-icon type="safety-certificate" theme="filled" class="brand-icon"></a-icon>
@@ -95,7 +108,56 @@
         /* [已删除] border-top: ... (那条横线已经彻底删除了) */
     }
 
-    /* 3. 品牌行样式 */
+    /* 4. 服务状态栏样式 */
+    .sidebar-status-bar {
+        padding: 8px 12px 4px 12px;
+        border-top: 1px solid rgba(128, 128, 128, 0.15);
+        margin-bottom: 6px;
+    }
+    .status-item {
+        display: flex;
+        align-items: center;
+        padding: 3px 0;
+        font-size: 11px;
+        gap: 5px;
+    }
+    .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: #999;
+    }
+    .status-dot.running, .status-item.running .status-dot {
+        background: #52c41a;
+        box-shadow: 0 0 5px #52c41a;
+    }
+    .status-item.running .status-dot {
+        animation: dot-pulse 2s infinite;
+    }
+    .status-dot.stop, .status-item.stop .status-dot {
+        background: #faad14;
+    }
+    .status-dot.error, .status-item.error .status-dot {
+        background: #ff4d4f;
+    }
+    @keyframes dot-pulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 5px #52c41a; }
+        50% { opacity: 0.4; box-shadow: 0 0 2px #52c41a; }
+    }
+    .status-name {
+        font-weight: 600;
+        opacity: 0.7;
+        min-width: 45px;
+        color: inherit;
+    }
+    .status-text {
+        opacity: 0.55;
+        font-size: 10px;
+        text-transform: capitalize;
+    }
+
+    /* 5. 品牌行样式 */
     .brand-row {
         display: flex;
         justify-content: center;
@@ -146,6 +208,7 @@
     const SIDEBAR_COLLAPSED_KEY = "isSidebarCollapsed"
 
     Vue.component('a-sidebar', {
+        delimiters: ['[[', ']]'],
         data() {
             return {
                 tabs: [
@@ -190,9 +253,39 @@
                 ],
                 visible: false,
                 collapsed: JSON.parse(localStorage.getItem(SIDEBAR_COLLAPSED_KEY)),
+                statusTimer: null,
+                xrayStatus: { state: 'stop', stateMsg: '--' },
+                singboxStatus: { state: 'stop', stateMsg: '--' },
             }
         },
+        mounted() {
+            this.fetchStatus();
+            this.statusTimer = setInterval(() => this.fetchStatus(), 5000);
+        },
+        beforeDestroy() {
+            if (this.statusTimer) clearInterval(this.statusTimer);
+        },
         methods: {
+            async fetchStatus() {
+                try {
+                    const msg = await HttpUtil.get('/panel/api/server/status');
+                    if (msg.success && msg.obj) {
+                        const data = msg.obj;
+                        if (data.xray) {
+                            this.xrayStatus = {
+                                state: data.xray.state || 'stop',
+                                stateMsg: data.xray.stateMsg || data.xray.state || '--'
+                            };
+                        }
+                        if (data.singbox) {
+                            this.singboxStatus = {
+                                state: data.singbox.state || 'stop',
+                                stateMsg: data.singbox.stateMsg || data.singbox.state || '--'
+                            };
+                        }
+                    }
+                } catch (e) {}
+            },
             openLink(key) {
                 return key.startsWith('http') ? 
                     window.open(key) : 
