@@ -271,18 +271,20 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			if model.Protocol(inbound.Protocol) == model.Shadowsocks {
 				ssMethod, _ := settings["method"].(string)
 				ssPass, _ := settings["password"].(string)
-				if ssMethod != "" || ssPass != "" {
-					for _, cr := range originalClients {
-						if cm, ok := cr.(map[string]interface{}); ok {
-							if _, has := cm["method"]; !has && ssMethod != "" {
-								cm["method"] = ssMethod
-							}
-							if _, has := cm["password"]; !has && ssPass != "" {
-								cm["password"] = ssPass
+					if ssMethod != "" || ssPass != "" {
+						for _, cr := range originalClients {
+							if cm, ok := cr.(map[string]interface{}); ok {
+								// method/password 字段存在但为空时也要用 settings 顶层值覆盖
+								// (面板前端可能写入 method="" + 随机 password 到 clients)
+								if m, ok := cm["method"].(string); (!ok || m == "") && ssMethod != "" {
+									cm["method"] = ssMethod
+								}
+								if p, ok := cm["password"].(string); (!ok || p == "") && ssPass != "" {
+									cm["password"] = ssPass
+								}
 							}
 						}
 					}
-				}
 			}
 			clientStats := inbound.ClientStats
 
