@@ -3,7 +3,7 @@
 
     /* 【通用】动态网络背景：深色底 + 粒子连线网络（网络元素风） */
     body {
-        background: linear-gradient(-45deg, #0b1e3a, #12294f, #0e2a3a, #1a2a6c, #0b1e3a, #143a54);
+        background: linear-gradient(-45deg, #13294b, #1a3560, #16344a, #203a75, #13294b, #1c4a6a);
         background-size: 400% 400%;
         animation: gradientBG 18s ease infinite;
     }
@@ -527,7 +527,7 @@
 										</a-card>
 
 										<a-card title='{{ i18n "pages.index.singboxStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
-										<template #extra>
+										<template slot="extra">
 											<template v-if="status.singbox.state != 'error'">
 												<a-badge status="processing" class="running-animation" :text="status.singbox.stateMsg" :color="status.singbox.color"/>
 											</template>
@@ -547,12 +547,18 @@
 											</template>
 										</template>
 										<a-tag v-if="status.singbox.version != 'Unknown'" color="green">v[[ status.singbox.version ]]</a-tag>
-										<template #actions>
+										<template slot="actions">
+											<a-space direction="horizontal" @click="openLogs()" :style="{ justifyContent: 'center' }">
+												<a-icon type="bars"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.logs" }}</span>
+											</a-space>
 											<a-space direction="horizontal" @click="stopSingBoxService" :style="{ justifyContent: 'center' }">
 												<a-icon type="poweroff"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.stopSingbox" }}</span>
 											</a-space>
 											<a-space direction="horizontal" @click="restartSingBoxService" :style="{ justifyContent: 'center' }">
 												<a-icon type="reload"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.restartSingbox" }}</span>
+											</a-space>
+											<a-space direction="horizontal" @click="openSingBoxVersion" :style="{ justifyContent: 'center' }">
+												<a-icon type="tool"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.singboxVersion" }}</span>
 											</a-space>
 										</template>
 										</a-card>
@@ -1288,6 +1294,10 @@ ${dateTime}
                 await PromiseUtil.sleep(500);
                 logModal.loading = false;
             },
+            openSingBoxVersion() {
+                const sb = this.status.singbox || {};
+                txtModal.show('sing-box', 'Version: ' + (sb.version || 'Unknown') + '\nState: ' + (sb.state || '-'), 'singbox-version');
+            },
             async openXrayLogs(){
               xraylogModal.loading = true;
                 const msg = await HttpUtil.post('/panel/api/server/xraylogs/'+xraylogModal.rows,{filter: xraylogModal.filter, showDirect: xraylogModal.showDirect, showBlocked: xraylogModal.showBlocked, showProxy: xraylogModal.showProxy});
@@ -1415,7 +1425,7 @@ ${dateTime}
         if (!canvas) return;
         var ctx = canvas.getContext('2d');
         var W = 0, H = 0, particles = [];
-        var COUNT = 55, LINK = 130;
+        var COUNT = 48, LINK = 130;
 
         function resize() {
             W = canvas.width = window.innerWidth;
@@ -1428,8 +1438,9 @@ ${dateTime}
                 particles.push({
                     x: Math.random() * W,
                     y: Math.random() * H,
-                    vx: (Math.random() - 0.5) * 0.6,
-                    vy: (Math.random() - 0.5) * 0.6
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    r: 0.8 + Math.random() * 1.2
                 });
             }
         }
@@ -1444,8 +1455,12 @@ ${dateTime}
                 if (p.x < 0 || p.x > W) p.vx *= -1;
                 if (p.y < 0 || p.y > H) p.vy *= -1;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(0, 229, 255, .9)';
+                ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 229, 255, .08)';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 229, 255, .55)';
                 ctx.fill();
             }
             for (i = 0; i < COUNT; i++) {
@@ -1456,12 +1471,12 @@ ${dateTime}
                     dy = p.y - q.y;
                     d = Math.sqrt(dx * dx + dy * dy);
                     if (d < LINK) {
-                        a = (1 - d / LINK) * 0.55;
+                        a = (1 - d / LINK) * 0.28;
                         ctx.beginPath();
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(q.x, q.y);
                         ctx.strokeStyle = 'rgba(0, 229, 255, ' + a + ')';
-                        ctx.lineWidth = 0.7;
+                        ctx.lineWidth = 0.5;
                         ctx.stroke();
                     }
                 }

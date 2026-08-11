@@ -150,6 +150,7 @@
 "readDatabaseError" = "خطا در خواندن پایگاه داده"
 "getDatabaseError" = "خطا در دریافت پایگاه داده"
 "getConfigError" = "خطا در دریافت فایل پیکربندی"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "کل ترافیک"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Xray با موفقیت راه‌اندازی مجدد شد"
 "stopSuccess" = "Xray با موفقیت متوقف شد"
 "restartError" = "خطا در راه‌اندازی مجدد Xray."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "خطا در توقف Xray."
 "basicTemplate" = "پایه"
 "advancedTemplate" = "پیشرفته"

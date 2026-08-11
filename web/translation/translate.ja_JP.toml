@@ -150,6 +150,7 @@
 "readDatabaseError" = "データベースの読み取り中にエラーが発生しました"
 "getDatabaseError" = "データベースの取得中にエラーが発生しました"
 "getConfigError" = "設定ファイルの取得中にエラーが発生しました"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "総トラフィック"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Xrayの再起動に成功しました"
 "stopSuccess" = "Xrayが正常に停止しました"
 "restartError" = "Xrayの再起動中にエラーが発生しました。"
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "Xrayの停止中にエラーが発生しました。"
 "basicTemplate" = "基本設定"
 "advancedTemplate" = "高度な設定"

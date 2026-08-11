@@ -150,6 +150,7 @@
 "readDatabaseError" = "Ocorreu um erro ao ler o banco de dados"
 "getDatabaseError" = "Ocorreu um erro ao recuperar o banco de dados"
 "getConfigError" = "Ocorreu um erro ao recuperar o arquivo de configuração"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "Tráfego Total"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Xray foi reiniciado com sucesso"
 "stopSuccess" = "Xray foi interrompido com sucesso"
 "restartError" = "Ocorreu um erro ao reiniciar o Xray."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "Ocorreu um erro ao parar o Xray."
 "basicTemplate" = "Básico"
 "advancedTemplate" = "Avançado"

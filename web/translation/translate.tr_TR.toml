@@ -150,6 +150,7 @@
 "readDatabaseError" = "Veritabanı okunurken bir hata oluştu"
 "getDatabaseError" = "Veritabanı alınırken bir hata oluştu"
 "getConfigError" = "Yapılandırma dosyası alınırken bir hata oluştu"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "Toplam Trafik"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Xray başarıyla yeniden başlatıldı"
 "stopSuccess" = "Xray başarıyla durduruldu"
 "restartError" = "Xray yeniden başlatılırken bir hata oluştu."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "Xray durdurulurken bir hata oluştu."
 "basicTemplate" = "Temeller"
 "advancedTemplate" = "Gelişmiş"

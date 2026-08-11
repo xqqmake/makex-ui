@@ -150,6 +150,7 @@
 "readDatabaseError" = "Виникла помилка під час читання бази даних"
 "getDatabaseError" = "Виникла помилка під час отримання бази даних"
 "getConfigError" = "Виникла помилка під час отримання файлу конфігурації"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "Загальний трафік"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Xray успішно перезапущено"
 "stopSuccess" = "Xray успішно зупинено"
 "restartError" = "Виникла помилка під час перезапуску Xray."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "Виникла помилка під час зупинки Xray."
 "basicTemplate" = "Базовий шаблон"
 "advancedTemplate" = "Додатково"

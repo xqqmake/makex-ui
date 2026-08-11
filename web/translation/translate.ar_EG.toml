@@ -150,6 +150,7 @@
 "readDatabaseError" = "حدث خطأ أثناء قراءة قاعدة البيانات"
 "getDatabaseError" = "حدث خطأ أثناء استرجاع قاعدة البيانات"
 "getConfigError" = "حدث خطأ أثناء استرجاع ملف الإعدادات"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "إجمالي حركة المرور"
@@ -400,6 +401,11 @@
 "restartSuccess" = "تم إعادة تشغيل Xray بنجاح"
 "stopSuccess" = "تم إيقاف Xray بنجاح"
 "restartError" = "حدث خطأ أثناء إعادة تشغيل Xray."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "حدث خطأ أثناء إيقاف Xray."
 "basicTemplate" = "أساسي"
 "advancedTemplate" = "متقدم"

@@ -150,6 +150,7 @@
 "readDatabaseError" = "Terjadi kesalahan saat membaca database"
 "getDatabaseError" = "Terjadi kesalahan saat mengambil database"
 "getConfigError" = "Terjadi kesalahan saat mengambil file konfigurasi"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "Total Lalu Lintas"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Xray berhasil diluncurkan ulang"
 "stopSuccess" = "Xray telah berhasil dihentikan"
 "restartError" = "Terjadi kesalahan saat memulai ulang Xray."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "Terjadi kesalahan saat menghentikan Xray."
 "basicTemplate" = "Dasar"
 "advancedTemplate" = "Lanjutan"

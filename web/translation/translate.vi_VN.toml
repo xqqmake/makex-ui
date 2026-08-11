@@ -150,6 +150,7 @@
 "readDatabaseError" = "Lỗi xảy ra khi đọc cơ sở dữ liệu"
 "getDatabaseError" = "Lỗi xảy ra khi truy xuất cơ sở dữ liệu"
 "getConfigError" = "Lỗi xảy ra khi truy xuất tệp cấu hình"
+"singboxVersion" = "Version"
 
 [pages.inbounds]
 "allTimeTraffic" = "Tổng Lưu Lượng"
@@ -400,6 +401,11 @@
 "restartSuccess" = "Đã khởi động lại Xray thành công"
 "stopSuccess" = "Xray đã được dừng thành công"
 "restartError" = "Đã xảy ra lỗi khi khởi động lại Xray."
+
+"singboxStopSuccess" = "sing-box stopped successfully"
+"singboxRestartSuccess" = "sing-box restarted successfully"
+"singboxStopError" = "Error stopping sing-box"
+"singboxRestartError" = "Error restarting sing-box"
 "stopError" = "Đã xảy ra lỗi khi dừng Xray."
 "basicTemplate" = "Mẫu Cơ bản"
 "advancedTemplate" = "Mẫu Nâng cao"
