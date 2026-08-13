@@ -576,90 +576,194 @@ hyjpport() {
 }
 
 # ==========================================================
-# 本地IP订阅分享链接（移植自 x-ui-yg 的“设置本地IP订阅分享链接”）
-# 通过 busybox httpd / python3 http.server 在本地端口分享订阅文件
-# 路径已适配 makex-ui（/usr/local/makex-ui/）
+# Argo 隧道 (Cloudflare Tunnel)（移植自 x-ui-yg install.sh xuiargo / sb.sh）
+# 原理：cloudflared 本地转发 WS 入站端口 -> CF 边缘 -> trycloudflare.com 随机域名 或 自有固定域名
+# 前提：入站必须是 WS 传输且 TLS 关闭（隧道自带 TLS，双 TLS 冲突）
+# 路径适配：/usr/local/makex-ui/（面板二进制 makex-ui，DB /etc/x-ui/makex-ui.db）
 # ==========================================================
-ipsub() {
-    subtokenipsub() {
-        echo
-        read -p "输入订阅链接路径密码（回车表示使用面板登录根路径）：" menu
-        if [ -z "$menu" ]; then
-            subtoken="$(/usr/local/makex-ui/makex-ui setting -show 2>/dev/null | awk -F': ' 'NR==4{print $2}' | tr -d '/')"
-        else
-            subtoken="$menu"
-        fi
-        rm -rf /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"
-        echo $subtoken > /usr/local/makex-ui/subtoken.log
-        echo -e "${green}订阅链接路径密码：$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)${plain}"
-    }
-    subportipsub() {
-        echo
-        read -p "输入未被占用且可用的订阅链接端口（回车表示随机端口）：" menu
-        if [ -z "$menu" ]; then
-            subport=$(shuf -i 10000-65535 -n 1)
-        else
-            subport="$menu"
-        fi
-        echo $subport > /usr/local/makex-ui/subport.log
-        echo -e "${green}订阅链接端口：$(cat /usr/local/makex-ui/subport.log 2>/dev/null)${plain}"
-    }
+
+# 下载 cloudflared 二进制（amd64/arm64）
+cloudflaredargo() {
+    if [ ! -e /usr/local/makex-ui/cloudflared ]; then
+        case $(uname -m) in
+            aarch64) cpu=arm64;;
+            x86_64) cpu=amd64;;
+        esac
+        echo -e "${yellow}首次使用，正在下载 cloudflared（linux-$cpu）...${plain}"
+        curl -L -o /usr/local/makex-ui/cloudflared -# --retry 2 https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$cpu
+        chmod +x /usr/local/makex-ui/cloudflared
+    fi
+}
+
+# 列出当前面板中 WS 传输且未开 TLS 的入站端口（Argo 前提条件）
+list_ws_inbounds() {
     echo
-    echo -e "${green}注意：目前订阅仅支持分享 /usr/local/makex-ui/bin/ 下的 clmi.yaml、sbox.json、jhsub.txt 订阅文件${plain}"
-    echo -e "${yellow}（本面板为 Xray 内核，若 bin 目录下无对应文件，请自行放置后重试）${plain}"
+    echo -e "${green}当前面板中【WS传输 + 未开TLS】的入站端口：${plain}"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - <<'PYEOF'
+import json, os
+p = '/usr/local/makex-ui/bin/config.json'
+if not os.path.exists(p):
+    print('  (config.json 不存在，请先启动面板)')
+    exit()
+cfg = json.load(open(p))
+found = []
+for ib in cfg.get('inbounds', []):
+    ss = ib.get('streamSettings') or {}
+    if ss.get('network') == 'ws' and ss.get('security') != 'tls':
+        found.append(str(ib.get('port')))
+print('  ' + ('、'.join(found) if found else '(无。请先在网页面板创建 ws 传输且关闭 TLS 的 vmess-ws 入站)'))
+PYEOF
+    else
+        echo '  (无 python3，跳过自动检测)'
+    fi
+}
+
+# Argo 主菜单
+xuiargo() {
     echo
-    echo -e "${yellow}1：重置安装本地IP订阅链接${plain}"
-    echo -e "${yellow}2：更换订阅链接路径密码${plain}"
-    echo -e "${yellow}3：更换订阅链接端口${plain}"
-    echo -e "${yellow}4：卸载本地IP订阅链接${plain}"
+    echo -e "${green}开启Argo隧道节点的三个前提要求：${plain}"
+    echo -e "${green}一、节点的传输协议是WS${plain}"
+    echo -e "${green}二、节点的TLS必须关闭（隧道自带TLS，双TLS冲突）${plain}"
+    echo -e "${green}三、节点的请求头留空不设${plain}"
+    echo -e "${green}节点类别可选：vmess-ws、vless-ws、trojan-ws。推荐vmess-ws${plain}"
+    list_ws_inbounds
+    echo
+    echo -e "${yellow}1：设置Argo临时隧道（随机域名）${plain}"
+    echo -e "${yellow}2：设置Argo固定隧道（自有域名）${plain}"
     echo -e "${yellow}0：返回上层${plain}"
-    read -p "请选择【0-4】：" menu
+    read -p "请选择【0-2】：" menu
     if [ "$menu" = "1" ]; then
-        subtokenipsub && subportipsub
+        cfargo
     elif [ "$menu" = "2" ]; then
-        subtokenipsub
-    elif [ "$menu" = "3" ]; then
-        subportipsub
-    elif [ "$menu" = "4" ]; then
-        kill -15 $(pgrep -f 'webxui' 2>/dev/null) >/dev/null 2>&1
-        crontab -l 2>/dev/null > /tmp/crontab.tmp
-        sed -i '/webxui/d' /tmp/crontab.tmp
-        crontab /tmp/crontab.tmp >/dev/null 2>&1
-        rm /tmp/crontab.tmp
-        rm -rf /root/webxui
-        rm -rf /etc/local.d/alpinesub.start
-        echo -e "${green}本地IP订阅链接已卸载完成${plain}" && exit
+        cfargoym
     else
         show_menu
     fi
+}
+
+# Argo 临时隧道（Quick Tunnel，随机 trycloudflare.com 域名）
+cfargo() {
     echo
-    echo -e "${green}请稍后…………${plain}"
-    kill -15 $(pgrep -f 'webxui' 2>/dev/null) >/dev/null 2>&1
-    mkdir -p /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"
-    [ -f /usr/local/makex-ui/bin/clmi.yaml ] && ln -sf /usr/local/makex-ui/bin/clmi.yaml /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"/clmi.yaml
-    [ -f /usr/local/makex-ui/bin/sbox.json ] && ln -sf /usr/local/makex-ui/bin/sbox.json /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"/sbox.json
-    [ -f /usr/local/makex-ui/bin/jhsub.txt ] && ln -sf /usr/local/makex-ui/bin/jhsub.txt /root/webxui/"$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)"/jhsub.txt
-    if command -v busybox >/dev/null 2>&1 && busybox --list 2>/dev/null | grep -q httpd; then
-        busybox httpd -f -p "$(cat /usr/local/makex-ui/subport.log 2>/dev/null)" -h /root/webxui > /dev/null 2>&1 &
-        httpd_cmd='busybox httpd -f -p $(cat /usr/local/makex-ui/subport.log 2>/dev/null) -h /root/webxui > /dev/null 2>&1 &'
-    elif command -v python3 >/dev/null 2>&1; then
-        cd /root/webxui && nohup python3 -m http.server "$(cat /usr/local/makex-ui/subport.log 2>/dev/null)" --bind 0.0.0.0 > /dev/null 2>&1 &
-        httpd_cmd='cd /root/webxui && nohup python3 -m http.server $(cat /usr/local/makex-ui/subport.log 2>/dev/null) --bind 0.0.0.0 > /dev/null 2>&1 &'
+    echo -e "${yellow}1：重置Argo临时隧道域名${plain}"
+    echo -e "${yellow}2：停止Argo临时隧道${plain}"
+    echo -e "${yellow}0：返回上层${plain}"
+    read -p "请选择【0-2】：" menu
+    if [ "$menu" = "1" ]; then
+        read -p "请输入Argo监听的WS节点端口：" port
+        echo "$port" > /usr/local/makex-ui/xuiargoport.log
+        cloudflaredargo
+        i=0
+        while [ $i -le 4 ]; do
+            i=$((i+1))
+            echo -e "${yellow}第${i}次刷新验证Cloudflared Argo隧道域名有效性，请稍等……${plain}"
+            if [ -n "$(ps -e | grep cloudflared)" ]; then
+                kill -15 $(cat /usr/local/makex-ui/xuiargopid.log 2>/dev/null) >/dev/null 2>&1
+            fi
+            /usr/local/makex-ui/cloudflared tunnel --url http://localhost:$port --edge-ip-version auto --no-autoupdate --protocol http2 > /usr/local/makex-ui/argo.log 2>&1 &
+            echo "$!" > /usr/local/makex-ui/xuiargopid.log
+            sleep 20
+            if [[ -n $(curl -sL https://$(cat /usr/local/makex-ui/argo.log 2>/dev/null | grep -a trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')/ -I | awk 'NR==1 && /404|400|503/') ]]; then
+                argo=$(cat /usr/local/makex-ui/argo.log 2>/dev/null | grep -a trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')
+                echo -e "${blue}Argo隧道申请成功，域名验证有效：$argo${plain}"
+                echo "$argo" > /usr/local/makex-ui/xuiargoym.log
+                break
+            fi
+            if [ $i -eq 5 ]; then
+                echo -e "${red}请注意${plain}"
+                echo -e "${yellow}1：请确保你输入的端口是已创建且未开TLS的WS协议端口${plain}"
+                echo -e "${yellow}2：Argo域名验证暂不可用，稍后可能会自动恢复，或者再次重置${plain}"
+            fi
+        done
+        crontab -l 2>/dev/null > /tmp/crontab.tmp
+        sed -i '/xuiargoport.log/d' /tmp/crontab.tmp
+        crontab /tmp/crontab.tmp >/dev/null 2>&1
+        rm /tmp/crontab.tmp
+        crontab -l 2>/dev/null > /tmp/crontab.tmp
+        echo '@reboot sleep 10 && /bin/bash -c "/usr/local/makex-ui/cloudflared tunnel --url http://localhost:$(cat /usr/local/makex-ui/xuiargoport.log) --edge-ip-version auto --no-autoupdate --protocol http2 > /usr/local/makex-ui/argo.log 2>&1 & pid=\$! && echo \$pid > /usr/local/makex-ui/xuiargopid.log"' >> /tmp/crontab.tmp
+        crontab /tmp/crontab.tmp >/dev/null 2>&1
+        rm /tmp/crontab.tmp
+        echo -e "${green}Argo临时隧道已设置完成（已配置开机自启）${plain}"
+        read -p "按回车键返回主菜单" _
+        show_menu
+    elif [ "$menu" = "2" ]; then
+        kill -15 $(cat /usr/local/makex-ui/xuiargopid.log 2>/dev/null) >/dev/null 2>&1
+        rm -rf /usr/local/makex-ui/argo.log /usr/local/makex-ui/xuiargopid.log /usr/local/makex-ui/xuiargoport.log /usr/local/makex-ui/xuiargoym.log
+        crontab -l 2>/dev/null > /tmp/crontab.tmp
+        sed -i '/xuiargopid.log/d' /tmp/crontab.tmp
+        crontab /tmp/crontab.tmp >/dev/null 2>&1
+        rm /tmp/crontab.tmp
+        echo -e "${green}已卸载Argo临时隧道${plain}"
+        read -p "按回车键返回主菜单" _
+        show_menu
     else
-        echo -e "${red}未找到 busybox httpd 或 python3，无法启动本地订阅服务${plain}"
+        xuiargo
     fi
-    sleep 2
-    crontab -l 2>/dev/null > /tmp/crontab.tmp
-    sed -i '/webxui/d' /tmp/crontab.tmp
-    echo "@reboot sleep 10 && /bin/bash -c \"$httpd_cmd\"" >> /tmp/crontab.tmp
-    crontab /tmp/crontab.tmp >/dev/null 2>&1
-    rm /tmp/crontab.tmp
-    subport=$(cat /usr/local/makex-ui/subport.log 2>/dev/null)
-    subtoken=$(cat /usr/local/makex-ui/subtoken.log 2>/dev/null)
-    echo -e "${green}本地IP订阅链接已更新完成${plain}"
-    echo -e "${green}订阅链接：http://$(curl -s4m5 icanhazip.com -k):$subport/$subtoken/${plain}"
-    read -p "按回车键返回主菜单" _
-    show_menu
+}
+
+# Argo 固定隧道（Named Tunnel，自有域名 + Token，systemd 守护）
+cfargoym() {
+    echo
+    if [[ -f /usr/local/makex-ui/xuiargotoken.log && -f /usr/local/makex-ui/xuiargoym.log ]]; then
+        echo -e "${green}当前Argo固定隧道域名：$(cat /usr/local/makex-ui/xuiargoym.log 2>/dev/null)${plain}"
+        echo -e "${green}当前Argo固定隧道Token：$(cat /usr/local/makex-ui/xuiargotoken.log 2>/dev/null)${plain}"
+    fi
+    echo
+    echo -e "${green}请确保Cloudflare官网 --- Zero Trust --- Networks --- Tunnels 已设置完成${plain}"
+    echo -e "${yellow}1：重置/设置Argo固定隧道域名${plain}"
+    echo -e "${yellow}2：停止Argo固定隧道${plain}"
+    echo -e "${yellow}0：返回上层${plain}"
+    read -p "请选择【0-2】：" menu
+    if [ "$menu" = "1" ]; then
+        read -p "请输入Argo监听的WS节点端口：" port
+        echo "$port" > /usr/local/makex-ui/xuiargoport.log
+        read -p "输入Argo固定隧道Token: " argotoken
+        read -p "输入Argo固定隧道域名: " argoym
+        cloudflaredargo
+        pid=$(ps -ef 2>/dev/null | awk '/[c]loudflared.*run/ {print $2}')
+        [ -n "$pid" ] && kill -9 "$pid" >/dev/null 2>&1
+        echo
+        echo -e "${yellow}注意！Zero Trust设置固定隧道URL端口填写WS节点端口：localhost:$port${plain}"
+        if [[ -n "${argotoken}" && -n "${argoym}" ]]; then
+            if pidof systemd >/dev/null 2>&1; then
+                cat > /etc/systemd/system/argo.service <<EOF
+[Unit]
+Description=argo service
+After=network.target
+[Service]
+Type=simple
+NoNewPrivileges=yes
+TimeoutStartSec=0
+ExecStart=/usr/local/makex-ui/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${argotoken}"
+Restart=on-failure
+RestartSec=5s
+[Install]
+WantedBy=multi-user.target
+EOF
+                systemctl daemon-reload >/dev/null 2>&1
+                systemctl enable argo >/dev/null 2>&1
+                systemctl start argo >/dev/null 2>&1
+            fi
+        fi
+        echo "${argoym}" > /usr/local/makex-ui/xuiargoym.log
+        echo "${argotoken}" > /usr/local/makex-ui/xuiargotoken.log
+        echo -e "${blue}Argo固定隧道设置完成，固定域名：${argoym}${plain}"
+        read -p "按回车键返回主菜单" _
+        show_menu
+    elif [ "$menu" = "2" ]; then
+        if pidof systemd >/dev/null 2>&1; then
+            systemctl stop argo >/dev/null 2>&1
+            systemctl disable argo >/dev/null 2>&1
+            rm -rf /etc/systemd/system/argo.service
+            systemctl daemon-reload >/dev/null 2>&1
+        fi
+        rm -rf /usr/local/makex-ui/xuiargotoken.log /usr/local/makex-ui/xuiargoym.log
+        echo -e "${green}Argo固定隧道已停止${plain}"
+        read -p "按回车键返回主菜单" _
+        show_menu
+    else
+        xuiargo
+    fi
 }
 
 disable_bbr() {
@@ -803,6 +907,22 @@ show_status() {
     esac
     show_xray_status
     show_singbox_status
+    show_argo_status
+}
+
+# Argo 隧道状态（在主菜单末尾与面板状态一起显示）
+show_argo_status() {
+    if [ -n "$(ps -e | grep cloudflared | grep -v grep)" ] && [ -f /usr/local/makex-ui/argo.log ]; then
+        argo=$(grep -a trycloudflare.com /usr/local/makex-ui/argo.log 2>/dev/null | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')
+        port=$(cat /usr/local/makex-ui/xuiargoport.log 2>/dev/null)
+        if [ -n "$argo" ]; then
+            echo -e "Argo隧道: ${green}运行中${plain} 域名: ${green}${argo}${plain} (WS端口: ${green}${port}${plain})"
+        else
+            echo -e "Argo隧道: ${yellow}启动中,等待域名分配...${plain}"
+        fi
+    else
+        echo -e "Argo隧道: ${red}未运行${plain} (选 ${green}24${plain} 启用)"
+    fi
 }
 
 show_enable_status() {
@@ -2517,7 +2637,7 @@ show_menu() {
 ——————————————————————
   ${green}22.${plain} 启用 BBR 
   ${green}23.${plain} 端口跳跃
-  ${green}24.${plain} 设置本地IP订阅分享链接
+  ${green}24.${plain} Argo 隧道
   ${green}25.${plain} 更新 Geo 文件
   ${green}26.${plain} Speedtest by Ookla
   ${green}27.${plain} 安装订阅转换 
@@ -2609,7 +2729,7 @@ show_menu() {
         hyjpport
         ;;
     24)
-        ipsub
+        xuiargo
         ;;
     25)
         update_geo
@@ -2675,3 +2795,4 @@ if [[ $# > 0 ]]; then
 else
     show_menu
 fi
+
