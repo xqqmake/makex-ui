@@ -397,9 +397,9 @@ install_free_version() {
         wget -O /usr/bin/makex-ui-temp https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh
 
         # Stop makex-ui service and remove old resources
-        if [[ -e "${xui_folder}" ]]; then
-            systemctl stop makex-ui 2>/dev/null; systemctl stop x-ui 2>/dev/null
-            rm -rf "${xui_folder}"
+        if [[ -e ${xui_folder}/ ]]; then
+            systemctl stop makex-ui
+            rm ${xui_folder}/ -rf
         fi
         
         sleep 3
@@ -991,7 +991,7 @@ ssl_cert_issue() {
 
     # Stop panel temporarily
     echo -e "${yellow}正在临时停止面板...${plain}"
-    systemctl stop makex-ui 2>/dev/null; systemctl stop x-ui 2>/dev/null 2> /dev/null || rc-service makex-ui stop 2> /dev/null
+    systemctl stop makex-ui 2> /dev/null || rc-service makex-ui stop 2> /dev/null
 
     if [[ ${cert_exists} -eq 0 ]]; then
         # issue the certificate
@@ -1201,7 +1201,7 @@ prompt_and_setup_ssl() {
             if [[ $release == "alpine" ]]; then
                 rc-service makex-ui stop > /dev/null 2>&1
             else
-                systemctl stop makex-ui 2>/dev/null; systemctl stop x-ui 2>/dev/null > /dev/null 2>&1
+                systemctl stop makex-ui > /dev/null 2>&1
             fi
 
             setup_ip_certificate "${server_ip}" "${ipv6_addr}"
