@@ -773,6 +773,8 @@
       </template>
     </a-modal>
     </a-layout-content>
+    <!-- REALITY Target Scanner (page level, inside #app Vue scope) -->
+    {{template "component/reality_scanner"}}
   </a-layout>
 </a-layout>
 {{template "page/body_scripts" .}}
@@ -951,6 +953,24 @@
             oneClickPort: '',
             oneClickId: 0,
             oneClickLoading: false,
+			
+			// REALITY Target Scanner
+			scannerVisible: false,
+			scannerQuery: '',
+			scanning: false,
+			scanResults: [],
+			scannerSelectedTarget: null,  // 存储选中的扫描结果，供编辑模态框使用
+			scannerColumns: [
+				{ title: 'Target', dataIndex: 'target', key: 'target', width: 200, scopedSlots: { customRender: 'target' } },
+				{ title: 'Status', dataIndex: 'feasible', key: 'feasible', width: 100, scopedSlots: { customRender: 'feasible' } },
+				{ title: 'TLS', dataIndex: 'tlsVersion', key: 'tlsVersion', width: 60, scopedSlots: { customRender: 'tlsVersion' } },
+				{ title: 'ALPN', dataIndex: 'alpn', key: 'alpn', width: 70, scopedSlots: { customRender: 'alpn' } },
+				{ title: 'Curve', dataIndex: 'curveID', key: 'curveID', width: 100, scopedSlots: { customRender: 'curveID' } },
+				{ title: 'Certificate', dataIndex: 'certSubject', key: 'certSubject', width: 150, scopedSlots: { customRender: 'certSubject' } },
+				{ title: 'SNI', dataIndex: 'serverNames', key: 'serverNames', width: 180, scopedSlots: { customRender: 'serverNames' } },
+				{ title: 'Latency', dataIndex: 'latencyMs', key: 'latencyMs', width: 80, scopedSlots: { customRender: 'latencyMs' } },
+				{ title: '', key: 'action', width: 60, scopedSlots: { customRender: 'action' } }
+			],
         },
 		
         mounted() {
@@ -2102,7 +2122,50 @@ async openPort(port) {
                     return p;
                 }
                 return false
-            }
+            },
+			// REALITY Target Scanner
+			openRealityScanner() {
+				this.scannerVisible = true;
+				this.runRealityScan();
+			},
+			async runRealityScan() {
+				this.scanning = true;
+				this.scanResults = [];
+				try {
+					const params = {};
+					if (this.scannerQuery.trim()) {
+						params.targets = this.scannerQuery.trim();
+					}
+					const msg = await HttpUtil.get('/panel/api/server/scanRealityTargets', params);
+					if (msg.success) {
+						this.scanResults = msg.obj || [];
+					}
+				} catch (e) {
+					this.$message.error('Scan failed: ' + e.message);
+				} finally {
+					this.scanning = false;
+				}
+			},
+			useScanResult(record) {
+				// 直接调用入站编辑模态框应用结果
+				if (typeof inboundModalVueInstance !== 'undefined' && inboundModalVueInstance) {
+					const im = inboundModalVueInstance;
+					if (im.inModal && im.inModal.inbound && im.inModal.inbound.stream && im.inModal.inbound.stream.reality) {
+						const reality = im.inModal.inbound.stream.reality;
+						reality.target = record.target;
+						if (record.serverNames && record.serverNames.length > 0) {
+							reality.serverNames = record.serverNames.join(',');
+						}
+						this.scannerVisible = false;
+						this.$message.success('Target: ' + record.target + ' → Target + SNI 已填入');
+						return;
+					}
+				}
+				// 兜底：存到 app 级别，等 watcher 转发
+				app.scannerSelectedTarget = record;
+				this.scannerVisible = false;
+				this.$message.success('Target selected: ' + record.target);
+			}
         },
         watch: {
             searchKey: Utils.debounce(function (newVal) {
@@ -2136,5 +2199,6 @@ async openPort(port) {
             }
         },
     });
+    window.app = app;  // 暴露给 window，供入站表单内的 REALITY Scanner 按钮调用
 </script>
 {{ template "page/body_end" .}}

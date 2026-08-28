@@ -161,6 +161,26 @@
                     }
                 },
                 deep: true
+            },
+            // 监听页面级 REALITY Scanner 选中结果
+            scannerSelectedTarget: {
+                handler(newVal) {
+                    if (newVal && inModal.inbound && inModal.inbound.stream && inModal.inbound.stream.reality) {
+                        inModal.inbound.stream.reality.dest = newVal.target;
+                        if (newVal.serverNames && newVal.serverNames.length > 0) {
+                            inModal.inbound.stream.reality.serverNames = newVal.serverNames.join(',');
+                        }
+                        app.scannerSelectedTarget = null;
+                        this.$message.success('REALITY target applied: ' + newVal.target);
+                    }
+                },
+                deep: true
+            }
+        },
+
+        computed: {
+            scannerSelectedTarget() {
+                return app.scannerSelectedTarget;
             }
         },
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 
 	"x-ui/web/global"
@@ -50,6 +51,8 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/getNewmldsa65", a.getNewmldsa65)
 	g.GET("/getNewmlkem768", a.getNewmlkem768)
 	g.GET("/getNewVlessEnc", a.getNewVlessEnc)
+	g.GET("/scanRealityTargets", a.scanRealityTargets)
+	g.GET("/scanRealityTarget", a.scanRealityTarget)
 
 	g.POST("/stopXrayService", a.stopXrayService)
 	g.POST("/restartXrayService", a.restartXrayService)
@@ -394,4 +397,25 @@ func (a *ServerController) openPort(c *gin.Context) {
 	// 【中文注释】: 3. 因为服务层方法是异步的，不再检查它的 error 返回值。
 	//    直接向前端返回一个成功的消息，告知用户指令已发送。
 	jsonMsg(c, "端口放行指令已成功发送，正在后台执行...", nil)
+}
+
+// REALITY Target Scanner API
+func (a *ServerController) scanRealityTargets(c *gin.Context) {
+	targets := c.Query("targets")
+	results, err := a.serverService.ScanRealityTargets(targets)
+	jsonObj(c, results, err)
+}
+
+func (a *ServerController) scanRealityTarget(c *gin.Context) {
+	target := c.Query("target")
+	sni := c.Query("sni")
+	xverStr := c.DefaultQuery("xver", "0")
+	xver, err := strconv.Atoi(xverStr)
+	if err != nil {
+		xver = 0
+	}
+	allowPrivate := c.Query("allowPrivate") == "true"
+
+	result, err := a.serverService.ScanRealityTarget(target, sni, xver, allowPrivate)
+	jsonObj(c, result, err)
 }

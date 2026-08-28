@@ -1,0 +1,78 @@
+{{define "component/reality_scanner"}}
+<a-modal id="reality-scanner-modal" :visible="scannerVisible" title="Reality扫描器" width="1100px" :footer="null" @cancel="scannerVisible=false">
+    <div style="margin-bottom: 16px;">
+        <a-input-search
+            v-model="scannerQuery"
+            placeholder="Enter targets (comma-separated) or leave empty for defaults"
+            enter-button="Scan"
+            @search="runRealityScan"
+            :loading="scanning"
+        />
+    </div>
+    
+    <a-table
+        :columns="scannerColumns"
+        :data-source="scanResults"
+        :loading="scanning"
+        :pagination="false"
+        size="small"
+        :scroll="{ y: 400 }"
+    >
+        <template slot="target" slot-scope="text, record">
+            <a-tooltip>
+                <template slot="title">[[ record.ip ? text + ' — ' + record.ip : text ]]</template>
+                <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    [[ text ]]
+                </div>
+                <div v-if="record.ip" style="color: #999; font-size: 12px;">[[ record.ip ]]</div>
+            </a-tooltip>
+        </template>
+        
+        <template slot="feasible" slot-scope="feasible, record">
+            <a-tag v-if="feasible" color="success">Feasible</a-tag>
+            <a-tooltip v-else>
+                <template slot="title">[[ record.reason ]]</template>
+                <a-tag color="warning">Not Feasible</a-tag>
+            </a-tooltip>
+        </template>
+        
+        <template slot="tlsVersion" slot-scope="version">
+            [[ version || '—' ]]
+        </template>
+        
+        <template slot="alpn" slot-scope="alpn">
+            [[ alpn || '—' ]]
+        </template>
+        
+        <template slot="curveID" slot-scope="curveID">
+            [[ curveID || '—' ]]
+        </template>
+        
+        <template slot="certSubject" slot-scope="certSubject, record">
+            <a-tooltip v-if="record.certValid">
+                <template slot="title">[[ record.certSubject ]] ([[ record.certIssuer ]])</template>
+                <span>[[ certSubject || '—' ]]</span>
+            </a-tooltip>
+            <a-tag v-else>Invalid</a-tag>
+        </template>
+        
+        <template slot="serverNames" slot-scope="serverNames">
+            <a-tooltip v-if="serverNames && serverNames.length">
+                <template slot="title">[[ serverNames.join(', ') ]]</template>
+                <div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    [[ serverNames.join(', ') ]]
+                </div>
+            </a-tooltip>
+            <span v-else>—</span>
+        </template>
+        
+        <template slot="latencyMs" slot-scope="latencyMs">
+            [[ latencyMs > 0 ? latencyMs + ' ms' : '—' ]]
+        </template>
+        
+        <template slot="action" slot-scope="text, record">
+            <a-button type="link" size="small" @click="useScanResult(record)">Use</a-button>
+        </template>
+    </a-table>
+</a-modal>
+{{end}}
