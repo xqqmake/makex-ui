@@ -46,6 +46,18 @@ install_deps() {
     echo -e "${green}>>> curl socat 安装/校验完成${plain}"
 }
 install_deps
+# 架构映射：将系统arch转换为Release文件名格式
+get_arch_name() {
+    local sys_arch=$(arch)
+    case "$sys_arch" in
+        x86_64)  echo "amd64" ;;
+        aarch64) echo "arm64" ;;
+        armv7l)  echo "armv7" ;;
+        armv6l)  echo "armv6" ;;
+        armv5l)  echo "armv5" ;;
+        *)       echo "$sys_arch" ;;
+    esac
+}
 # ==========【通用依赖安装 结束】==========
 
 # 非交互模式支持
@@ -157,7 +169,7 @@ install_free_version() {
     }
 
     echo ""
-    echo -e "${yellow}---------->>>>>当前系统的架构为: $(arch)${plain}"
+    echo -e "${yellow}---------->>>>>当前系统的架构为: $(get_arch_name)${plain}"
     echo ""
     last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     # 获取 makex-ui 版本
@@ -345,14 +357,14 @@ install_free_version() {
             echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
             echo ""
             sleep 2
-            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(arch).tar.gz https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(arch).tar.gz
+            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(get_arch_name).tar.gz https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(get_arch_name).tar.gz
             if [[ $? -ne 0 ]]; then
                 echo -e "${red}下载 makex-ui 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
                 exit 1
             fi
         else
             last_version=$1
-            url="https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(arch).tar.gz"
+            url="https://github.com/xqqmake/makex-ui/releases/download/${last_version}/makex-ui-linux-$(get_arch_name).tar.gz"
             echo ""
             echo -e "--------------------------------------------"
             echo -e "${green}---------------->>>>开始安装 makex-ui 免费版$1${plain}"
@@ -365,7 +377,7 @@ install_free_version() {
             echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
             echo ""
             sleep 2
-            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(arch).tar.gz ${url}
+            wget -N --no-check-certificate -O /usr/local/makex-ui-linux-$(get_arch_name).tar.gz ${url}
             if [[ $? -ne 0 ]]; then
                 echo -e "${red}下载 makex-ui $1 失败, 请检查此版本是否存在 ${plain}"
                 exit 1
@@ -382,23 +394,23 @@ install_free_version() {
         sleep 3
         echo -e "${green}------->>>>>>>>>>>检查并保存安装目录${plain}"
         echo ""
-        tar zxvf makex-ui-linux-$(arch).tar.gz
-        rm makex-ui-linux-$(arch).tar.gz -f
+        tar zxvf makex-ui-linux-$(get_arch_name).tar.gz
+        rm makex-ui-linux-$(get_arch_name).tar.gz -f
         
         cd makex-ui
         chmod +x makex-ui
         chmod +x makex-ui.sh
 
         # Check the system's architecture and rename the file accordingly
-        if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
-            mv bin/xray-linux-$(arch) bin/xray-linux-arm
+        if [[ $(get_arch_name) == "armv5" || $(get_arch_name) == "armv6" || $(get_arch_name) == "armv7" ]]; then
+            mv bin/xray-linux-$(get_arch_name) bin/xray-linux-arm
             chmod +x bin/xray-linux-arm
         fi
-        chmod +x makex-ui bin/xray-linux-$(arch)
+        chmod +x makex-ui bin/xray-linux-$(get_arch_name)
 
         # sing-box 二进制(anytls/tuic/naive 协议依赖)
-        if [[ -f bin/sing-box-linux-$(arch) ]]; then
-            chmod +x bin/sing-box-linux-$(arch)
+        if [[ -f bin/sing-box-linux-$(get_arch_name) ]]; then
+            chmod +x bin/sing-box-linux-$(get_arch_name)
         fi
         if [[ -f bin/sing-box-linux-arm ]]; then
             chmod +x bin/sing-box-linux-arm
