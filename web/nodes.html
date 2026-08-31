@@ -1,0 +1,991 @@
+{{ template "page/head_start" .}}
+<link rel="stylesheet" href="{{ .base_path }}assets/xterm/xterm.css?{{ .cur_ver }}">
+<style>
+    @media (min-width: 769px) {
+        .ant-layout-content {
+            margin: 24px 16px;
+        }
+    }
+    @media (max-width: 768px) {
+        .ant-layout-content {
+            margin: 10px 10px;
+        }
+    }
+    .ant-card-body {
+        padding: 24px;
+    }
+    .node-status {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    .node-status.online { background: #52c41a; }
+    .node-status.offline { background: #ff4d4f; }
+    .install-cmd {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        margin-top: 15px;
+        position: relative;
+        overflow-x: auto;
+    }
+    .platform-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .platform-tab {
+        padding: 10px 20px;
+        border: 2px solid #e8e8e8;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+    .platform-tab.active {
+        border-color: #1890ff;
+        background: #e6f7ff;
+        color: #1890ff;
+    }
+    .platform-tab:hover {
+        border-color: #40a9ff;
+    }
+    /* xterm终端样式 */
+    .xterm-container {
+        width: 100%;
+        height: 420px;
+        background: #1e1e1e;
+        border-radius: 6px;
+        padding: 8px;
+        overflow: hidden;
+    }
+    .xterm-container .xterm {
+        height: 100%;
+    }
+    .terminal-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: #f5f5f5;
+        border-radius: 6px 6px 0 0;
+        border: 1px solid #e8e8e8;
+        border-bottom: none;
+        font-size: 13px;
+    }
+    .dark .terminal-toolbar {
+        background: #1f1f1f;
+        border-color: #303030;
+        color: #d4d4d4;
+    }
+    .node-info-os {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .node-info-cpu {
+        font-size: 12px;
+        color: #888;
+        line-height: 1.5;
+    }
+</style>
+{{ template "page/head_end" .}}
+
+{{ template "page/body_start" .}}
+<a-layout id="app" v-cloak :class="themeSwitcher.currentTheme">
+    <a-sidebar></a-sidebar>
+    
+    <a-layout id="content-layout">
+        <a-layout-content>
+            <a-spin :spinning="loading" tip="加载中...">
+                <a-row :gutter="[16, 16]">
+                    <a-col :xs="24">
+                        <a-card hoverable>
+                            <a-row>
+                                <a-col :span="24">
+                                    <a-space :size="15">
+                                        <a-button type="primary" @click="showCreateModal">
+                                            <a-icon type="plus"></a-icon> 创建节点
+                                        </a-button>
+                                        
+                                        <a-button type="default" icon="reload" @click="loadNodes">
+                                            刷新列表
+                                        </a-button>
+                                        
+                                        <a-button type="primary" style="cursor: default;">
+                                            <a-icon type="info-circle"></a-icon>
+                                            在线：[[ onlineCount ]] / 总计：[[ totalCount ]]
+                                        </a-button>
+                                    </a-space>
+                                </a-col>
+                            </a-row>
+
+                            <a-table :columns="columns" :data-source="nodes" :row-key="record => record.id" 
+                                     :pagination="pagination" @change="handleTableChange" 
+                                     :scroll="isMobile ? { x: 'max-content' } : {}" style="margin-top: 20px">
+                                <template slot="status" slot-scope="text, record">
+                                    <span>
+                                        <span class="node-status" :class="record.status"></span>
+                                        [[ record.status === 'online' ? '在线' : '离线' ]]
+                                    </span>
+                                </template>
+                                <template slot="info" slot-scope="text, record">
+                                    <div>
+                                        <div class="node-info-os">[[ record.os || '等待上报...' ]] [[ record.arch || '' ]]</div>
+                                        <div class="node-info-cpu">
+                                            [[ record.cpuName || '-' ]] · [[ record.cpuCores > 0 ? record.cpuCores + '核' : '-' ]]
+                                        </div>
+                                    </div>
+                                </template>
+                                <template slot="usage" slot-scope="text, record">
+                                    <div v-if="record.status === 'online'">
+                                        <div>CPU: [[ (record.cpuUsage || 0).toFixed(1) ]]%</div>
+                                        <div>内存: [[ formatBytes(record.memUsed) ]] / [[ formatBytes(record.memTotal) ]]</div>
+                                    </div>
+                                    <div v-else style="color: #999;">-</div>
+                                </template>
+                                <template slot="cpu" slot-scope="text, record">
+                                    <div v-if="record.status === 'online'">
+                                        <a-progress :percent="Math.min(100, Math.round(record.cpuUsage || 0))" size="small" :stroke-color="usageColor(record.cpuUsage)"/>
+                                        <div style="font-size:12px;color:#888;">[[ (record.cpuUsage||0).toFixed(1) ]]%</div>
+                                    </div>
+                                    <div v-else style="color: #999;">-</div>
+                                </template>
+                                <template slot="mem" slot-scope="text, record">
+                                    <div v-if="record.status === 'online'">
+                                        <a-progress :percent="memPercent(record)" size="small" :stroke-color="usageColor(memPercent(record))"/>
+                                        <div style="font-size:12px;color:#888;">[[ formatBytes(record.memUsed) ]] / [[ formatBytes(record.memTotal) ]]</div>
+                                    </div>
+                                    <div v-else style="color: #999;">-</div>
+                                </template>
+                                <template slot="disk" slot-scope="text, record">
+                                    <div v-if="record.status === 'online'">
+                                        <a-progress :percent="diskPercent(record)" size="small" :stroke-color="usageColor(diskPercent(record))"/>
+                                        <div style="font-size:12px;color:#888;">[[ formatBytes(record.diskUsed) ]] / [[ formatBytes(record.diskTotal) ]]</div>
+                                    </div>
+                                    <div v-else style="color: #999;">-</div>
+                                </template>
+                                <template slot="net" slot-scope="text, record">
+                                    <div v-if="record.status === 'online'">
+                                        <div style="font-size:12px;color:#52c41a;">↓ [[ formatSpeed(record.netIn) ]]</div>
+                                        <div style="font-size:12px;color:#1890ff;">↑ [[ formatSpeed(record.netOut) ]]</div>
+                                    </div>
+                                    <div v-else style="color: #999;">-</div>
+                                </template>
+                                <template slot="network" slot-scope="text, record">
+                                    <div>[[ record.ipv4 || record.host || '-' ]]</div>
+                                    <div style="font-size: 12px; color: #999;">[[ record.group || '默认' ]]</div>
+                                </template>
+                                <template slot="action" slot-scope="text, record">
+                                    <a-space>
+                                        <a-button type="primary" size="small" @click="showInstallModal(record)">
+                                            <a-icon type="download"></a-icon> 安装命令
+                                        </a-button>
+                                        <a-button size="small" style="color:#722ed1; border-color:#722ed1;" @click="openTerminal(record)">
+                                            <a-icon type="code"></a-icon> 终端
+                                        </a-button>
+                                        <a-button size="small" type="default" @click="openExec(record)">
+                                            <a-icon type="play-circle"></a-icon> 执行命令
+                                        </a-button>
+                                        <a-button type="default" size="small" @click="editNode(record)">
+                                            <a-icon type="edit"></a-icon> 编辑
+                                        </a-button>
+                                        <a-popconfirm title="确定要删除这个节点吗？" @confirm="deleteNode(record)" okText="确定" cancelText="取消">
+                                            <a-button type="danger" size="small">
+                                                <a-icon type="delete"></a-icon> 删除
+                                            </a-button>
+                                        </a-popconfirm>
+                                    </a-space>
+                                </template>
+                            </a-table>
+                        </a-card>
+                    </a-col>
+                </a-row>
+            </a-spin>
+        </a-layout-content>
+    </a-layout>
+
+    <!-- 创建节点弹窗 -->
+    <a-modal v-model="createModalVisible" title="创建节点" @ok="createNode" okText="创建" cancelText="取消">
+        <a-form-model :model="createForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+            <a-form-model-item label="节点昵称" required>
+                <a-input v-model="createForm.name" placeholder="如：香港-01、美西-02"></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="分组">
+                <a-input v-model="createForm.group" placeholder="如：花屿云、索隆"></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="备注">
+                <a-textarea v-model="createForm.remark" :rows="2"></a-textarea>
+            </a-form-model-item>
+            <a-divider orientation="left" style="font-size: 13px;">SSH连接信息（用于终端）</a-divider>
+            <a-form-model-item label="SSH账号">
+                <a-input v-model="createForm.sshUser" placeholder="如: root"></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="SSH密码">
+                <a-input-password v-model="createForm.sshPassword" placeholder="节点SSH密码"></a-input-password>
+            </a-form-model-item>
+        </a-form-model>
+    </a-modal>
+
+    <!-- 编辑节点弹窗 -->
+    <a-modal v-model="editModalVisible" title="编辑节点" @ok="updateNode" okText="保存" cancelText="取消">
+        <a-form-model :model="editForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+            <a-form-model-item label="节点昵称">
+                <a-input v-model="editForm.name"></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="分组">
+                <a-input v-model="editForm.group"></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="备注">
+                <a-textarea v-model="editForm.remark" :rows="2"></a-textarea>
+            </a-form-model-item>
+            <a-divider orientation="left" style="font-size: 13px;">SSH连接信息（用于终端）</a-divider>
+            <a-form-model-item label="SSH账号">
+                <a-input v-model="editForm.sshUser" placeholder="如: root"></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="SSH密码">
+                <a-input-password v-model="editForm.sshPassword" placeholder="留空表示不修改"></a-input-password>
+            </a-form-model-item>
+            <a-form-model-item label="UUID">
+                <a-input v-model="editForm.uuid" disabled></a-input>
+            </a-form-model-item>
+            <a-form-model-item label="Token">
+                <a-input v-model="editForm.token" disabled></a-input>
+            </a-form-model-item>
+        </a-form-model>
+    </a-modal>
+
+    <!-- 安装命令弹窗 -->
+    <a-modal v-model="installModalVisible" title="安装节点客户端" width="800px" :footer="null">
+        <div style="margin-bottom: 15px;">
+            <strong>节点：</strong>[[ currentNode.name ]] | 
+            <strong>UUID：</strong>[[ currentNode.uuid ? currentNode.uuid.substring(0,8) + '...' : '-' ]]
+        </div>
+        
+        <!-- 平台选择 -->
+        <div class="platform-tabs">
+            <div class="platform-tab" :class="{active: installForm.platform === 'linux'}" @click="installForm.platform = 'linux'; generateInstallCmd()">
+                <a-icon type="linux" style="font-size: 24px;"></a-icon><br>Linux
+            </div>
+            <div class="platform-tab" :class="{active: installForm.platform === 'macos'}" @click="installForm.platform = 'macos'; generateInstallCmd()">
+                <a-icon type="apple" style="font-size: 24px;"></a-icon><br>macOS
+            </div>
+            <div class="platform-tab" :class="{active: installForm.platform === 'docker'}" @click="installForm.platform = 'docker'; generateInstallCmd()">
+                <a-icon type="cloud" style="font-size: 24px;"></a-icon><br>Docker
+            </div>
+        </div>
+
+        <!-- 安装选项 -->
+        <a-collapse default-active-key='1'>
+            <a-collapse-panel key="1" header="基本选项">
+                <a-row :gutter="16">
+                    <a-col :span="12">
+                        <a-form-item label="采集间隔(秒)">
+                            <a-input-number v-model="installForm.interval" :min="5" :max="3600" style="width: 100%"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-form-item label="GitHub代理">
+                            <a-input v-model="installForm.githubProxy" placeholder="如: https://ghproxy.com/"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="16">
+                    <a-col :span="12">
+                        <a-form-item label="安装目录">
+                            <a-input v-model="installForm.installDir" placeholder="如: /opt/komari"></a-input>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-form-item label="服务名称">
+                            <a-input v-model="installForm.serviceName" placeholder="如: komari-agent"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </a-collapse-panel>
+            <a-collapse-panel key="2" header="监控配置">
+                <a-row :gutter="16">
+                    <a-col :span="12">
+                        <a-form-item label="只监测网卡">
+                            <a-input v-model="installForm.monitorOnlyNIC" placeholder="如: eth0"></a-input>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-form-item label="排除网卡">
+                            <a-input v-model="installForm.excludeNIC" placeholder="如: docker0"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="16">
+                    <a-col :span="12">
+                        <a-form-item label="只监测挂载点">
+                            <a-input v-model="installForm.monitorOnlyMount" placeholder="如: /"></a-input>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-form-item label="月重置日">
+                            <a-input-number v-model="installForm.monthlyResetDay" :min="1" :max="28" style="width: 100%"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </a-collapse-panel>
+            <a-collapse-panel key="3" header="高级选项">
+                <a-row :gutter="16">
+                    <a-col :span="12">
+                        <a-checkbox v-model="installForm.disableRemoteControl">禁用远程控制</a-checkbox>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-checkbox v-model="installForm.disableAutoUpdate">禁用自动更新</a-checkbox>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="16" style="margin-top: 10px;">
+                    <a-col :span="12">
+                        <a-checkbox v-model="installForm.ignoreInsecureCert">忽略不安全证书</a-checkbox>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-checkbox v-model="installForm.includeBufferMemory">包含缓冲区内存</a-checkbox>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="16" style="margin-top: 10px;">
+                    <a-col :span="12">
+                        <a-checkbox v-model="installForm.getIPFromNIC">从网卡获取IP</a-checkbox>
+                    </a-col>
+                    <a-col :span="12">
+                        <a-checkbox v-model="installForm.enableDetailedGPU">详细GPU监控</a-checkbox>
+                    </a-col>
+                </a-row>
+            </a-collapse-panel>
+        </a-collapse>
+
+        <!-- 生成的安装命令 -->
+        <div class="install-cmd" style="margin-top: 15px;">
+            <a-button type="primary" size="small" style="position: absolute; top: 10px; right: 10px;" @click="copyInstallCmd">
+                <a-icon type="copy"></a-icon> 复制
+            </a-button>
+            <pre style="margin: 0; background: transparent; color: inherit; border: none; white-space: pre-wrap; word-break: break-all;">[[ installCommand ]]</pre>
+        </div>
+    </a-modal>
+
+    <!-- WebSSH终端弹窗 -->
+    <a-modal v-model="terminalModalVisible" :title="'终端 - ' + (terminalNode.name || '')" 
+             width="880px" :footer="null" :maskClosable="false" @cancel="closeTerminal"
+             :bodyStyle="{ padding: '0px', background: '#1e1e1e', borderRadius: '0 0 4px 4px' }">
+        <div class="terminal-toolbar">
+            <span>
+                <a-icon type="code" style="margin-right: 5px;"></a-icon>
+                [[ terminalNode.host || terminalNode.ipv4 || '-' ]]:[[ terminalNode.port || 22 ]]
+                <span v-if="terminalConnected" style="color: #52c41a; margin-left: 10px;">
+                    <a-icon type="check-circle"></a-icon> 已连接
+                </span>
+                <span v-else style="color: #faad14; margin-left: 10px;">
+                    <a-icon type="loading"></a-icon> 连接中...
+                </span>
+            </span>
+            <span>
+                <a-button size="small" ghost @click="closeTerminal">
+                    <a-icon type="close"></a-icon> 断开
+                </a-button>
+            </span>
+        </div>
+        <div class="xterm-container" id="xterm-container"></div>
+    </a-modal>
+
+    <!-- 执行命令弹窗 -->
+    <a-modal v-model="execModalVisible" :title="'执行命令 - ' + (execNode.name || '')" 
+             width="700px" :footer="null" :maskClosable="false">
+        <div class="terminal-toolbar" style="margin-bottom: 10px;">
+            <span>
+                <a-icon type="play-circle" style="margin-right: 5px;"></a-icon>
+                [[ execNode.host || execNode.ipv4 || '-' ]]
+                <span v-if="execNode._online" style="color: #52c41a; margin-left: 10px;">
+                    <a-icon type="check-circle"></a-icon> 在线
+                </span>
+                <span v-else style="color: #ff4d4f; margin-left: 10px;">
+                    <a-icon type="close-circle"></a-icon> 离线
+                </span>
+            </span>
+        </div>
+        <a-input-search v-model="execCommand" placeholder="输入要执行的命令，如: uptime" 
+                        enter-button="执行" size="large" @search="runExec"
+                        :loading="execRunning"></a-input-search>
+        <div v-if="execOutput" class="install-cmd" style="margin-top: 12px; max-height: 320px; overflow: auto;">
+            <pre style="margin: 0; background: transparent; color: inherit; border: none; white-space: pre-wrap; word-break: break-all;">[[ execOutput ]]</pre>
+        </div>
+    </a-modal>
+</a-layout>
+
+{{template "page/body_scripts" .}}
+{{template "component/aSidebar" .}}
+{{template "component/aThemeSwitch" .}}
+<script src="{{ .base_path }}assets/xterm/xterm.js?{{ .cur_ver }}"></script>
+<script src="{{ .base_path }}assets/xterm/xterm-addon-fit.js?{{ .cur_ver }}"></script>
+
+<script>
+    // 全局时间格式化函数（customRender 中 this 不指向组件实例，必须用全局函数）
+    function formatTimeGlobal(time) {
+        if (!time || time === '0001-01-01T00:00:00Z') return '从未';
+        const date = new Date(time);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+        if (diff < 60) return '刚刚';
+        if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+        if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+        return Math.floor(diff / 86400) + '天前';
+    }
+    new Vue({
+        mixins: [MediaQueryMixin],
+        delimiters: ['[[', ']]'],
+        el: '#app',
+        data: {
+            themeSwitcher,
+            loading: false,
+            nodes: [],
+            onlineCount: 0,
+            totalCount: 0,
+            pagination: {
+                current: 1,
+                pageSize: 20,
+                total: 0,
+                showTotal: total => `共 ${total} 条`,
+                showSizeChanger: true,
+                pageSizeOptions: ['10', '20', '50', '100']
+            },
+            columns: [
+                { title: '状态', dataIndex: 'status', scopedSlots: { customRender: 'status' }, width: 90 },
+                { title: '名称', dataIndex: 'name', width: 130 },
+                { title: '系统信息', scopedSlots: { customRender: 'info' }, width: 190 },
+                { title: 'CPU', scopedSlots: { customRender: 'cpu' }, width: 110 },
+                { title: '内存', scopedSlots: { customRender: 'mem' }, width: 150 },
+                { title: '磁盘', scopedSlots: { customRender: 'disk' }, width: 150 },
+                { title: '网络', scopedSlots: { customRender: 'net' }, width: 130 },
+                { title: 'IP/分组', scopedSlots: { customRender: 'network' }, width: 140 },
+                { title: '最后上报', dataIndex: 'lastReport', width: 130, customRender: text => formatTimeGlobal(text) },
+                { title: '操作', scopedSlots: { customRender: 'action' }, width: 330, fixed: 'right' }
+            ],
+            createModalVisible: false,
+            editModalVisible: false,
+            installModalVisible: false,
+            terminalModalVisible: false,
+            terminalNode: {},
+            terminalConnected: false,
+            terminalWs: null,
+            terminalInstance: null,
+            terminalFit: null,
+            createForm: { name: '', group: '', remark: '', sshUser: '', sshPassword: '' },
+            editForm: { id: 0, name: '', group: '', remark: '', uuid: '', token: '', sshUser: '', sshPassword: '' },
+            currentNode: {},
+            installForm: {
+                platform: 'linux',
+                interval: 30,
+                githubProxy: '',
+                installDir: '',
+                serviceName: '',
+                monitorOnlyNIC: '',
+                excludeNIC: '',
+                monitorOnlyMount: '',
+                monthlyResetDay: 1,
+                disableRemoteControl: false,
+                disableAutoUpdate: false,
+                ignoreInsecureCert: false,
+                includeBufferMemory: false,
+                getIPFromNIC: false,
+                enableDetailedGPU: false
+            },
+            installCommand: '',
+            refreshTimer: null,
+            // 执行命令
+            execModalVisible: false,
+            execNode: {},
+            execCommand: '',
+            execOutput: '',
+            execRunning: false,
+            execPollTimer: null,
+            // 实时上报数据
+            onlineUuids: [],
+            reportMap: {}
+        },
+        mounted() {
+            this.loadNodes();
+        },
+        beforeDestroy() {
+            if (this.refreshTimer) {
+                clearInterval(this.refreshTimer);
+            }
+            if (this.execPollTimer) {
+                clearInterval(this.execPollTimer);
+            }
+        },
+        methods: {
+            async loadNodes() {
+                this.loading = true;
+                try {
+                    const msg = await HttpUtil.get('/panel/api/nodes/list');
+                    if (msg.success) {
+                        this.nodes = msg.obj || [];
+                        this.totalCount = this.nodes.length;
+                        this.onlineCount = this.nodes.filter(n => n.status === 'online').length;
+                        this.pagination.total = this.nodes.length;
+                    }
+                    // 拉取实时在线状态与最新上报，合并到节点列表
+                    try {
+                        const onlineMsg = await HttpUtil.get('/panel/api/nodes/agent/online');
+                        if (onlineMsg.success) {
+                            this.onlineUuids = onlineMsg.obj.online || [];
+                            this.reportMap = onlineMsg.obj.reports || {};
+                            this.mergeAgentData();
+                        }
+                    } catch (e) {}
+                } catch (e) {
+                    console.error('加载节点列表失败:', e);
+                } finally {
+                    this.loading = false;
+                }
+            },
+            mergeAgentData() {
+                const onlineSet = {};
+                (this.onlineUuids || []).forEach(u => onlineSet[u] = true);
+                this.nodes.forEach(n => {
+                    const rep = this.reportMap[n.uuid];
+                    const isOnline = !!onlineSet[n.uuid];
+                    n._online = isOnline;
+                    if (isOnline) {
+                        n.status = 'online';
+                        if (rep) {
+                            n.cpuUsage = rep.cpu ? rep.cpu.usage : 0;
+                            n.memUsed = rep.ram ? rep.ram.used : 0;
+                            n.memTotal = rep.ram ? rep.ram.total : n.memTotal;
+                            n.diskUsed = rep.disk ? rep.disk.used : 0;
+                            n.diskTotal = rep.disk ? rep.disk.total : n.diskTotal;
+                            n.netIn = rep.network ? rep.network.down : 0;
+                            n.netOut = rep.network ? rep.network.up : 0;
+                            n.uptime = rep.uptime || 0;
+                            if (rep.cpu && rep.cpu.cores > 0) n.cpuCores = rep.cpu.cores;
+                            if (rep.cpu && rep.cpu.name) n.cpuName = rep.cpu.name;
+                        }
+                        n.lastReport = new Date().toISOString();
+                    } else {
+                        if (n.status === 'online') {
+                            n.status = 'offline';
+                        }
+                    }
+                });
+                this.onlineCount = this.nodes.filter(n => n._online).length;
+            },
+            // 实时辅助
+            memPercent(record) {
+                if (!record.memTotal) return 0;
+                return Math.min(100, Math.round((record.memUsed || 0) / record.memTotal * 100));
+            },
+            diskPercent(record) {
+                if (!record.diskTotal) return 0;
+                return Math.min(100, Math.round((record.diskUsed || 0) / record.diskTotal * 100));
+            },
+            usageColor(p) {
+                if (p >= 85) return '#ff4d4f';
+                if (p >= 60) return '#faad14';
+                return '#52c41a';
+            },
+            formatSpeed(bps) {
+                if (!bps) return '0 B/s';
+                const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+                let i = 0;
+                while (bps >= 1024 && i < units.length - 1) {
+                    bps /= 1024;
+                    i++;
+                }
+                return bps.toFixed(1) + ' ' + units[i];
+            },
+            // ===== 执行命令（agent） =====
+            openExec(node) {
+                this.execNode = node;
+                this.execCommand = '';
+                this.execOutput = '';
+                this.execModalVisible = true;
+            },
+            async runExec() {
+                const cmd = (this.execCommand || '').trim();
+                if (!cmd) {
+                    this.$message.error('请输入命令');
+                    return;
+                }
+                if (!this.execNode._online) {
+                    this.$message.error('节点离线，无法执行命令');
+                    return;
+                }
+                this.execRunning = true;
+                this.execOutput = '';
+                try {
+                    const msg = await HttpUtil.post('/panel/api/nodes/' + this.execNode.id + '/agent/exec', { command: cmd });
+                    if (msg.success) {
+                        const taskId = msg.obj.taskId;
+                        this.execOutput = '命令已下发，等待执行...\n';
+                        this.execRunning = false;
+                        this.pollExecResult(taskId);
+                    } else {
+                        this.execOutput = '执行失败: ' + msg.msg;
+                        this.execRunning = false;
+                    }
+                } catch (e) {
+                    this.execOutput = '请求失败: ' + e.message;
+                    this.execRunning = false;
+                }
+            },
+            pollExecResult(taskId) {
+                if (this.execPollTimer) {
+                    clearInterval(this.execPollTimer);
+                }
+                let tries = 0;
+                this.execPollTimer = setInterval(async () => {
+                    tries++;
+                    try {
+                        const msg = await HttpUtil.get('/panel/api/nodes/' + this.execNode.id + '/agent/task/' + taskId);
+                        if (msg.success && msg.obj.done) {
+                            clearInterval(this.execPollTimer);
+                            this.execPollTimer = null;
+                            const r = msg.obj;
+                            this.execOutput = (r.result || '') + (r.exit_code ? '\n[退出码: ' + r.exit_code + ']' : '');
+                        } else if (tries > 30) {
+                            clearInterval(this.execPollTimer);
+                            this.execPollTimer = null;
+                            this.execOutput += '\n[执行超时]';
+                        }
+                    } catch (e) {
+                        clearInterval(this.execPollTimer);
+                        this.execPollTimer = null;
+                        this.execOutput += '\n[查询失败: ' + e.message + ']';
+                    }
+                }, 1000);
+            },
+            handleTableChange(pagination) {
+                this.pagination.current = pagination.current;
+                this.pagination.pageSize = pagination.pageSize;
+            },
+            showCreateModal() {
+                this.createForm = { name: '', group: '', remark: '', sshUser: '', sshPassword: '' };
+                this.createModalVisible = true;
+            },
+            async createNode() {
+                if (!this.createForm.name) {
+                    this.$message.error('请输入节点昵称');
+                    return;
+                }
+                const msg = await HttpUtil.post('/panel/api/nodes/create', this.createForm);
+                if (msg.success) {
+                    this.createModalVisible = false;
+                    this.loadNodes();
+                    this.$message.success('节点创建成功！');
+                    this.$notification.success({
+                        message: '创建成功',
+                        description: `UUID: ${msg.obj.uuid}\nToken: ${msg.obj.token}\n请保存好这些信息！`,
+                        duration: 10
+                    });
+                } else {
+                    this.$message.error(msg.msg);
+                }
+            },
+            editNode(node) {
+                this.editForm = {
+                    id: node.id,
+                    name: node.name,
+                    group: node.group,
+                    remark: node.remark,
+                    uuid: node.uuid,
+                    token: node.token,
+                    sshUser: node.sshUser || '',
+                    sshPassword: ''
+                };
+                this.editModalVisible = true;
+            },
+            async updateNode() {
+                const msg = await HttpUtil.post('/panel/api/nodes/update', this.editForm);
+                if (msg.success) {
+                    this.editModalVisible = false;
+                    this.loadNodes();
+                    this.$message.success('更新成功！');
+                } else {
+                    this.$message.error(msg.msg);
+                }
+            },
+            async deleteNode(node) {
+                const msg = await HttpUtil.delete('/panel/api/nodes/' + node.id);
+                if (msg.success) {
+                    this.loadNodes();
+                    this.$message.success('删除成功！');
+                } else {
+                    this.$message.error(msg.msg);
+                }
+            },
+            showInstallModal(node) {
+                this.currentNode = node;
+                this.installCommand = '';
+                this.generateInstallCmd();
+                this.installModalVisible = true;
+            },
+            async generateInstallCmd() {
+                const params = {};
+                params.platform = this.installForm.platform;
+                params.interval = this.installForm.interval;
+                
+                if (this.installForm.githubProxy) params.github_proxy = this.installForm.githubProxy;
+                if (this.installForm.installDir) params.install_dir = this.installForm.installDir;
+                if (this.installForm.serviceName) params.service_name = this.installForm.serviceName;
+                if (this.installForm.monitorOnlyNIC) params.monitor_only_nic = this.installForm.monitorOnlyNIC;
+                if (this.installForm.excludeNIC) params.exclude_nic = this.installForm.excludeNIC;
+                if (this.installForm.monitorOnlyMount) params.monitor_only_mount = this.installForm.monitorOnlyMount;
+                if (this.installForm.monthlyResetDay !== 1) params.monthly_reset_day = this.installForm.monthlyResetDay;
+                
+                if (this.installForm.disableRemoteControl) params.disable_remote_control = 'true';
+                if (this.installForm.disableAutoUpdate) params.disable_auto_update = 'true';
+                if (this.installForm.ignoreInsecureCert) params.ignore_insecure_cert = 'true';
+                if (this.installForm.includeBufferMemory) params.include_buffer_memory = 'true';
+                if (this.installForm.getIPFromNIC) params.get_ip_from_nic = 'true';
+                if (this.installForm.enableDetailedGPU) params.enable_detailed_gpu = 'true';
+                
+                const msg = await HttpUtil.get('/panel/api/nodes/' + this.currentNode.id + '/install-cmd', params);
+                if (msg.success) {
+                    this.installCommand = msg.obj.command;
+                }
+            },
+            copyInstallCmd() {
+                const textarea = document.createElement('textarea');
+                textarea.value = this.installCommand;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                this.$message.success('已复制到剪贴板！');
+            },
+            formatBytes(bytes) {
+                if (!bytes) return '-';
+                const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                let i = 0;
+                while (bytes >= 1024 && i < units.length - 1) {
+                    bytes /= 1024;
+                    i++;
+                }
+                return bytes.toFixed(1) + ' ' + units[i];
+            },
+            formatTime(time) {
+                if (!time || time === '0001-01-01T00:00:00Z') return '从未';
+                const date = new Date(time);
+                const now = new Date();
+                const diff = (now - date) / 1000;
+                
+                if (diff < 60) return '刚刚';
+                if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+                if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+                return Math.floor(diff / 86400) + '天前';
+            },
+            // ===== WebSSH终端 =====
+            openTerminal(node) {
+                this.terminalNode = node;
+                this.terminalConnected = false;
+                this.terminalModalVisible = true;
+                this.$nextTick(() => {
+                    if (node._online) {
+                        // agent 在线 -> 使用 agent 终端（无需SSH凭据）
+                        this.initAgentTerminal(node);
+                    } else {
+                        // agent 离线 -> 回退 SSH 终端
+                        this.initTerminal(node);
+                    }
+                });
+            },
+            initAgentTerminal(node) {
+                // 关闭旧连接
+                this.closeTerminalSocket();
+                if (this.terminalInstance) {
+                    this.terminalInstance.dispose();
+                    this.terminalInstance = null;
+                }
+
+                const container = document.getElementById('xterm-container');
+                if (!container) return;
+                container.innerHTML = '';
+
+                // 创建xterm实例
+                const term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    theme: { background: '#1e1e1e', foreground: '#d4d4d4' },
+                    scrollback: 2000,
+                    convertEol: true
+                });
+                const fit = new FitAddon.FitAddon();
+                term.loadAddon(fit);
+                term.open(container);
+                fit.fit();
+
+                this.terminalInstance = term;
+                this.terminalFit = fit;
+
+                // 构造WebSocket地址（basePath为页面全局变量，如 /xui/）
+                const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const wsUrl = proto + window.location.host + (typeof basePath !== 'undefined' ? basePath : '/') + 'panel/api/nodes/' + node.id + '/agent/terminal';
+
+                let ws;
+                try {
+                    ws = new WebSocket(wsUrl);
+                } catch (e) {
+                    term.writeln('\x1b[31mWebSocket创建失败: ' + e.message + '\x1b[0m');
+                    return;
+                }
+                this.terminalWs = ws;
+
+                ws.onopen = () => {
+                    this.terminalConnected = true;
+                    term.writeln('\x1b[32m[已请求Agent终端 ' + (node.host || node.ipv4 || '') + ']\x1b[0m');
+                };
+                ws.onmessage = (evt) => {
+                    if (typeof evt.data === 'string') {
+                        // 首帧可能是 {"request_id":"xxx"}，跳过
+                        if (evt.data.indexOf('{') === 0 && evt.data.indexOf('request_id') > -1) {
+                            try {
+                                const j = JSON.parse(evt.data);
+                                if (j.request_id) return;
+                            } catch (e) {}
+                        }
+                        term.write(evt.data);
+                    } else {
+                        evt.data.arrayBuffer().then(buf => {
+                            term.write(new Uint8Array(buf));
+                        });
+                    }
+                };
+                ws.onclose = () => {
+                    this.terminalConnected = false;
+                    term.writeln('\x1b[33m\r\n[连接已关闭]\x1b[0m');
+                };
+                ws.onerror = () => {
+                    term.writeln('\x1b[31m\r\n[WebSocket错误]\x1b[0m');
+                };
+
+                // 输入转发
+                term.onData(data => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(data);
+                    }
+                });
+
+                // 窗口大小调整
+                term.onResize(size => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(new Uint8Array([0xFF, 0x01, size.rows, size.cols]));
+                    }
+                });
+
+                // 点击聚焦
+                term.onRender(() => { term.focus(); });
+            },
+            initTerminal(node) {
+                // 关闭旧连接
+                this.closeTerminalSocket();
+                if (this.terminalInstance) {
+                    this.terminalInstance.dispose();
+                    this.terminalInstance = null;
+                }
+
+                const container = document.getElementById('xterm-container');
+                if (!container) return;
+                container.innerHTML = '';
+
+                // 创建xterm实例
+                const term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    theme: { background: '#1e1e1e', foreground: '#d4d4d4' },
+                    scrollback: 2000,
+                    convertEol: true
+                });
+                const fit = new FitAddon.FitAddon();
+                term.loadAddon(fit);
+                term.open(container);
+                fit.fit();
+
+                this.terminalInstance = term;
+                this.terminalFit = fit;
+
+                // 构造WebSocket地址（basePath为页面全局变量，如 /xui/）
+                const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const wsUrl = proto + window.location.host + (typeof basePath !== 'undefined' ? basePath : '/') + 'panel/api/nodes/' + node.id + '/ws';
+
+                let ws;
+                try {
+                    ws = new WebSocket(wsUrl);
+                } catch (e) {
+                    term.writeln('\x1b[31mWebSocket创建失败: ' + e.message + '\x1b[0m');
+                    return;
+                }
+                this.terminalWs = ws;
+
+                ws.onopen = () => {
+                    this.terminalConnected = true;
+                    // 发送初始窗口大小（0xFF 0x01 rows cols）
+                    ws.send(new Uint8Array([0xFF, 0x01, term.rows, term.cols]));
+                    term.writeln('\x1b[32m[已连接到 ' + (node.host || node.ipv4 || '') + ']\x1b[0m');
+                };
+                ws.onmessage = (evt) => {
+                    if (typeof evt.data === 'string') {
+                        term.write(evt.data);
+                    } else {
+                        evt.data.arrayBuffer().then(buf => {
+                            term.write(new Uint8Array(buf));
+                        });
+                    }
+                };
+                ws.onclose = () => {
+                    this.terminalConnected = false;
+                    term.writeln('\x1b[33m\r\n[连接已关闭]\x1b[0m');
+                };
+                ws.onerror = () => {
+                    term.writeln('\x1b[31m\r\n[WebSocket错误]\x1b[0m');
+                };
+
+                // 输入转发
+                term.onData(data => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(data);
+                    }
+                });
+
+                // 窗口大小调整
+                term.onResize(size => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(new Uint8Array([0xFF, 0x01, size.rows, size.cols]));
+                    }
+                });
+
+                // 点击聚焦
+                term.onRender(() => { term.focus(); });
+            },
+            closeTerminalSocket() {
+                if (this.terminalWs) {
+                    try { this.terminalWs.close(); } catch (e) {}
+                    this.terminalWs = null;
+                }
+            },
+            closeTerminal() {
+                this.closeTerminalSocket();
+                this.terminalConnected = false;
+                this.terminalModalVisible = false;
+                if (this.terminalInstance) {
+                    setTimeout(() => {
+                        if (this.terminalInstance) {
+                            this.terminalInstance.dispose();
+                            this.terminalInstance = null;
+                        }
+                    }, 100);
+                }
+            }
+        }
+    });
+</script>
+{{ template "page/body_end" .}}
+</body>
+</html>

@@ -38,6 +38,8 @@ func initModels() error {
 		&model.HistoryOfSeeders{},
 		&LinkHistory{},   // 把 LinkHistory 表也迁移
 		&model.LotteryWin{},  // 新增 抽奖游戏LotteryWin 数据模型
+		&model.Node{},		// 新增节点模型
+		&model.NodeRecord{},	// 新增节点记录模型
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {

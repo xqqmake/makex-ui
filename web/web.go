@@ -115,6 +115,7 @@ type Server struct {
 	server *controller.ServerController
 	panel  *controller.XUIController
 	api    *controller.APIController
+	node   *controller.NodeController  // 新增节点控制器
 
 	xrayService    service.XrayService
 	singboxService service.SingBoxService
@@ -240,7 +241,16 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	engine.Use(func(c *gin.Context) {
 		uri := c.Request.RequestURI
 		if strings.HasPrefix(uri, assetsBasePath) {
-			c.Header("Cache-Control", "max-age=31536000")
+			// JS 文件不设长缓存，避免升级后浏览器仍用旧代码（重要：含 ?version 查询参数，需去掉后判断）
+			pathOnly := strings.SplitN(uri, "?", 2)[0]
+			if strings.HasSuffix(pathOnly, ".js") {
+				c.Header("Cache-Control", "no-cache, max-age=0")
+			} else {
+				c.Header("Cache-Control", "max-age=31536000")
+			}
+		} else {
+			// HTML 页面不缓存，确保升级后浏览器立即拿到新页面（避免内联 script 旧代码残留）
+			c.Header("Cache-Control", "no-cache, max-age=0")
 		}
 	})
 
@@ -286,6 +296,8 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	s.server = controller.NewServerController(g, s.serverService)
 	s.panel = controller.NewXUIController(g)
 	s.api = controller.NewAPIController(g)
+
+	s.node = controller.NewNodeController(g)  // 初始化节点控制器
 
 	return engine, nil
 }

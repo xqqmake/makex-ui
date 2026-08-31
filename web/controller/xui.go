@@ -31,6 +31,7 @@ func (a *XUIController) initRouter(g *gin.RouterGroup) {
 	g.GET("/settings", a.settings)
 	g.GET("/xray", a.xraySettings)
 	g.GET("/navigation", a.navigation)
+	g.GET("/nodes", a.nodesPage)  // 节点管理页面
 
                  // 【新增 2】注册页面路由
 	g.GET("/servers", a.serversPage)
@@ -64,4 +65,9 @@ func (a *XUIController) navigation(c *gin.Context) {
 // 【新增 4】添加页面渲染方法
 func (a *XUIController) serversPage(c *gin.Context) {
 	html(c, "servers.html", "pages.controlledmanagement.title", nil)
+}
+
+// nodesPage 节点管理页面
+func (a *XUIController) nodesPage(c *gin.Context) {
+	html(c, "nodes.html", "pages.controlledmanagement.title", nil)
 }

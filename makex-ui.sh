@@ -137,7 +137,50 @@ confirm_restart() {
     fi
 }
 
-before_show_menu() {
+before_
+# 节点客户端安装
+install_node_client() {
+    echo -e "${green}——————————————————————${plain}"
+    echo -e "${green}  节点客户端安装${plain}"
+    echo -e "${green}——————————————————————${plain}"
+    echo ""
+    
+    # 获取面板地址
+    local webport=$(cat /etc/x-ui/x-ui.db 2>/dev/null | grep -o '"webPort":[0-9]*' | head -1 | grep -o '[0-9]*')
+    [ -z "$webport" ] && webport="33333"
+    local webbasepath=$(cat /etc/x-ui/x-ui.db 2>/dev/null | grep -o '"webBasePath":"[^"]*"' | head -1 | cut -d'"' -f4)
+    [ -z "$webbasepath" ] && webbasepath="/"
+    local ip=$(curl -s --connect-timeout 5 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    local master_url="https://${ip}:${webport}${webbasepath}"
+    
+    echo -e "${yellow}主控面板地址: ${green}$master_url${plain}"
+    echo ""
+    
+    echo -e "${yellow}请在从节点服务器上执行以下命令:${plain}"
+    echo ""
+    echo -e "${green}curl -sk '${master_url}panel/api/nodes/install.sh' | bash -s -- '${master_url}' '节点名称' '分组'${plain}"
+    echo ""
+    echo -e "${yellow}示例:${plain}"
+    echo -e "curl -sk '${master_url}panel/api/nodes/install.sh' | bash -s -- '${master_url}' '香港-01' '花屿云'"
+    echo ""
+    echo -e "${yellow}参数说明:${plain}"
+    echo -e "  第1个参数: 主控面板地址（自动获取）"
+    echo -e "  第2个参数: 节点名称（如：香港-01）"
+    echo -e "  第3个参数: 分组名称（如：花屿云）"
+    echo ""
+    echo -e "${yellow}安装完成后，节点会自动每30秒上报状态到主控面板${plain}"
+    echo ""
+    echo -e "${green}管理命令（在从节点上执行）:${plain}"
+    echo -e "  查看状态: systemctl status makex-node.timer"
+    echo -e "  停止上报: systemctl stop makex-node.timer"
+    echo -e "  手动上报: bash /etc/makex-node/report.sh"
+    echo -e "  卸载: systemctl disable --now makex-node.timer && rm -rf /etc/makex-node /etc/systemd/system/makex-node.*"
+    echo ""
+    
+    before_show_menu
+}
+
+show_menu() {
     echo && echo -n -e "${yellow}按 Enter 键返回主菜单：${plain}" && read temp
     show_menu
 }
@@ -2601,6 +2644,49 @@ show_usage() {
     echo -e "--------------------------------------------"
 }
 
+
+# 节点客户端安装
+install_node_client() {
+    echo -e "${green}——————————————————————${plain}"
+    echo -e "${green}  节点客户端安装${plain}"
+    echo -e "${green}——————————————————————${plain}"
+    echo ""
+    
+    # 获取面板地址
+    local webport=$(cat /etc/x-ui/x-ui.db 2>/dev/null | grep -o '"webPort":[0-9]*' | head -1 | grep -o '[0-9]*')
+    [ -z "$webport" ] && webport="33333"
+    local webbasepath=$(cat /etc/x-ui/x-ui.db 2>/dev/null | grep -o '"webBasePath":"[^"]*"' | head -1 | cut -d'"' -f4)
+    [ -z "$webbasepath" ] && webbasepath="/"
+    local ip=$(curl -s --connect-timeout 5 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    local master_url="https://${ip}:${webport}${webbasepath}"
+    
+    echo -e "${yellow}主控面板地址: ${green}$master_url${plain}"
+    echo ""
+    
+    echo -e "${yellow}请在从节点服务器上执行以下命令:${plain}"
+    echo ""
+    echo -e "${green}curl -sk '${master_url}panel/api/nodes/install.sh' | bash -s -- '${master_url}' '节点名称' '分组'${plain}"
+    echo ""
+    echo -e "${yellow}示例:${plain}"
+    echo -e "curl -sk '${master_url}panel/api/nodes/install.sh' | bash -s -- '${master_url}' '香港-01' '花屿云'"
+    echo ""
+    echo -e "${yellow}参数说明:${plain}"
+    echo -e "  第1个参数: 主控面板地址（自动获取）"
+    echo -e "  第2个参数: 节点名称（如：香港-01）"
+    echo -e "  第3个参数: 分组名称（如：花屿云）"
+    echo ""
+    echo -e "${yellow}安装完成后，节点会自动每30秒上报状态到主控面板${plain}"
+    echo ""
+    echo -e "${green}管理命令（在从节点上执行）:${plain}"
+    echo -e "  查看状态: systemctl status makex-node.timer"
+    echo -e "  停止上报: systemctl stop makex-node.timer"
+    echo -e "  手动上报: bash /etc/makex-node/report.sh"
+    echo -e "  卸载: systemctl disable --now makex-node.timer && rm -rf /etc/makex-node /etc/systemd/system/makex-node.*"
+    echo ""
+    
+    before_show_menu
+}
+
 show_menu() {
     echo -e "
 ——————————————————————
@@ -2640,7 +2726,9 @@ show_menu() {
   ${green}24.${plain} Argo 隧道
   ${green}25.${plain} 更新 Geo 文件
   ${green}26.${plain} Speedtest by Ookla
-  ${green}27.${plain} 安装订阅转换 
+  ${green}27.${plain} 安装订阅转换
+——————————————————————
+  ${green}28.${plain} 节点客户端安装 
 ——————————————————————
   ${green}若在使用过程中有任何问题${plain}
   ${yellow}请在项目地址提交 Issue 反馈${plain}
@@ -2653,7 +2741,7 @@ show_menu() {
 "
     show_vps_status
     show_status
-    echo && read -p "请输入选项 [0-27]: " num
+    echo && read -p "请输入选项 [0-28]: " num
 
     case "${num}" in
     0)
@@ -2740,8 +2828,11 @@ show_menu() {
     27)
         subconverter
         ;;
+    28)
+        install_node_client
+        ;;
     *)
-        LOGE "请输入正确的数字选项 [0-27]"
+        LOGE "请输入正确的数字选项 [0-28]"
         ;;
     esac
 }

@@ -86,6 +86,20 @@ class HttpUtil {
         }
         return msg;
     }
+
+    static async delete(url, params, options = {}) {
+        try {
+            const resp = await axios.delete(url, { params, ...options });
+            const msg = this._respToMsg(resp);
+            this._handleMsg(msg);
+            return msg;
+        } catch (error) {
+            console.error('DELETE request failed:', error);
+            const errorMsg = new Msg(false, error.response?.data?.message || error.message || 'Request failed');
+            this._handleMsg(errorMsg);
+            return errorMsg;
+        }
+    }
 }
 
 class PromiseUtil {
