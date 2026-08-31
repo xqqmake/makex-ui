@@ -42,3 +42,4 @@ docker-compose.override.yml
 
 # Ignore root compiled binary (CI builds its own)
 /makex-ui
+x-ui-new
