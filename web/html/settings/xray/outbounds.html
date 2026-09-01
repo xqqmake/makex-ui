@@ -24,7 +24,7 @@
         </a-col>
     </a-row>
     <a-table :columns="outboundColumns" bordered :row-key="r => r.key" :data-source="outboundData"
-        :scroll="isMobile ? {} : { x: 800 }" :pagination="false" :indent-size="0"
+        :scroll="isMobile ? {} : { x: 650 }" :pagination="false" :indent-size="0"
         :locale='{ filterConfirm: `{{ i18n "confirm" }}`, filterReset: `{{ i18n "reset" }}` }'>
         <template slot="action" slot-scope="text, outbound, index">
             <span>[[ index+1 ]]</span>
@@ -70,6 +70,24 @@
         </template>
         <template slot="traffic" slot-scope="text, outbound, index">
             <a-tag color="green">[[ findOutboundTraffic(outbound) ]]</a-tag>
+        </template>
+        <template slot="test" slot-scope="text, outbound, index">
+            <a-space size="small">
+                <a-tooltip title="测试出站连通性">
+                    <a-button size="small" shape="circle"
+                        :loading="testingTag === outbound.tag"
+                        :icon="testingTag === outbound.tag ? '' : 'thunderbolt'"
+                        :style="{ borderColor: outboundTestResult && outboundTestResult.tag === outbound.tag ? (outboundTestResult.success ? '#52c41a' : '#ff4d4f') : '#d9d9d9', color: outboundTestResult && outboundTestResult.tag === outbound.tag && outboundTestResult.success ? '#52c41a' : '' }"
+                        @click="testOutbound(outbound)"></a-button>
+                </a-tooltip>
+                <span v-if="outboundTestResult && outboundTestResult.tag === outbound.tag">
+                    <a-tooltip :title="outboundTestResult.success ? ('延迟 ' + outboundTestResult.latency + 'ms') : outboundTestResult.error">
+                        <span :style="{ color: '#fff', background: outboundTestResult.success ? '#389e0d' : '#cf1322', borderRadius: '3px', padding: '0 6px', fontSize: '12px', lineHeight: '18px', display: 'inline-block', whiteSpace: 'nowrap' }">
+                            [[ outboundTestResult.success ? outboundTestResult.latency + 'ms' : '失败' ]]
+                        </span>
+                    </a-tooltip>
+                </span>
+            </a-space>
         </template>
     </a-table>
 </a-space>

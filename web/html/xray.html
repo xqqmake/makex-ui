@@ -215,9 +215,10 @@
   const outboundColumns = [
     { title: "#", align: 'center', width: 20, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.outbound.tag"}}', dataIndex: 'tag', align: 'center', width: 50 },
-    { title: '{{ i18n "protocol"}}', align: 'center', width: 50, scopedSlots: { customRender: 'protocol' } },
-    { title: '{{ i18n "pages.xray.outbound.address"}}', align: 'center', width: 50, scopedSlots: { customRender: 'address' } },
-    { title: '{{ i18n "pages.inbounds.traffic" }}', align: 'center', width: 50, scopedSlots: { customRender: 'traffic' } },
+    { title: '{{ i18n "protocol"}}', align: 'center', width: 130, scopedSlots: { customRender: 'protocol' } },
+    { title: '{{ i18n "pages.xray.outbound.address"}}', align: 'center', width: 200, scopedSlots: { customRender: 'address' } },
+    { title: '{{ i18n "pages.inbounds.traffic" }}', align: 'center', width: 80, scopedSlots: { customRender: 'traffic' } },
+    { title: '{{ i18n "pages.xray.outbound.test"}}', align: 'center', width: 110, scopedSlots: { customRender: 'test' } },
   ];
 
   const reverseColumns = [
@@ -265,6 +266,8 @@
       saveBtnDisable: true,
       refreshing: false,
       restartResult: '',
+      testingTag: '',
+      outboundTestResult: null,
       showAlert: false,
       advSettings: 'xraySetting',
       obsSettings: '',
@@ -584,7 +587,32 @@
           default:
             return null;
         }
+        // 兼容扁平结构：address/port 直接写在 settings 顶层（非 vnext/servers 数组）
+        if ((!serverObj || serverObj.length === 0) && o.settings && o.settings.address) {
+          return [o.settings.address + ':' + (o.settings.port != null ? o.settings.port : '')];
+        }
         return serverObj ? serverObj.map(obj => obj.address + ':' + obj.port) : null;
+      },
+      async testOutbound(outbound) {
+        this.testingTag = outbound.tag;
+        this.outboundTestResult = null;
+        try {
+          const msg = await HttpUtil.post('/panel/xray/testOutbound', { outbound: JSON.stringify(outbound) });
+          if (msg.success && msg.obj) {
+            this.outboundTestResult = Object.assign({ tag: outbound.tag }, msg.obj);
+            if (msg.obj.success) {
+              Vue.prototype.$message.success('✅ ' + outbound.tag + ' 连通，延迟 ' + msg.obj.latency + 'ms');
+            } else {
+              Vue.prototype.$message.error('❌ ' + outbound.tag + ' 不可用: ' + (msg.obj.error || ('HTTP ' + msg.obj.status)));
+            }
+          } else {
+            Vue.prototype.$message.error('测试失败: ' + (msg.msg || '未知错误'));
+          }
+        } catch (e) {
+          Vue.prototype.$message.error('测试异常: ' + e);
+        } finally {
+          this.testingTag = null;
+        }
       },
       addOutbound() {
         outModal.show({

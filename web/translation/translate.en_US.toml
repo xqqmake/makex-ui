@@ -577,6 +577,7 @@
 "type" = "Type"
 "bridge" = "Bridge"
 "portal" = "Portal"
+"test" = "Test"
 "link" = "Link"
 "intercon" = "Interconnection"
 "settings" = "Settings"
