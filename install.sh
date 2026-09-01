@@ -12,7 +12,8 @@ yellow='\033[0;33m'
 plain='\033[0m'
 
 # 面板安装目录
-xui_folder="${XUI_MAIN_FOLDER:=$(detect_install_folder)}"
+# 注意：xui_folder 必须在 detect_install_folder 定义之后赋值（bash 顺序执行）
+# 原 15 行提前赋值会因函数未定义导致 xui_folder 为空
 
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
@@ -56,6 +57,9 @@ detect_install_folder() {
         echo "/usr/local/makex-ui"
     fi
 }
+
+# 面板安装目录（须在 detect_install_folder 定义后赋值）
+xui_folder="${XUI_MAIN_FOLDER:=$(detect_install_folder)}"
 
 # 架构映射：将系统arch转换为Release文件名格式
 get_arch_name() {
@@ -349,6 +353,32 @@ install_free_version() {
     install_x-ui() {
         cd /usr/local/
 
+        # ========== 自愈检测：安装中断残留修复 ==========
+        # 场景：install.sh 因 raw.githubusercontent.com 被墙中断在注册 systemd 一步，
+        # 二进制+DB 已就位但 /etc/systemd/system/makex-ui.service 缺失
+        # 现象：systemctl 找不到单元、makex-ui.sh 菜单判"未安装"、内核不启动、journal 无记录
+        if [[ -x "${xui_folder}/makex-ui" && -f /etc/x-ui/makex-ui.db && ! -f /etc/systemd/system/makex-ui.service ]]; then
+            echo -e "${yellow}检测到 makex-ui 已安装但 systemd 服务未注册（上次安装中断残留），正在自动修复...${plain}"
+            if [[ -f "${xui_folder}/makex-ui.service" ]]; then
+                cp -f "${xui_folder}/makex-ui.service" /etc/systemd/system/makex-ui.service
+            else
+                echo -e "${red}安装目录缺少 makex-ui.service，无法自动修复，请手动处理${plain}"
+                return 1
+            fi
+            systemctl daemon-reload
+            systemctl enable makex-ui > /dev/null 2>&1
+            systemctl start makex-ui > /dev/null 2>&1
+            if systemctl is-active makex-ui > /dev/null 2>&1; then
+                echo -e "${green}systemd 服务已注册并启动，makex-ui 内核将由面板自动拉起。修复完成！${plain}"
+                # 已装实例：只修服务，不重复下载覆盖二进制/DB
+                show_vps_status
+                return 0
+            else
+                echo -e "${red}服务注册成功但启动失败，请查看 journalctl -u makex-ui 日志${plain}"
+                return 1
+            fi
+        fi
+
         # Download resources
         if [ $# == 0 ]; then
             last_version=$(curl -Ls "https://api.github.com/repos/xqqmake/makex-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
@@ -394,9 +424,23 @@ install_free_version() {
                 exit 1
             fi
         fi
-        wget -O /usr/bin/makex-ui-temp https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh
+        # 下载 makex-ui.sh 菜单脚本（raw.githubusercontent.com 在国内被墙时自动切镜像）
+        if ! wget -q -O /usr/bin/makex-ui-temp https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh 2>/dev/null; then
+            echo -e "${yellow}raw.githubusercontent.com 下载失败，切换 ghfast.top 镜像重试...${plain}"
+            wget -q -O /usr/bin/makex-ui-temp https://ghfast.top/https://raw.githubusercontent.com/xqqmake/makex-ui/main/makex-ui.sh 2>/dev/null || true
+        fi
 
         # Stop makex-ui service and remove old resources
+        # 注意：必须先解压验证成功，再删旧目录（避免解压/mv失败导致已装二进制丢失）
+        # 解压到临时目录，验证产物后再替换
+        mkdir -p /tmp/makex-ui-install
+        tar zxf /tmp/makex-ui-linux-$(get_arch_name).tar.gz -C /tmp/makex-ui-install 2>/dev/null
+        if [[ ! -x /tmp/makex-ui-install/makex-ui/makex-ui ]]; then
+            echo -e "${red}解压失败：未找到 makex-ui 二进制，已中止（保留原有安装）${plain}"
+            rm -rf /tmp/makex-ui-install
+            exit 1
+        fi
+
         if [[ -e "${xui_folder}" ]]; then
             systemctl stop makex-ui 2>/dev/null; systemctl stop x-ui 2>/dev/null
             rm -rf "${xui_folder}"
@@ -405,14 +449,11 @@ install_free_version() {
         sleep 3
         echo -e "${green}------->>>>>>>>>>>检查并保存安装目录${plain}"
         echo ""
-        tar zxvf /tmp/makex-ui-linux-$(get_arch_name).tar.gz
         rm /tmp/makex-ui-linux-$(get_arch_name).tar.gz -f
         
         # 移动到安装目录
-        if [[ -d "${xui_folder}" ]]; then
-            rm -rf "${xui_folder}"
-        fi
-        mv makex-ui "${xui_folder}"
+        mv /tmp/makex-ui-install/makex-ui "${xui_folder}"
+        rm -rf /tmp/makex-ui-install
         cd "${xui_folder}"
         chmod +x makex-ui
         chmod +x makex-ui.sh
