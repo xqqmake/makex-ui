@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"x-ui/web/service"
@@ -27,6 +28,7 @@ type XraySettingController struct {
 	OutboundService    service.OutboundService
 	XrayService        service.XrayService
 	WarpService        service.WarpService
+	SingBoxService     service.SingBoxService
 }
 
 func NewXraySettingController(g *gin.RouterGroup) *XraySettingController {
@@ -40,12 +42,154 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 
 	g.POST("/", a.getXraySetting)
 	g.POST("/update", a.updateSetting)
+	g.POST("/updateSingboxOutbounds", a.updateSingboxOutbounds)
 	g.GET("/getXrayResult", a.getXrayResult)
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
 	g.POST("/warp/:action", a.warp)
 	g.GET("/getOutboundsTraffic", a.getOutboundsTraffic)
 	g.POST("/resetOutboundsTraffic", a.resetOutboundsTraffic)
 	g.POST("/testOutbound", a.testOutbound)
+	g.POST("/importOutbounds", a.importOutbounds)
+}
+
+// importOutbounds 一键导入出站：解析分享链接，生成标准出站 JSON 并追加到对应模板，
+// 保存后自动重启生效。xray 协议（vless/vmess/trojan/ss/socks/hysteria/hysteria2）写 xray 模板；
+// sing-box 协议（anytls/tuic/naive）写 singbox 出站模板（singboxOutboundTemplate）。
+func (a *XraySettingController) importOutbounds(c *gin.Context) {
+	links := c.PostForm("links")
+	if links == "" {
+		jsonMsg(c, "links is required", nil)
+		return
+	}
+
+	// 读取当前 xray 模板并解析 outbounds
+	tmpl, err := a.SettingService.GetXrayConfigTemplate()
+	if err != nil {
+		jsonMsg(c, "读取 xray 模板失败: "+err.Error(), nil)
+		return
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal([]byte(tmpl), &cfg); err != nil {
+		jsonMsg(c, "xray 模板解析失败: "+err.Error(), nil)
+		return
+	}
+	var outbounds []any
+	if ob, ok := cfg["outbounds"].([]any); ok {
+		outbounds = ob
+	}
+
+	// 读取当前 sing-box 出站模板（JSON 数组）
+	sbTpl, _ := a.SettingService.GetString("singboxOutboundTemplate")
+	var sbOutbounds []map[string]any
+	if sbTpl != "" {
+		if err := json.Unmarshal([]byte(sbTpl), &sbOutbounds); err != nil {
+			sbOutbounds = nil
+		}
+	}
+
+	usedTags := map[string]bool{}
+	for _, ob := range outbounds {
+		if m, ok := ob.(map[string]any); ok {
+			if tag, ok := m["tag"].(string); ok && tag != "" {
+				usedTags[tag] = true
+			}
+		}
+	}
+	for _, ob := range sbOutbounds {
+		if tag, ok := ob["tag"].(string); ok && tag != "" {
+			usedTags[tag] = true
+		}
+	}
+
+	isSingBoxProtocol := func(proto string) bool {
+		switch proto {
+		case "anytls", "tuic", "naive":
+			return true
+		}
+		return false
+	}
+
+	created := []map[string]any{}
+	failed := []string{}
+	for _, line := range strings.Split(links, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		p, err := service.ParseShareLink(line)
+		if err != nil {
+			failed = append(failed, line+" → "+err.Error())
+			continue
+		}
+		// 生成唯一 tag：优先用备注，冲突时加后缀
+		base := p.Remark
+		if base == "" {
+			base = p.Address
+		}
+		tag := base
+		i := 1
+		for usedTags[tag] {
+			i++
+			tag = fmt.Sprintf("%s-%d", base, i)
+		}
+		usedTags[tag] = true
+
+		if isSingBoxProtocol(p.Protocol) {
+			// anytls/tuic/naive：由 sing-box 内核承载出站
+			sbOutbound := p.BuildSingBoxOutbound(tag)
+			sbOutbounds = append(sbOutbounds, sbOutbound)
+		} else {
+			outbound := p.BuildOutbound(tag)
+			outbounds = append(outbounds, outbound)
+		}
+		created = append(created, map[string]any{
+			"tag":      tag,
+			"protocol": p.Protocol,
+			"address":  p.Address,
+			"port":     p.Port,
+		})
+	}
+
+	if len(created) == 0 {
+		jsonMsg(c, "没有成功解析任何链接", nil)
+		return
+	}
+
+	xrayChanged := false
+	if len(outbounds) > 0 {
+		cfg["outbounds"] = outbounds
+		newBytes, err := json.MarshalIndent(cfg, "", "  ")
+		if err != nil {
+			jsonMsg(c, "序列化失败: "+err.Error(), nil)
+			return
+		}
+		if err := a.XraySettingService.SaveXraySetting(string(newBytes)); err != nil {
+			jsonMsg(c, "保存 xray 配置失败: "+err.Error(), nil)
+			return
+		}
+		xrayChanged = true
+	}
+	singboxChanged := false
+	if len(sbOutbounds) > 0 {
+		sbBytes, _ := json.Marshal(sbOutbounds)
+		if err := a.SettingService.SetString("singboxOutboundTemplate", string(sbBytes)); err != nil {
+			jsonMsg(c, "保存 sing-box 出站模板失败: "+err.Error(), nil)
+			return
+		}
+		singboxChanged = true
+	}
+
+	if xrayChanged {
+		a.XrayService.SetToNeedRestart()
+	}
+	if singboxChanged {
+		a.SingBoxService.SetToNeedRestart()
+	}
+	jsonObj(c, map[string]any{
+		"success": true,
+		"created": created,
+		"failed":  failed,
+	}, nil)
 }
 
 func (a *XraySettingController) getXraySetting(c *gin.Context) {
@@ -59,14 +203,43 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
 		return
 	}
-	xrayResponse := "{ \"xraySetting\": " + xraySetting + ", \"inboundTags\": " + inboundTags + " }"
-	jsonObj(c, xrayResponse, nil)
+	// 合并 sing-box 出站模板（anytls/tuic/naive 等 sing-box 协议出站），供出站列表统一展示
+	resp := map[string]any{
+		"xraySetting":     json.RawMessage(xraySetting),
+		"inboundTags":     json.RawMessage(inboundTags),
+		"singboxOutbounds": json.RawMessage("[]"),
+	}
+	if sbTpl, err := a.SettingService.GetString("singboxOutboundTemplate"); err == nil && sbTpl != "" && sbTpl != "[]" {
+		resp["singboxOutbounds"] = json.RawMessage(sbTpl)
+	}
+	respBytes, _ := json.Marshal(resp)
+	jsonObj(c, string(respBytes), nil)
 }
 
 func (a *XraySettingController) updateSetting(c *gin.Context) {
 	xraySetting := c.PostForm("xraySetting")
 	err := a.XraySettingService.SaveXraySetting(xraySetting)
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+}
+
+// updateSingboxOutbounds 保存 sing-box 出站模板（anytls/tuic/naive 等）
+func (a *XraySettingController) updateSingboxOutbounds(c *gin.Context) {
+	sbTpl := c.PostForm("singboxOutbounds")
+	if sbTpl == "" {
+		sbTpl = "[]"
+	}
+	// 校验是合法 JSON 数组
+	var arr []map[string]any
+	if err := json.Unmarshal([]byte(sbTpl), &arr); err != nil {
+		jsonMsg(c, "sing-box 出站模板格式错误", err)
+		return
+	}
+	if err := a.SettingService.SetString("singboxOutboundTemplate", sbTpl); err != nil {
+		jsonMsg(c, "保存 sing-box 出站模板失败", err)
+		return
+	}
+	a.SingBoxService.SetToNeedRestart()
+	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), nil)
 }
 
 func (a *XraySettingController) getDefaultXrayConfig(c *gin.Context) {

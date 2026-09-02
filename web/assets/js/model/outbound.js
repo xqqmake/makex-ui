@@ -1318,6 +1318,22 @@ Outbound.VLESSSettings = class extends CommonClass {
     }
 
     static fromJson(json = {}) {
+        if (ObjectUtil.isEmpty(json)) return new Outbound.VLESSSettings();
+        // 标准 xray vless 出站结构：settings.vnext[0].{address,port,users[0].{id,flow,encryption}}
+        if (!ObjectUtil.isArrEmpty(json.vnext)) {
+            const v = json.vnext[0] || {};
+            const u = ObjectUtil.isArrEmpty(v.users) ? {} : v.users[0];
+            return new Outbound.VLESSSettings(
+                v.address,
+                v.port,
+                u.id,
+                u.flow,
+                u.encryption,
+                (u.testpre || 0),
+                u.testseed && u.testseed.length >= 4 ? u.testseed : [900, 500, 900, 256]
+            );
+        }
+        // 兼容扁平结构（手动创建默认对象等）
         if (ObjectUtil.isEmpty(json.address) || ObjectUtil.isEmpty(json.port)) return new Outbound.VLESSSettings();
         return new Outbound.VLESSSettings(
             json.address,
@@ -1331,23 +1347,29 @@ Outbound.VLESSSettings = class extends CommonClass {
     }
 
     toJson() {
-        const result = {
-            address: this.address,
-            port: this.port,
+        const u = {
             id: this.id,
-            flow: this.flow,
             encryption: this.encryption,
         };
+        if (this.flow && this.flow !== '') {
+            u.flow = this.flow;
+        }
         // Only include Vision settings when flow is set
         if (this.flow && this.flow !== '') {
             if (this.testpre > 0) {
-                result.testpre = this.testpre;
+                u.testpre = this.testpre;
             }
             if (this.testseed && this.testseed.length >= 4) {
-                result.testseed = this.testseed;
+                u.testseed = this.testseed;
             }
         }
-        return result;
+        return {
+            vnext: [{
+                address: this.address,
+                port: this.port,
+                users: [u]
+            }]
+        };
     }
 };
 Outbound.TrojanSettings = class extends CommonClass {

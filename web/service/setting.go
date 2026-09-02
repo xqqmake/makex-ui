@@ -25,6 +25,7 @@ var xrayTemplateConfig string
 
 var defaultValueMap = map[string]string{
 	"xrayTemplateConfig":          xrayTemplateConfig,
+	"singboxOutboundTemplate":     "[]",
 	"webListen":                   "",
 	"webDomain":                   "",
 	"webPort":                     "13688",
@@ -240,6 +241,16 @@ func (s *SettingService) setInt(key string, value int) error {
 
 func (s *SettingService) GetXrayConfigTemplate() (string, error) {
 	return s.getString("xrayTemplateConfig")
+}
+
+// GetString 读取任意字符串设置键（默认值兜底）
+func (s *SettingService) GetString(key string) (string, error) {
+	return s.getString(key)
+}
+
+// SetString 写入任意字符串设置键
+func (s *SettingService) SetString(key string, value string) error {
+	return s.setString(key, value)
 }
 
 func (s *SettingService) GetListen() (string, error) {

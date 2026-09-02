@@ -92,9 +92,21 @@ func (s *SingBoxService) GetSingBoxConfig() (*singbox.Config, error) {
 		"timestamp": true,
 	})
 	sbConfig.Log = json_util.RawMessage(logJSON)
-	outboundJSON, _ := json.Marshal([]map[string]any{
+
+	// 出站：direct 兜底 + 用户一键导入的自定义出站（anytls/tuic/naive 等 sing-box 协议）
+	// 用户出站模板存于设置键 singboxOutboundTemplate（JSON 数组，与 xrayTemplateConfig 同构）
+	userOutbounds := []map[string]any{}
+	if tpl, err := s.settingService.GetString("singboxOutboundTemplate"); err == nil && tpl != "" {
+		var arr []map[string]any
+		if json.Unmarshal([]byte(tpl), &arr) == nil && len(arr) > 0 {
+			userOutbounds = arr
+		}
+	}
+	outboundList := []map[string]any{
 		{"type": "direct", "tag": "direct"},
-	})
+	}
+	outboundList = append(outboundList, userOutbounds...)
+	outboundJSON, _ := json.Marshal(outboundList)
 	sbConfig.Outbounds = json_util.RawMessage(outboundJSON)
 
 	// 流量统计：sing-box experimental.v2ray_api 提供与 xray 兼容的

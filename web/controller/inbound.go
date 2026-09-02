@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"x-ui/database/model"
 	"x-ui/web/service"
@@ -42,6 +43,7 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.POST("/resetAllClientTraffics/:id", a.resetAllClientTraffics)
 	g.POST("/delDepletedClients/:id", a.delDepletedClients)
 	g.POST("/import", a.importInbound)
+	g.POST("/importLinks", a.importLinks)
 	g.POST("/onlines", a.onlines)
 	g.POST("/lastOnline", a.lastOnline)
 	g.POST("/updateClientTraffic/:email", a.updateClientTraffic)
@@ -327,6 +329,71 @@ func (a *InboundController) importInbound(c *gin.Context) {
 	}
 }
 
+// importLinks 一键导入入站：解析 vless/vmess/trojan/ss 分享链接，
+// 生成对应协议入站配置并批量创建。返回每个链接的创建结果。
+func (a *InboundController) importLinks(c *gin.Context) {
+	links := c.PostForm("links")
+	if links == "" {
+		jsonMsg(c, "links is required", nil)
+		return
+	}
+	user := session.GetLoginUser(c)
+	created := []map[string]any{}
+	failed := []string{}
+	for _, line := range strings.Split(links, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		p, err := service.ParseShareLink(line)
+		if err != nil {
+			failed = append(failed, line+" → "+err.Error())
+			continue
+		}
+		settings, err := p.BuildInboundSettings()
+		if err != nil {
+			failed = append(failed, line+" → "+err.Error())
+			continue
+		}
+		streamSettings, err := p.BuildInboundStreamSettings()
+		if err != nil {
+			failed = append(failed, line+" → "+err.Error())
+			continue
+		}
+		inbound := &model.Inbound{
+			UserId:         user.Id,
+			Port:           p.Port,
+			Protocol:       model.Protocol(p.Protocol),
+			Settings:       settings,
+			StreamSettings: streamSettings,
+			Remark:         p.Remark,
+			Enable:         true,
+		}
+		if inbound.Listen == "" || inbound.Listen == "0.0.0.0" || inbound.Listen == "::" || inbound.Listen == "::0" {
+			inbound.Tag = fmt.Sprintf("inbound-%v", inbound.Port)
+		} else {
+			inbound.Tag = fmt.Sprintf("inbound-%v:%v", inbound.Listen, inbound.Port)
+		}
+		inbound, _, err = a.inboundService.AddInbound(inbound)
+		if err != nil {
+			failed = append(failed, line+" → "+err.Error())
+			continue
+		}
+		created = append(created, map[string]any{
+			"id":       inbound.Id,
+			"port":     inbound.Port,
+			"protocol": inbound.Protocol,
+			"remark":   inbound.Remark,
+		})
+	}
+	a.xrayService.SetToNeedRestart()
+	jsonObj(c, map[string]any{
+		"success": len(created) > 0,
+		"created": created,
+		"failed":  failed,
+	}, nil)
+}
+
 func (a *InboundController) delDepletedClients(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -384,6 +451,7 @@ func (a *InboundController) oneClickConfig(c *gin.Context) {
 		Host     string `json:"host" form:"host"`
 		Protocol string `json:"protocol" form:"protocol"`
 		Security string `json:"security" form:"security"`
+		Network  string `json:"network" form:"network"`
 		Target   string `json:"target" form:"target"`
 		SNI      string `json:"sni" form:"sni"`
 		Auth     string `json:"auth" form:"auth"`
@@ -405,6 +473,7 @@ func (a *InboundController) oneClickConfig(c *gin.Context) {
 		Host:     req.Host,
 		Protocol: req.Protocol,
 		Security: req.Security,
+		Network:  req.Network,
 		Target:   req.Target,
 		SNI:      req.SNI,
 		Auth:     req.Auth,

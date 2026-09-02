@@ -338,6 +338,7 @@
 "remarkPlaceholder" = "例如：我的節點"
 "emailLabel" = "電子郵件 (可選)"
 "protocolLabel" = "協議"
+"networkLabel" = "傳輸方式"
 "securityLabel" = "安全協議"
 "targetLabel" = "Reality Target"
 "sniLabel" = "Reality SNI"

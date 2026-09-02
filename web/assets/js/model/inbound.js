@@ -1922,26 +1922,27 @@ class Inbound extends XrayCommonClass {
 
     genAllLinks(remark = '', remarkModel = '-ieo', client) {
         let result = [];
-        let email = client ? client.email : '';
+        let email = client ? (client.email || '') : '';
         let addr = !ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0" ? this.listen : location.hostname;
         let port = this.port;
         const separationChar = remarkModel.charAt(0);
         const orderChars = remarkModel.slice(1);
         let orders = {
-            'i': remark,
+            'i': remark || '',
             'e': email,
             'o': '',
         };
+        const safeJoin = (chars) => chars.split('').map(char => orders[char] || '').filter(x => x.length > 0).join(separationChar);
         if (ObjectUtil.isArrEmpty(this.stream.externalProxy)) {
-            let r = orderChars.split('').map(char => orders[char]).filter(x => x.length > 0).join(separationChar);
+            let r = safeJoin(orderChars);
             result.push({
                 remark: r,
                 link: this.genLink(addr, port, 'same', r, client)
             });
         } else {
             this.stream.externalProxy.forEach((ep) => {
-                orders['o'] = ep.remark;
-                let r = orderChars.split('').map(char => orders[char]).filter(x => x.length > 0).join(separationChar);
+                orders['o'] = ep.remark || '';
+                let r = safeJoin(orderChars);
                 result.push({
                     remark: r,
                     link: this.genLink(ep.dest, ep.port, ep.forceTls, r, client)

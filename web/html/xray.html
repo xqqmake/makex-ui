@@ -262,12 +262,20 @@
       oldXraySetting: '',
       xraySetting: '',
       inboundTags: [],
+      singboxOutbounds: [],
       outboundsTraffic: [],
       saveBtnDisable: true,
       refreshing: false,
       restartResult: '',
       testingTag: '',
       outboundTestResult: null,
+      importOutboundModal: {
+        visible: false,
+        title: '一键导入出站节点',
+        links: '',
+        loading: false,
+        result: null,
+      },
       showAlert: false,
       advSettings: 'xraySetting',
       obsSettings: '',
@@ -410,6 +418,8 @@
           this.oldXraySetting = xs;
           this.xraySetting = xs;
           this.inboundTags = result.inboundTags;
+          // sing-box 协议出站（anytls/tuic/naive）：与 xray 出站分开存，出站列表合并展示
+          this.singboxOutbounds = result.singboxOutbounds || [];
           this.saveBtnDisable = true;
         }
       },
@@ -568,6 +578,10 @@
         return SizeFormatter.sizeFormat(0) + ' / ' + SizeFormatter.sizeFormat(0);
       },
       findOutboundAddress(o) {
+        // sing-box 扁平结构出站（anytls/tuic/naive）：{type, server, server_port, ...}
+        if (o && o.engine === 'singbox') {
+          return [o.server + ':' + o.server_port];
+        }
         serverObj = null;
         switch (o.protocol) {
           case Protocols.VMess:
@@ -579,6 +593,11 @@
           case Protocols.Shadowsocks:
           case Protocols.Trojan:
             serverObj = o.settings.servers;
+            break;
+          case Protocols.Hysteria:
+          case 'hysteria2':
+            // hysteria 出站：settings 扁平结构 {address, port}
+            serverObj = [o.settings];
             break;
           case Protocols.DNS:
             return [o.settings?.address + ':' + o.settings?.port];
@@ -594,6 +613,11 @@
         return serverObj ? serverObj.map(obj => obj.address + ':' + obj.port) : null;
       },
       async testOutbound(outbound) {
+        // sing-box 协议出站（anytls/tuic/naive）：无 xray 内核承载，提示用 sing-box 内核验证
+        if (outbound && outbound.engine === 'singbox') {
+          this.$message.info('sing-box 协议出站由 sing-box 内核承载，请点"Restart SingBox"启动内核后实测连通');
+          return;
+        }
         this.testingTag = outbound.tag;
         this.outboundTestResult = null;
         try {
@@ -614,6 +638,38 @@
           this.testingTag = null;
         }
       },
+      showImportOutboundModal() {
+        this.importOutboundModal.links = '';
+        this.importOutboundModal.result = null;
+        this.importOutboundModal.visible = true;
+      },
+      async doImportOutbound() {
+        if (!this.importOutboundModal.links || this.importOutboundModal.links.trim() === '') {
+          this.$message.warning('请先粘贴分享链接');
+          return;
+        }
+        this.importOutboundModal.loading = true;
+        const msg = await HttpUtil.post('/panel/xray/importOutbounds', { links: this.importOutboundModal.links });
+        this.importOutboundModal.loading = false;
+        if (msg.success) {
+          this.importOutboundModal.result = msg.obj;
+          this.$message.success('导入完成：成功 ' + (msg.obj.created || []).length + ' 个');
+          // 重新加载模板并刷新出站列表
+          await this.getXraySetting();
+          await this.refreshOutboundTraffic();
+        } else {
+          this.$message.error(msg.msg || '导入失败');
+        }
+      },
+      async saveSingboxOutbounds() {
+        const msg = await HttpUtil.post('/panel/xray/updateSingboxOutbounds', { singboxOutbounds: JSON.stringify(this.singboxOutbounds || []) });
+        if (msg.success) {
+          this.$message.success('sing-box 出站已更新，重启 sing-box 内核后生效');
+          await this.getXraySetting();
+        } else {
+          this.$message.error(msg.msg || '保存 sing-box 出站失败');
+        }
+      },
       addOutbound() {
         outModal.show({
           title: '{{ i18n "pages.xray.outbound.addOutbound"}}',
@@ -631,27 +687,54 @@
         });
       },
       editOutbound(index) {
+        const row = this.outboundData[index];
+        // sing-box 协议出站：暂不支持表单编辑（结构与 xray 出站不同），提示用删除后重新导入
+        if (row && row.engine === 'singbox') {
+          this.$message.info('sing-box 协议出站（anytls/tuic/naive）暂不支持表单编辑，可删除后重新导入');
+          return;
+        }
+        const xIdx = this.templateSettings.outbounds.findIndex(o => o.tag === row.tag);
+        const realIdx = xIdx >= 0 ? xIdx : index;
         outModal.show({
-          title: '{{ i18n "pages.xray.outbound.editOutbound"}} ' + (index + 1),
-          outbound: app.templateSettings.outbounds[index],
+          title: '{{ i18n "pages.xray.outbound.editOutbound"}} ' + (realIdx + 1),
+          outbound: app.templateSettings.outbounds[realIdx],
           confirm: (outbound) => {
             outModal.loading();
-            this.templateSettings.outbounds[index] = outbound;
+            this.templateSettings.outbounds[realIdx] = outbound;
             this.outboundSettings = JSON.stringify(this.templateSettings.outbounds);
             outModal.close();
           },
           isEdit: true,
-          tags: this.outboundData.filter((o) => o.key != index).map(obj => obj.tag)
+          tags: this.templateSettings.outbounds.filter((o, i) => i != realIdx && o.tag).map(obj => obj.tag)
         });
       },
       deleteOutbound(index) {
+        const row = this.outboundData[index];
+        // sing-box 协议出站（anytls/tuic/naive）：从 singboxOutbounds 删除并调后端保存
+        if (row && row.engine === 'singbox') {
+          const idx = this.singboxOutbounds.findIndex(o => o.tag === row.tag);
+          if (idx >= 0) {
+            this.singboxOutbounds.splice(idx, 1);
+          }
+          this.saveSingboxOutbounds();
+          return;
+        }
         outbounds = this.templateSettings.outbounds;
-        outbounds.splice(index, 1);
+        // outboundData 已合并 singbox 出站，index 不再等于 xray 模板下标，用 tag 定位删除
+        const xIdx = outbounds.findIndex(o => o.tag === row.tag);
+        if (xIdx >= 0) {
+          outbounds.splice(xIdx, 1);
+        }
         this.outboundSettings = JSON.stringify(outbounds);
       },
       setFirstOutbound(index) {
+        const row = this.outboundData[index];
+        if (!row || row.engine === 'singbox') return; // sing-box 出站不参与 xray 首选
         outbounds = this.templateSettings.outbounds;
-        outbounds.splice(0, 0, outbounds.splice(index, 1)[0]);
+        const xIdx = outbounds.findIndex(o => o.tag === row.tag);
+        if (xIdx > 0) {
+          outbounds.splice(0, 0, outbounds.splice(xIdx, 1)[0]);
+        }
         this.outboundSettings = JSON.stringify(outbounds);
       },
       addReverse() {
@@ -1065,7 +1148,13 @@
           data = []
           if (this.templateSettings != null) {
             this.templateSettings.outbounds.forEach((o, index) => {
-              data.push({ 'key': index, ...o });
+              data.push({ 'key': index, 'engine': 'xray', ...o });
+            });
+          }
+          // 合并 sing-box 协议出站（anytls/tuic/naive），带 engine 标记以区分删除/测试路径
+          if (this.singboxOutbounds && this.singboxOutbounds.length > 0) {
+            this.singboxOutbounds.forEach((o, index) => {
+              data.push({ 'key': 'sb-' + index, 'engine': 'singbox', ...o });
             });
           }
           return data;

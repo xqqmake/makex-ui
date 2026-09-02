@@ -333,6 +333,7 @@
 "remarkPlaceholder" = "e.g. My Node"
 "emailLabel" = "Email (optional)"
 "protocolLabel" = "Protocol"
+"networkLabel" = "Transport"
 "securityLabel" = "Security"
 "targetLabel" = "Reality Target"
 "sniLabel" = "Reality SNI"

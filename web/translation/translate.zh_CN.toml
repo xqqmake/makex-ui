@@ -342,6 +342,7 @@
 "remarkPlaceholder" = "例如：我的节点"
 "emailLabel" = "电子邮件 (可选)"
 "protocolLabel" = "协议"
+"networkLabel" = "传输方式"
 "securityLabel" = "安全协议"
 "targetLabel" = "Reality Target"
 "sniLabel" = "Reality SNI"

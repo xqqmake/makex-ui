@@ -2525,8 +2525,9 @@ func (s *InboundService) genShortID() (string, error) {
 type OneClickOptions struct {
 	Remark   string // 备注（用户自填）
 	Email    string // 电子邮件（用户自填）
-	Protocol string // 协议: vless / vmess / trojan / hysteria（默认 vless）
-	Security string // 安全: reality / tls / none（默认 reality；hysteria 固定 tls）
+	Protocol string // 协议: vless / vmess / trojan / shadowsocks / socks / hysteria / tuic / naive / anytls（默认 vless）
+	Security string // 安全: reality / tls / none（默认 reality；hysteria/tuic/naive 固定 tls，socks/shadowsocks 固定 none）
+	Network  string // 传输: tcp / ws / grpc / httpupgrade / xhttp（默认 tcp；仅 vless/vmess/trojan 可选）
 	Target   string // Reality Target，默认 1.1.1.1:443
 	SNI      string // Reality SNI，默认 www.yahu.com
 	Auth     string // Hysteria 认证密码（留空则随机生成）
@@ -2545,6 +2546,20 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 	}
 	if opts.Security == "" {
 		opts.Security = "reality"
+	}
+	if opts.Network == "" {
+		opts.Network = "tcp"
+	}
+	// 协议强制安全：socks/shadowsocks 固定 none；tuic/naive/hysteria 固定 tls；anytls 支持 tls/reality（默认 tls）
+	switch opts.Protocol {
+	case "socks", "shadowsocks":
+		opts.Security = "none"
+	case "tuic", "naive":
+		opts.Security = "tls"
+	case "anytls":
+		if opts.Security == "" || opts.Security == "none" {
+			opts.Security = "tls"
+		}
 	}
 	if opts.Host == "" {
 		return nil, "", common.NewError("host is required")
@@ -2590,11 +2605,24 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 	if opts.Protocol == "hysteria" && hysteriaAuth == "" {
 		hysteriaAuth = uuid.New().String()[:16]
 	}
+	// 其余协议需要的共享凭证（链接生成也要用，提升到函数级）
+	ssPassword := uuid.New().String()
+	socksUser := strings.ReplaceAll(uuid.New().String(), "-", "")[:8]
+	socksPass := strings.ReplaceAll(uuid.New().String(), "-", "")[:10]
+	naiveUser := opts.Email
 
-	// Hysteria(TLS) 模式：优先用面板设置证书 (webCertFile/webKeyFile)，无则回退随机自签
+	// TLS 证书准备：hysteria/tuic/naive 固定 TLS；vless/vmess/trojan/anytls 选 security=tls 时也要证书。
+	// 优先用面板设置证书 (webCertFile/webKeyFile)，无则回退随机自签到 /root/cert/oneclick-<port>/
+	needTLS := false
+	switch opts.Protocol {
+	case "hysteria", "tuic", "naive":
+		needTLS = true
+	case "vless", "vmess", "trojan", "anytls":
+		needTLS = (opts.Security == "tls")
+	}
 	var certFile, keyFile string
 	usePanelCert := false
-	if opts.Protocol == "hysteria" {
+	if needTLS {
 		settingService := &SettingService{}
 		if cf, err := settingService.GetCertFile(); err == nil && cf != "" {
 			if kf, err2 := settingService.GetKeyFile(); err2 == nil && kf != "" {
@@ -2609,12 +2637,6 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 				certFile = fmt.Sprintf("/root/cert/oneclick-%d/fullchain.pem", port)
 				keyFile = fmt.Sprintf("/root/cert/oneclick-%d/privkey.pem", port)
 			}
-		}
-	}
-	// Reality 模式：随机获取新证书保存到 /root/cert/oneclick-<port>/
-	if opts.Security == "reality" {
-		if _, err := s.genRandomCert(fmt.Sprintf("/root/cert/oneclick-%d", port)); err != nil {
-			logger.Warning("一键配置: 随机证书生成失败:", err)
 		}
 	}
 
@@ -2669,6 +2691,41 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 			"fallbacks": []any{},
 		}
 		settingsJSON, err = json.MarshalIndent(trojanSettings, "", "  ")
+	case "shadowsocks":
+		ssMethod := "aes-256-gcm"
+		ssEmail := opts.Email
+		if ssEmail == "" {
+			ssEmail = "ss-" + strings.ReplaceAll(uuid.New().String(), "-", "")[:8]
+		}
+		ssSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"email":      ssEmail,
+					"enable":     true,
+					"expiryTime": 0,
+					"limitIp":    0,
+					"method":     ssMethod,
+					"password":   ssPassword,
+					"reset":      0,
+					"subId":      subID,
+					"tgId":       "",
+					"totalGB":    0,
+				},
+			},
+			"ivCheck":  false,
+			"method":   ssMethod,
+			"network":  "tcp,udp",
+			"password": ssPassword,
+		}
+		settingsJSON, err = json.MarshalIndent(ssSettings, "", "  ")
+	case "socks":
+		socksSettings := map[string]any{
+			"auth":     "password",
+			"accounts": []map[string]any{{"user": socksUser, "pass": socksPass}},
+			"udp":      true,
+			"ip":       "",
+		}
+		settingsJSON, err = json.MarshalIndent(socksSettings, "", "  ")
 	case "hysteria":
 		// 与 hy2-test 一致的 hysteria settings 结构（version 2 / hysteria2）
 		hysteriaSettings := map[string]any{
@@ -2688,6 +2745,55 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 			"version": 2,
 		}
 		settingsJSON, err = json.MarshalIndent(hysteriaSettings, "", "  ")
+	case "tuic":
+		tuicSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"id":         clientUUID,
+					"password":   clientUUID,
+					"email":      opts.Email,
+					"enable":     true,
+					"subId":      subID,
+					"created_at": 0,
+					"updated_at": 0,
+				},
+			},
+			"congestionControl": "bbr",
+			"udpRelayMode":      "quic",
+		}
+		settingsJSON, err = json.MarshalIndent(tuicSettings, "", "  ")
+	case "naive":
+		if naiveUser == "" {
+			naiveUser = "naive" + strings.ReplaceAll(uuid.New().String(), "-", "")[:6]
+		}
+		naiveSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"username":   naiveUser,
+					"password":   clientUUID,
+					"email":      opts.Email,
+					"enable":     true,
+					"subId":      subID,
+					"created_at": 0,
+					"updated_at": 0,
+				},
+			},
+		}
+		settingsJSON, err = json.MarshalIndent(naiveSettings, "", "  ")
+	case "anytls":
+		anytlsSettings := map[string]any{
+			"clients": []map[string]any{
+				{
+					"password":   clientUUID,
+					"email":      opts.Email,
+					"enable":     true,
+					"subId":      subID,
+					"created_at": 0,
+					"updated_at": 0,
+				},
+			},
+		}
+		settingsJSON, err = json.MarshalIndent(anytlsSettings, "", "  ")
 	default: // vless
 		vlessSettings := model.VLESSSettings{
 			Clients:    []model.Client{client},
@@ -2700,12 +2806,20 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		return nil, "", err
 	}
 
-	// 按安全协议构造 streamSettings
+	// 按协议 + 传输 + 安全构造 streamSettings
+	// 自动生成的传输参数（用户零手填）
+	autoPath := "/" + strings.ReplaceAll(uuid.New().String(), "-", "")[:16]
+	autoService := "svc-" + strings.ReplaceAll(uuid.New().String(), "-", "")[:10]
+	// host 用于 ws/grpc/httpupgrade/xhttp 的 Host 头/SNI，优先 opts.Host（用户填的域名/IP）
+	streamHost := opts.Host
+	if opts.SNI != "" && (opts.Security == "tls") {
+		streamHost = opts.SNI
+	}
+
 	var streamSettings map[string]any
-	// Hysteria 固定使用 TLS（前端一键配置 hysteria 时隐藏了安全下拉）
-	if opts.Protocol == "hysteria" {
-		// 与 hy2-test 一致的 streamSettings：network=hysteria, security=tls,
-		// SNI 自动填当前 IP/域名（opts.Host），ALPN 加 h3,h2；不设置 portHopping = 端口跳跃关闭
+	switch opts.Protocol {
+	case "hysteria":
+		// hysteria(2) 走 QUIC，固定 TLS：SNI 自动填 host，ALPN h3,h2，证书引用
 		streamSettings = map[string]any{
 			"network":  "hysteria",
 			"security": "tls",
@@ -2714,47 +2828,115 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 				"alpn":        []string{"h3", "h2"},
 				"fingerprint": "chrome",
 				"certificates": []map[string]any{
-					{
-						"certificateFile": certFile,
-						"keyFile":         keyFile,
-					},
+					{"certificateFile": certFile, "keyFile": keyFile},
 				},
 			},
 		}
-	} else {
-	switch opts.Security {
-	case "tls":
+	case "tuic", "naive":
+		// sing-box 协议：仅 TLS，无传输层包装（tuic/naive 不能套 ws/CDN）
+		alpn := []string{}
+		if opts.Protocol == "tuic" {
+			alpn = []string{"h3"}
+		}
 		streamSettings = map[string]any{
-			"network": "tcp",
+			"network":  "tcp",
 			"security": "tls",
 			"tlsSettings": map[string]any{
-				"serverName": opts.SNI,
+				"serverName": streamHost,
+				"alpn":       alpn,
 				"certificates": []map[string]any{
-					{
-						"certificateFile": fmt.Sprintf("/root/cert/oneclick-%d/fullchain.pem", port),
-						"keyFile":         fmt.Sprintf("/root/cert/oneclick-%d/privkey.pem", port),
-					},
+					{"certificateFile": certFile, "keyFile": keyFile},
 				},
 			},
-			"tcpSettings": map[string]any{
-				"acceptProxyProtocol": false,
-				"header": map[string]any{"type": "none"},
-			},
 		}
-	case "none":
+	case "anytls":
+		// sing-box anytls：支持 TLS 与 Reality(Any-Reality)
+		if opts.Security == "reality" {
+			streamSettings = map[string]any{
+				"network":  "tcp",
+				"security": "reality",
+				"realitySettings": map[string]any{
+					"privateKey":  privKey,
+					"target":      opts.Target,
+					"serverNames": []string{opts.SNI},
+					"shortIds":    []string{shortID},
+					"settings": map[string]any{
+						"publicKey":   pubKey,
+						"fingerprint": "chrome",
+						"serverName":  opts.SNI,
+						"spiderX":     "/",
+					},
+				},
+			}
+		} else {
+			streamSettings = map[string]any{
+				"network":  "tcp",
+				"security": "tls",
+				"tlsSettings": map[string]any{
+					"serverName": streamHost,
+					"certificates": []map[string]any{
+						{"certificateFile": certFile, "keyFile": keyFile},
+					},
+				},
+			}
+		}
+	case "socks", "shadowsocks":
+		// socks/ss 固定 TCP + 无安全
 		streamSettings = map[string]any{
-			"network": "tcp",
+			"network":  "tcp",
 			"security": "none",
 			"tcpSettings": map[string]any{
 				"acceptProxyProtocol": false,
-				"header": map[string]any{"type": "none"},
+				"header":              map[string]any{"type": "none"},
 			},
 		}
-	default: // reality —— 与手动创建一致的字段结构
+	default: // vless / vmess / trojan —— 支持 传输(tcp/ws/grpc/httpupgrade/xhttp) × 安全(none/tls/reality)
 		streamSettings = map[string]any{
-			"network":   "tcp",
-			"security":  "reality",
-			"realitySettings": map[string]any{
+			"network":  opts.Network,
+			"security": opts.Security,
+		}
+		// 传输层设置
+		switch opts.Network {
+		case "ws":
+			streamSettings["wsSettings"] = map[string]any{
+				"path":    autoPath,
+				"headers": map[string]any{"Host": streamHost},
+			}
+		case "grpc":
+			streamSettings["grpcSettings"] = map[string]any{
+				"serviceName": autoService,
+				"multiMode":   false,
+			}
+		case "httpupgrade":
+			streamSettings["httpupgradeSettings"] = map[string]any{
+				"path": autoPath,
+				"host": streamHost,
+			}
+		case "xhttp":
+			streamSettings["xhttpSettings"] = map[string]any{
+				"path":    autoPath,
+				"host":    streamHost,
+				"mode":    "auto",
+				"headers": map[string]any{},
+			}
+		default: // tcp
+			streamSettings["tcpSettings"] = map[string]any{
+				"acceptProxyProtocol": false,
+				"header":              map[string]any{"type": "none"},
+			}
+		}
+		// 安全层设置
+		switch opts.Security {
+		case "tls":
+			streamSettings["tlsSettings"] = map[string]any{
+				"serverName": streamHost,
+				"fingerprint": "chrome",
+				"certificates": []map[string]any{
+					{"certificateFile": certFile, "keyFile": keyFile},
+				},
+			}
+		case "reality":
+			streamSettings["realitySettings"] = map[string]any{
 				"show":        false,
 				"xver":        0,
 				"target":      opts.Target,
@@ -2770,13 +2952,8 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 					"serverName":  "",
 					"spiderX":     "/",
 				},
-			},
-			"tcpSettings": map[string]any{
-				"acceptProxyProtocol": false,
-				"header": map[string]any{"type": "none"},
-			},
+			}
 		}
-	}
 	}
 	streamJSON, err := json.MarshalIndent(streamSettings, "", "  ")
 	if err != nil {
@@ -2793,6 +2970,11 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		return nil, "", err
 	}
 
+	tagNetwork := opts.Network
+	if tagNetwork == "" {
+		tagNetwork = "tcp"
+	}
+	// hysteria/sing-box 协议：tag 网络段按协议内核习惯命名（xray inbound tag 无严格格式，保持可读）
 	inbound := &model.Inbound{
 		UserId:         1,
 		Remark:         opts.Remark,
@@ -2801,7 +2983,7 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		Protocol:       model.Protocol(opts.Protocol),
 		Settings:       string(settingsJSON),
 		StreamSettings: string(streamJSON),
-		Tag:            fmt.Sprintf("inbound-%d-tcp", port),
+		Tag:            fmt.Sprintf("inbound-%d-%s", port, tagNetwork),
 		Sniffing:       string(sniffingJSON),
 	}
 
@@ -2810,24 +2992,49 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		return nil, "", err
 	}
 
-	// 按协议+安全生成连接链接
+	// 按协议+传输+安全生成连接链接（与分享链接解析器格式对齐，保证可被一键导入回读）
+	host := opts.Host
+	if streamHost != "" && (opts.Security == "tls") {
+		host = streamHost
+	}
+	// transport 链接参数
+	typeParam := opts.Network
+	if typeParam == "" {
+		typeParam = "tcp"
+	}
+	headerType := "none"
+	if typeParam != "tcp" && typeParam != "grpc" {
+		headerType = "none"
+	}
 	var link string
 	switch opts.Protocol {
 	case "vmess":
 		vmessJSON := map[string]any{
 			"v":    "2",
 			"ps":   opts.Remark,
-			"add":  opts.Host,
+			"add":  host,
 			"port": strconv.Itoa(port),
 			"id":   clientUUID,
 			"aid":  "0",
 			"scy":  "auto",
-			"net":  "tcp",
-			"type": "none",
-			"host": "",
+			"net":  typeParam,
+			"type": headerType,
+			"host": streamHost,
 			"path": "",
 			"tls":  "",
 			"sni":  "",
+		}
+		switch typeParam {
+		case "ws":
+			vmessJSON["path"] = autoPath
+			vmessJSON["host"] = streamHost
+		case "grpc":
+			vmessJSON["path"] = autoService
+			vmessJSON["host"] = ""
+			vmessJSON["type"] = "gun"
+		case "httpupgrade", "xhttp":
+			vmessJSON["path"] = autoPath
+			vmessJSON["host"] = streamHost
 		}
 		if opts.Security == "reality" {
 			vmessJSON["tls"] = "reality"
@@ -2844,16 +3051,38 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		vmessRaw, _ := json.Marshal(vmessJSON)
 		link = "vmess://" + base64.StdEncoding.EncodeToString(vmessRaw)
 	case "trojan":
-		if opts.Security == "reality" {
-			link = fmt.Sprintf("trojan://%s@%s:%d?security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=%s#%s",
-				clientUUID, opts.Host, port, pubKey, shortID, opts.SNI, url.QueryEscape(opts.Remark))
-		} else if opts.Security == "tls" {
-			link = fmt.Sprintf("trojan://%s@%s:%d?security=tls&type=tcp&headerType=none&sni=%s#%s",
-				clientUUID, opts.Host, port, opts.SNI, url.QueryEscape(opts.Remark))
-		} else {
-			link = fmt.Sprintf("trojan://%s@%s:%d?type=tcp&headerType=none#%s",
-				clientUUID, opts.Host, port, url.QueryEscape(opts.Remark))
+		q := url.Values{}
+		q.Set("security", opts.Security)
+		if typeParam != "tcp" {
+			q.Set("type", typeParam)
+			q.Set("headerType", "none")
 		}
+		if opts.Security == "reality" {
+			q.Set("fp", "chrome")
+			q.Set("pbk", pubKey)
+			q.Set("sid", shortID)
+			q.Set("spx", "/")
+			q.Set("sni", opts.SNI)
+		} else if opts.Security == "tls" {
+			q.Set("fp", "chrome")
+			q.Set("sni", opts.SNI)
+		}
+		switch typeParam {
+		case "ws":
+			q.Set("path", autoPath)
+			q.Set("host", streamHost)
+		case "grpc":
+			q.Set("serviceName", autoService)
+		case "httpupgrade", "xhttp":
+			q.Set("path", autoPath)
+			q.Set("host", streamHost)
+		}
+		link = fmt.Sprintf("trojan://%s@%s:%d?%s#%s", clientUUID, opts.Host, port, q.Encode(), url.QueryEscape(opts.Remark))
+	case "shadowsocks":
+		link = fmt.Sprintf("ss://%s@%s:%d#%s",
+			base64.StdEncoding.EncodeToString([]byte("aes-256-gcm:"+ssPassword)), opts.Host, port, url.QueryEscape(opts.Remark))
+	case "socks":
+		link = fmt.Sprintf("socks://%s:%s@%s:%d#%s", socksUser, socksPass, opts.Host, port, url.QueryEscape(opts.Remark))
 	case "hysteria":
 		// 与 hy2-test 一致的 hysteria2 链接：sni 自动填 host，alpn h3,h2；
 		// 面板证书(正式)不加 insecure；随机自签证书才加 insecure=1
@@ -2863,17 +3092,54 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 		}
 		link = fmt.Sprintf("hysteria2://%s@%s:%d?sni=%s&alpn=h3,h2%s#%s",
 			hysteriaAuth, opts.Host, port, url.QueryEscape(opts.Host), insecure, url.QueryEscape(opts.Remark))
-	default: // vless
+	case "tuic":
+		link = fmt.Sprintf("tuic://%s:%s@%s:%d?congestion_control=bbr&alpn=h3&sni=%s#%s",
+			clientUUID, clientUUID, opts.Host, port, url.QueryEscape(opts.Host), url.QueryEscape(opts.Remark))
+	case "naive":
+		link = fmt.Sprintf("naive+https://%s:%s@%s:%d#%s",
+			url.QueryEscape(naiveUser), clientUUID, opts.Host, port, url.QueryEscape(opts.Remark))
+	case "anytls":
+		anytlsQ := url.Values{}
 		if opts.Security == "reality" {
-			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=reality&type=tcp&headerType=none&fp=chrome&pbk=%s&sid=%s&spx=%%2F&sni=%s&flow=xtls-rprx-vision#%s",
-				clientUUID, opts.Host, port, pubKey, shortID, opts.SNI, url.QueryEscape(opts.Remark))
-		} else if opts.Security == "tls" {
-			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=tls&type=tcp&headerType=none&fp=chrome&sni=%s#%s",
-				clientUUID, opts.Host, port, opts.SNI, url.QueryEscape(opts.Remark))
+			anytlsQ.Set("security", "reality")
+			anytlsQ.Set("pbk", pubKey)
+			anytlsQ.Set("sid", shortID)
+			anytlsQ.Set("sni", opts.SNI)
 		} else {
-			link = fmt.Sprintf("vless://%s@%s:%d?encryption=none&security=none&type=tcp&headerType=none#%s",
-				clientUUID, opts.Host, port, url.QueryEscape(opts.Remark))
+			anytlsQ.Set("security", "tls")
+			anytlsQ.Set("sni", opts.SNI)
 		}
+		link = fmt.Sprintf("anytls://%s@%s:%d?%s#%s", clientUUID, opts.Host, port, anytlsQ.Encode(), url.QueryEscape(opts.Remark))
+	default: // vless
+		q := url.Values{}
+		q.Set("encryption", "none")
+		q.Set("security", opts.Security)
+		if typeParam != "tcp" {
+			q.Set("type", typeParam)
+			q.Set("headerType", "none")
+		}
+		switch typeParam {
+		case "ws":
+			q.Set("path", autoPath)
+			q.Set("host", streamHost)
+		case "grpc":
+			q.Set("serviceName", autoService)
+		case "httpupgrade", "xhttp":
+			q.Set("path", autoPath)
+			q.Set("host", streamHost)
+		}
+		if opts.Security == "reality" {
+			q.Set("fp", "chrome")
+			q.Set("pbk", pubKey)
+			q.Set("sid", shortID)
+			q.Set("spx", "/")
+			q.Set("sni", opts.SNI)
+			q.Set("flow", "xtls-rprx-vision")
+		} else if opts.Security == "tls" {
+			q.Set("fp", "chrome")
+			q.Set("sni", opts.SNI)
+		}
+		link = fmt.Sprintf("vless://%s@%s:%d?%s#%s", clientUUID, opts.Host, port, q.Encode(), url.QueryEscape(opts.Remark))
 	}
 
 	return created, link, nil

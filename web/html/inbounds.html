@@ -266,10 +266,6 @@
                         <template v-if="!isMobile">{{ i18n "pages.inbounds.generalActions" }}</template>
                       </a-button>
                       <a-menu slot="overlay" @click="a => generalActions(a)" :theme="themeSwitcher.currentTheme">
-                        <a-menu-item key="import">
-                          <a-icon type="import"></a-icon>
-                          {{ i18n "pages.inbounds.importInbound" }}
-                        </a-menu-item>
                         <a-menu-item key="export">
                           <a-icon type="export"></a-icon>
                           {{ i18n "pages.inbounds.export" }}
@@ -718,18 +714,26 @@
           <a-input v-model="oneClickEmail" placeholder="user@example.com"></a-input>
         </a-form-item>
         <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.protocolLabel" }}`">
-          <a-select v-model="oneClickProtocol" style="width: 100%">
-            <a-select-option value="vmess">VMess</a-select-option>
+          <a-select v-model="oneClickProtocol" style="width: 100%" @change="applyOneClickDefaults">
             <a-select-option value="vless">VLESS</a-select-option>
-            <a-select-option value="hysteria">Hysteria</a-select-option>
+            <a-select-option value="vmess">VMess</a-select-option>
             <a-select-option value="trojan">Trojan</a-select-option>
+            <a-select-option value="shadowsocks">Shadowsocks</a-select-option>
+            <a-select-option value="socks">SOCKS</a-select-option>
+            <a-select-option value="hysteria">Hysteria2</a-select-option>
+            <a-select-option value="tuic">TUIC</a-select-option>
+            <a-select-option value="naive">Naive</a-select-option>
+            <a-select-option value="anytls">AnyTLS</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item v-if="oneClickProtocol !== 'hysteria'" :label="`{{ i18n "pages.inbounds.oneClick.securityLabel" }}`">
-          <a-select v-model="oneClickSecurity" style="width: 100%">
-            <a-select-option value="reality">Reality</a-select-option>
-            <a-select-option value="tls">TLS</a-select-option>
-            <a-select-option value="none">无</a-select-option>
+        <a-form-item v-if="oneClickNetworks().length > 1" :label="`{{ i18n "pages.inbounds.oneClick.networkLabel" }}`">
+          <a-select v-model="oneClickNetwork" style="width: 100%">
+            <a-select-option v-for="n in oneClickNetworks()" :key="n" :value="n">[[ n ]]</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item v-if="oneClickSecurities().length > 1 && oneClickProtocol !== 'hysteria'" :label="`{{ i18n "pages.inbounds.oneClick.securityLabel" }}`">
+          <a-select v-model="oneClickSecurity" style="width: 100%" @change="applyOneClickDefaults">
+            <a-select-option v-for="s in oneClickSecurities()" :key="s" :value="s">[[ s === 'none' ? '无' : (s === 'reality' ? 'Reality' : 'TLS') ]]</a-select-option>
           </a-select>
         </a-form-item>
         <template v-if="oneClickProtocol === 'hysteria'">
@@ -772,6 +776,7 @@
         </a-alert>
       </template>
     </a-modal>
+
     </a-layout-content>
     <!-- REALITY Target Scanner (page level, inside #app Vue scope) -->
     {{template "component/reality_scanner"}}
@@ -945,6 +950,7 @@
             oneClickEmail: '',
             oneClickProtocol: 'vless',
             oneClickSecurity: 'reality',
+            oneClickNetwork: 'tcp',
             oneClickTarget: '1.1.1.1:443',
             oneClickSNI: 'www.yahu.com',
             oneClickHysteriaAuth: '',
@@ -1216,6 +1222,65 @@ async openPort(port) {
                 this.oneClickId = 0;
                 this.oneClickHysteriaAuth = '';
                 this.oneClickLoading = false;
+                this.oneClickProtocol = 'vless';
+                this.oneClickSecurity = 'reality';
+                this.oneClickNetwork = 'tcp';
+                this.applyOneClickDefaults();
+            },
+
+            // 【中文注释】: 协议切换时自动设置合理的默认安全/传输，并保留用户已选但合法的值
+            applyOneClickDefaults() {
+                const p = this.oneClickProtocol;
+                const validSecurities = this.oneClickSecurities();
+                if (validSecurities.indexOf(this.oneClickSecurity) === -1) {
+                    this.oneClickSecurity = validSecurities[0];
+                }
+                const validNetworks = this.oneClickNetworks();
+                if (validNetworks.indexOf(this.oneClickNetwork) === -1) {
+                    this.oneClickNetwork = validNetworks[0];
+                }
+            },
+
+            // 【中文注释】: 当前协议可用的传输（network）列表（reality 不支持 ws/普通 http 传输层）
+            oneClickNetworks() {
+                let nets = ['tcp'];
+                switch (this.oneClickProtocol) {
+                    case 'vless': case 'vmess': case 'trojan':
+                        nets = ['tcp', 'ws', 'grpc', 'httpupgrade', 'xhttp'];
+                        break;
+                    case 'shadowsocks': case 'socks':
+                        nets = ['tcp'];
+                        break;
+                    case 'hysteria':
+                        nets = ['hysteria'];
+                        break;
+                    case 'tuic': case 'naive': case 'anytls':
+                        nets = ['tcp'];
+                        break;
+                    default:
+                        nets = ['tcp'];
+                }
+                if (this.oneClickSecurity === 'reality') {
+                    // reality 基于 TLS 伪装，ws/httpupgrade 传输层不适用（与 23 服务器 reality 节点一致：tcp/xhttp）
+                    nets = ['tcp', 'grpc', 'xhttp'];
+                }
+                return nets;
+            },
+
+            // 【中文注释】: 当前协议可用的安全（security）列表
+            oneClickSecurities() {
+                switch (this.oneClickProtocol) {
+                    case 'vless': case 'vmess': case 'trojan':
+                        return ['reality', 'tls', 'none'];
+                    case 'anytls':
+                        return ['tls', 'reality'];
+                    case 'shadowsocks': case 'socks':
+                        return ['none'];
+                    case 'hysteria': case 'tuic': case 'naive':
+                        return ['tls'];
+                    default:
+                        return ['reality', 'tls', 'none'];
+                }
             },
 
             // 【中文注释】: 处理“一键配置”模态框的取消操作
@@ -1233,9 +1298,13 @@ async openPort(port) {
                 // 【中文注释】: 默认用 hostname（纯 IP/域名，不带面板端口），
                 // 避免生成 vmess add 带端口 / vless 链接双冒号导致 V2rayN 无法解析
                 const host = this.oneClickHost.trim() || window.location.hostname;
-                // Reality 模式下 Target/SNI 若留空则用默认值
-                let target = this.oneClickTarget.trim() || '1.1.1.1:443';
-                let sni = this.oneClickSNI.trim() || 'www.yahu.com';
+                // Reality 模式下 Target/SNI 若留空则用默认值；TLS/无安全模式 SNI 用 host 本身（避免默认值污染握手）
+                let target = '1.1.1.1:443';
+                let sni = host;
+                if (this.oneClickSecurity === 'reality') {
+                    target = this.oneClickTarget.trim() || '1.1.1.1:443';
+                    sni = this.oneClickSNI.trim() || 'www.yahu.com';
+                }
                 this.oneClickLoading = true;
                 try {
                     const msg = await HttpUtil.post('/panel/api/inbounds/oneclick', {
@@ -1244,6 +1313,7 @@ async openPort(port) {
                         host: host,
                         protocol: this.oneClickProtocol,
                         security: this.oneClickSecurity,
+                        network: this.oneClickNetwork,
                         target: target,
                         sni: sni,
                         auth: this.oneClickHysteriaAuth.trim()
@@ -1277,7 +1347,8 @@ async openPort(port) {
                 }
                 if (dbInbound) {
                     const newDbInbound = this.checkFallback(dbInbound);
-                    const links = newDbInbound.genInboundLinks(newDbInbound.remark, app.remarkModel);
+                    // 【中文注释】: genInboundLinks 只接收 remarkModel 一个参数，内部自动用 DBInbound.remark 作为节点名
+                    const links = newDbInbound.genInboundLinks(this.remarkModel);
                     if (links) {
                         try {
                             await ClipboardManager.copyText(links);
@@ -1312,7 +1383,21 @@ async openPort(port) {
                     return;
                 }
                 const newDbInbound = this.checkFallback(dbInbound);
-                qrModal.show('{{ i18n "qrCode" }}', newDbInbound);
+                // 【中文注释】: 一键配置产生的节点单客户端（可能无 email），取第一个 client 传给 qrModal，
+                // 否则 qrModal 内部 genLink 访问 client.id 会抛 TypeError（与「+」展开后的二维码一致）
+                let firstClient = null;
+                try {
+                    let rawSettings = newDbInbound.settings;
+                    if (typeof rawSettings === 'string') {
+                        rawSettings = JSON.parse(rawSettings);
+                    }
+                    if (rawSettings && Array.isArray(rawSettings.clients) && rawSettings.clients.length > 0) {
+                        firstClient = rawSettings.clients[0];
+                    }
+                } catch (e) {
+                    // 解析失败则回退为 null（单用户 SS/WG 等协议不依赖 client）
+                }
+                qrModal.show('{{ i18n "qrCode" }}', newDbInbound, firstClient);
             },
 
             // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
@@ -1488,9 +1573,6 @@ async openPort(port) {
 
             generalActions(action) {
                 switch (action.key) {
-                    case "import":
-                        this.importInbound();
-                        break;
                     case "export":
                         this.exportAllLinks();
                         break;
