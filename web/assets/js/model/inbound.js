@@ -1865,7 +1865,8 @@ class Inbound extends XrayCommonClass {
     genTuicLink(address = '', port = this.port, forceTls, remark = '', clientId, clientPassword) {
         const params = new Map();
         params.set("congestion_control", this.settings.congestionControl || 'bbr');
-        params.set("udp_relay_mode", this.settings.udpRelayMode || 'native');
+        // tuic v5 分享链接只认 native；DB 可能残留 v4 的 quic 值，统一归一为 native 保证 GUI 可导入
+        params.set("udp_relay_mode", "native");
         if (this.stream.isTls) {
             if (!ObjectUtil.isArrEmpty(this.stream.tls.alpn)) {
                 params.set("alpn", this.stream.tls.alpn.join(","));
@@ -1887,13 +1888,13 @@ class Inbound extends XrayCommonClass {
     }
 
     genNaiveLink(address = '', port = this.port, forceTls, remark = '', clientUsername, clientPassword) {
-        const params = new Map();
-        params.set("encryption", "none");
-        const link = `naive://${clientUsername}:${clientPassword}@${address}:${port}`;
+        // 标准 naive 分享链接格式: naive+https://user:pass@host:port (不带 encryption 参数, 兼容 v2rayN/sing-box/Clash 导入)
+        // 【中文注释】: username/password 必须 encodeURIComponent —— naive 用户名常为 email 格式含 @，
+        // 不编码会被 URL 解析器在 @ 处截断 userinfo，导致 V2rayN 用错误凭据连接而失败
+        const user = encodeURIComponent(clientUsername || '');
+        const pass = encodeURIComponent(clientPassword || '');
+        const link = `naive+https://${user}:${pass}@${address}:${port}`;
         const url = new URL(link);
-        for (const [key, value] of params) {
-            url.searchParams.set(key, value);
-        }
         url.hash = encodeURIComponent(remark);
         return url.toString();
     }
@@ -1964,6 +1965,22 @@ class Inbound extends XrayCommonClass {
             return links.join('\r\n');
         } else {
             if (this.protocol == Protocols.SHADOWSOCKS && !this.isSSMultiUser) return this.genSSLink(addr, this.port, 'same', remark);
+            if (this.protocol == Protocols.SOCKS) {
+                // socks 入站账号在 settings.accounts 中（非 clients），单独生成 socks://user:pass@host:port
+                let links = [];
+                const accounts = this.settings?.accounts || [];
+                accounts.forEach((acc) => {
+                    if (!acc || !acc.user) return;
+                    const link = `socks://${encodeURIComponent(acc.user)}:${encodeURIComponent(acc.pass)}@${addr}:${this.port}`;
+                    links.push(link + '#' + encodeURIComponent(remark));
+                });
+                if (links.length > 0) return links.join('\r\n');
+                // 无认证 socks：仅 host:port
+                if (this.settings?.auth !== 'password') {
+                    return `socks://${addr}:${this.port}#` + encodeURIComponent(remark);
+                }
+                return '';
+            }
             if (this.protocol == Protocols.WIREGUARD) {
                 let links = [];
                 this.settings.peers.forEach((p, index) => {

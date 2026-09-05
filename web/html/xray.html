@@ -219,6 +219,7 @@
     { title: '{{ i18n "pages.xray.outbound.address"}}', align: 'center', width: 200, scopedSlots: { customRender: 'address' } },
     { title: '{{ i18n "pages.inbounds.traffic" }}', align: 'center', width: 80, scopedSlots: { customRender: 'traffic' } },
     { title: '{{ i18n "pages.xray.outbound.test"}}', align: 'center', width: 110, scopedSlots: { customRender: 'test' } },
+    { title: '接管', align: 'center', width: 80, scopedSlots: { customRender: 'route' } },
   ];
 
   const reverseColumns = [
@@ -269,6 +270,12 @@
       restartResult: '',
       testingTag: '',
       outboundTestResult: null,
+      // 出站显式接管入站（跨引擎路由绑定）状态
+      routeModalVisible: false,
+      routeCurrent: null,
+      routeChecked: { xray: [], singbox: [] },
+      outboundRoutes: [],
+      inboundEngines: [],
       importOutboundModal: {
         visible: false,
         title: '一键导入出站节点',
@@ -420,7 +427,62 @@
           this.inboundTags = result.inboundTags;
           // sing-box 协议出站（anytls/tuic/naive）：与 xray 出站分开存，出站列表合并展示
           this.singboxOutbounds = result.singboxOutbounds || [];
+          this.outboundRoutes = result.outboundRoutes || [];
+          this.inboundEngines = result.inboundEngines || [];
           this.saveBtnDisable = true;
+        }
+      },
+      // ---- 出站显式接管入站（跨引擎路由绑定）----
+      routeXrayInbounds() {
+        return (this.inboundEngines || []).filter(i => i.enable && i.engine === 'xray').map(i => i.tag);
+      },
+      routeSboxInbounds() {
+        return (this.inboundEngines || []).filter(i => i.enable && i.engine === 'singbox').map(i => i.tag);
+      },
+      routeCount(row) {
+        if (!row || !row.tag) return 0;
+        const exist = (this.outboundRoutes || []).find(r => r.engine === row.engine && r.outbound === row.tag);
+        return exist ? (exist.inbounds || []).length : 0;
+      },
+      routeLabels(row) {
+        if (!row || !row.tag) return [];
+        const exist = (this.outboundRoutes || []).find(r => r.engine === row.engine && r.outbound === row.tag);
+        return exist ? (exist.inbounds || []).map(i => '[' + (i.engine === 'singbox' ? 'SB' : 'XR') + '] ' + i.tag) : [];
+      },
+      openRouteModal(index) {
+        const row = this.outboundData[index];
+        if (!row || !row.tag) {
+          this.$message.info('该出站不可配置接管（无 tag）');
+          return;
+        }
+        this.routeCurrent = { engine: row.engine, tag: row.tag };
+        const exist = (this.outboundRoutes || []).find(r => r.engine === row.engine && r.outbound === row.tag);
+        const checked = { xray: [], singbox: [] };
+        if (exist) {
+          (exist.inbounds || []).forEach(i => {
+            if (i.engine === 'singbox') checked.singbox.push(i.tag);
+            else checked.xray.push(i.tag);
+          });
+        }
+        this.routeChecked = checked;
+        this.routeModalVisible = true;
+      },
+      async saveRoute() {
+        if (!this.routeCurrent) return;
+        const { engine, tag } = this.routeCurrent;
+        const others = (this.outboundRoutes || []).filter(r => !(r.engine === engine && r.outbound === tag));
+        const inboundRefs = [];
+        (this.routeChecked.xray || []).forEach(t => inboundRefs.push({ engine: 'xray', tag: t }));
+        (this.routeChecked.singbox || []).forEach(t => inboundRefs.push({ engine: 'singbox', tag: t }));
+        this.outboundRoutes = inboundRefs.length > 0 ? [...others, { engine, outbound: tag, inbounds: inboundRefs }] : others;
+        this.routeModalVisible = false;
+        const msg = await HttpUtil.post("/panel/xray/updateOutboundRoutes", {
+          routes: JSON.stringify(this.outboundRoutes)
+        });
+        if (msg.success) {
+          this.$message.success('接管入站已保存（正在重启内核生效）');
+        } else {
+          this.$message.error('保存接管入站失败');
         }
       },
       async updateXraySetting() {
@@ -433,12 +495,20 @@
       },
       async restartXray() {
         this.loading(true);
-        const msg = await HttpUtil.post("/panel/api/server/restartXrayService");
-        this.loading(false);
-        if (msg.success) {
-          await PromiseUtil.sleep(500);
-          await this.getXrayResult();
+        // 容错：若浏览器经本机入站代理访问面板，重启内核会短暂断开代理链路，
+        // 请求可能收不到响应(Network Error)，但重启动作已实际生效，故不阻塞报错。
+        let ok = true;
+        try {
+          await HttpUtil.post("/panel/api/server/restartKernels");
+        } catch (e) {
+          ok = false;
         }
+        this.loading(false);
+        if (!ok) {
+          this.$message.info("重启已触发：若经代理访问面板，断开属正常现象，内核实际已重启，稍候刷新即可");
+        }
+        await PromiseUtil.sleep(2000);
+        await this.getXrayResult();
         this.loading(false);
       },
       async getXrayResult() {
@@ -613,15 +683,14 @@
         return serverObj ? serverObj.map(obj => obj.address + ':' + obj.port) : null;
       },
       async testOutbound(outbound) {
-        // sing-box 协议出站（anytls/tuic/naive）：无 xray 内核承载，提示用 sing-box 内核验证
-        if (outbound && outbound.engine === 'singbox') {
-          this.$message.info('sing-box 协议出站由 sing-box 内核承载，请点"Restart SingBox"启动内核后实测连通');
-          return;
-        }
+        // sing-box 协议出站（anytls/tuic/naive）：由 sing-box 内核承载，
+        // 走独立的 testSingboxOutbound 端点起临时 sing-box 实例实测
+        const isSingbox = outbound && outbound.engine === 'singbox';
         this.testingTag = outbound.tag;
         this.outboundTestResult = null;
         try {
-          const msg = await HttpUtil.post('/panel/xray/testOutbound', { outbound: JSON.stringify(outbound) });
+          const url = isSingbox ? '/panel/xray/testSingboxOutbound' : '/panel/xray/testOutbound';
+          const msg = await HttpUtil.post(url, { outbound: JSON.stringify(outbound) });
           if (msg.success && msg.obj) {
             this.outboundTestResult = Object.assign({ tag: outbound.tag }, msg.obj);
             if (msg.obj.success) {

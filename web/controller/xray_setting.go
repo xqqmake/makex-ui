@@ -12,9 +12,12 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"x-ui/database/model"
+	"x-ui/singbox"
 	"x-ui/web/service"
 	"x-ui/xray"
 
@@ -43,12 +46,14 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/", a.getXraySetting)
 	g.POST("/update", a.updateSetting)
 	g.POST("/updateSingboxOutbounds", a.updateSingboxOutbounds)
+	g.POST("/updateOutboundRoutes", a.updateOutboundRoutes)
 	g.GET("/getXrayResult", a.getXrayResult)
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
 	g.POST("/warp/:action", a.warp)
 	g.GET("/getOutboundsTraffic", a.getOutboundsTraffic)
 	g.POST("/resetOutboundsTraffic", a.resetOutboundsTraffic)
 	g.POST("/testOutbound", a.testOutbound)
+	g.POST("/testSingboxOutbound", a.testSingboxOutbound)
 	g.POST("/importOutbounds", a.importOutbounds)
 }
 
@@ -205,12 +210,35 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 	}
 	// 合并 sing-box 出站模板（anytls/tuic/naive 等 sing-box 协议出站），供出站列表统一展示
 	resp := map[string]any{
-		"xraySetting":     json.RawMessage(xraySetting),
-		"inboundTags":     json.RawMessage(inboundTags),
+		"xraySetting":      json.RawMessage(xraySetting),
+		"inboundTags":      json.RawMessage(inboundTags),
 		"singboxOutbounds": json.RawMessage("[]"),
+		"outboundRoutes":   json.RawMessage("[]"),
+		"inboundEngines":   json.RawMessage("[]"),
 	}
 	if sbTpl, err := a.SettingService.GetString("singboxOutboundTemplate"); err == nil && sbTpl != "" && sbTpl != "[]" {
 		resp["singboxOutbounds"] = json.RawMessage(sbTpl)
+	}
+	// 出站显式接管入站：返回已保存的绑定与全部入站的引擎归属（前端弹窗分组勾选用）
+	if rb, err := a.SettingService.GetString("outboundRoutes"); err == nil && rb != "" {
+		resp["outboundRoutes"] = json.RawMessage(rb)
+	}
+	if inbounds, err := a.InboundService.GetAllInbounds(); err == nil {
+		engines := make([]map[string]any, 0, len(inbounds))
+		for _, inb := range inbounds {
+			eng := "xray"
+			if model.IsSingBoxProtocol(inb.Protocol) {
+				eng = "singbox"
+			}
+			engines = append(engines, map[string]any{
+				"tag":    inb.Tag,
+				"engine": eng,
+				"enable": inb.Enable,
+			})
+		}
+		if eb, err := json.Marshal(engines); err == nil {
+			resp["inboundEngines"] = json.RawMessage(eb)
+		}
 	}
 	respBytes, _ := json.Marshal(resp)
 	jsonObj(c, string(respBytes), nil)
@@ -220,6 +248,27 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 	xraySetting := c.PostForm("xraySetting")
 	err := a.XraySettingService.SaveXraySetting(xraySetting)
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+}
+
+// updateOutboundRoutes 保存出站显式接管入站绑定（跨引擎路由，默认零接管）。
+// 前端提交完整 outboundRoutes 数组 JSON；保存后标记 xray/sing-box 需重启生效。
+func (a *XraySettingController) updateOutboundRoutes(c *gin.Context) {
+	routes := c.PostForm("routes")
+	if routes == "" {
+		routes = "[]"
+	}
+	var arr []map[string]any
+	if err := json.Unmarshal([]byte(routes), &arr); err != nil {
+		jsonMsg(c, "outboundRoutes 格式错误", err)
+		return
+	}
+	if err := a.SettingService.SetString("outboundRoutes", routes); err != nil {
+		jsonMsg(c, "保存 outboundRoutes 失败", err)
+		return
+	}
+	a.XrayService.SetToNeedRestart()
+	a.SingBoxService.SetToNeedRestart()
+	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), nil)
 }
 
 // updateSingboxOutbounds 保存 sing-box 出站模板（anytls/tuic/naive 等）
@@ -369,6 +418,131 @@ func (a *XraySettingController) testOutbound(c *gin.Context) {
 	}
 	if !ready {
 		jsonObj(c, map[string]interface{}{"success": false, "error": "xray 测试实例启动超时", "latency": 0}, nil)
+		return
+	}
+
+	proxyURL, _ := url.Parse(fmt.Sprintf("socks5h://127.0.0.1:%d", port))
+	transport := &http.Transport{
+		Proxy:           http.ProxyURL(proxyURL),
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: transport, Timeout: 8 * time.Second}
+	start := time.Now()
+	resp, err := client.Get("https://www.gstatic.com/generate_204")
+	latency := time.Since(start).Milliseconds()
+	if err != nil {
+		jsonObj(c, map[string]interface{}{"success": false, "error": err.Error(), "latency": latency}, nil)
+		return
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	jsonObj(c, map[string]interface{}{
+		"success": resp.StatusCode >= 200 && resp.StatusCode < 400,
+		"status":  resp.StatusCode,
+		"latency": latency,
+	}, nil)
+}
+
+// testSingboxOutbound 通过临时 sing-box 实例 + socks5 入站实测 sing-box 协议出站
+// （anytls/tuic/naive）连通性。与 testOutbound 同构：起内核加载该出站，再经
+// socks5 代理真实访问 gstatic 204 验证出网。
+func (a *XraySettingController) testSingboxOutbound(c *gin.Context) {
+	outboundJSON := c.PostForm("outbound")
+	if outboundJSON == "" {
+		jsonMsg(c, "outbound is required", nil)
+		return
+	}
+
+	var outbound map[string]interface{}
+	if err := json.Unmarshal([]byte(outboundJSON), &outbound); err != nil {
+		jsonMsg(c, "invalid outbound json: "+err.Error(), nil)
+		return
+	}
+	otype, _ := outbound["type"].(string)
+	if otype == "" {
+		jsonMsg(c, "outbound type is required", nil)
+		return
+	}
+
+	// 前端出站列表对象带 UI 标记字段（engine/key 等），sing-box 配置解析遇到
+	// 未知字段会直接拒绝启动。这里剥离非协议字段，仅保留 sing-box 可识别的键。
+	for _, meta := range []string{"engine", "key", "remark", "remarks", "traffic", "up", "down", "expiryTime", "enable"} {
+		delete(outbound, meta)
+	}
+	// tag 为空时补一个，避免 sing-box 报 "missing tag"
+	if outbound["tag"] == nil || outbound["tag"] == "" {
+		outbound["tag"] = "test-singbox-outbound"
+	}
+
+	// 随机本地 socks 端口（与 xray 测试端口段错开）
+	n, err := rand.Int(rand.Reader, big.NewInt(900))
+	if err != nil {
+		jsonMsg(c, "rand failed: "+err.Error(), nil)
+		return
+	}
+	port := 39110 + int(n.Int64())
+	tmpFile := fmt.Sprintf("/tmp/singbox-out-test-%d.json", port)
+	defer os.Remove(tmpFile)
+
+	cfg := map[string]interface{}{
+		"log": map[string]interface{}{"level": "warn"},
+		"inbounds": []map[string]interface{}{{
+			"type":        "socks",
+			"tag":         "socks-in",
+			"listen":      "127.0.0.1",
+			"listen_port": port,
+		}},
+		"outbounds": []interface{}{outbound},
+	}
+	cfgBytes, err := json.Marshal(cfg)
+	if err != nil {
+		jsonMsg(c, "marshal config failed: "+err.Error(), nil)
+		return
+	}
+	if err := os.WriteFile(tmpFile, cfgBytes, 0644); err != nil {
+		jsonMsg(c, "write config failed: "+err.Error(), nil)
+		return
+	}
+
+	// 使用 sing-box 二进制；naive 出站依赖 libcronet.so，须与二进制同目录（bin/）。
+	// 必须把 cmd.Dir 设为二进制所在目录，否则 dlopen 找不到 libcronet.so 导致启动挂起。
+	// GetBinaryPath() 返回的是相对路径（bin/sing-box-linux-amd64），须先解析为
+	// 绝对路径（基于面板可执行文件所在目录），否则 cmd.Dir 相对 + exec 相对会双重拼接。
+	sbBin := singbox.GetBinaryPath()
+	if !filepath.IsAbs(sbBin) {
+		if exePath, exeErr := os.Executable(); exeErr == nil {
+			sbBin = filepath.Join(filepath.Dir(exePath), sbBin)
+		}
+	}
+	if _, statErr := os.Stat(sbBin); statErr != nil {
+		jsonMsg(c, "sing-box 二进制不存在: "+statErr.Error(), nil)
+		return
+	}
+
+	cmd := exec.Command(sbBin, "run", "-c", tmpFile)
+	cmd.Dir = filepath.Dir(sbBin)
+	if err := cmd.Start(); err != nil {
+		jsonMsg(c, "start sing-box failed: "+err.Error(), nil)
+		return
+	}
+	defer func() {
+		cmd.Process.Kill()
+		cmd.Wait()
+	}()
+
+	// 等待 socks 端口就绪（最长 4s）
+	ready := false
+	for i := 0; i < 40; i++ {
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 200*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			ready = true
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if !ready {
+		jsonObj(c, map[string]interface{}{"success": false, "error": "sing-box 测试实例启动超时", "latency": 0}, nil)
 		return
 	}
 

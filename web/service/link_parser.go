@@ -738,8 +738,14 @@ func (p *ParsedLink) BuildStreamSettings() map[string]any {
 	}
 	switch p.Security {
 	case "tls":
+		// SNI 缺省回退到 address：IP 直连或无 sni 参数的链接若留空，
+		// xray 会拿协议名当 SNI 校验证书导致 CRYPTO_ERROR（hy2 实锤）
+		sni := p.SNI
+		if sni == "" {
+			sni = p.Address
+		}
 		tlsS := map[string]any{
-			"serverName":    p.SNI,
+			"serverName":    sni,
 			"allowInsecure": p.AllowInsecure,
 		}
 		if p.Fingerprint != "" {
@@ -815,16 +821,26 @@ func (p *ParsedLink) BuildSingBoxOutbound(tag string) map[string]any {
 	case "tuic":
 		ob["uuid"] = p.UUID
 		ob["password"] = p.Password
+		// sing-box tuic 出站 udp_relay_mode 只支持 native/udp_over_quic，默认 native；
+		// 旧版解析可能把分享链接的 quic 误存，统一落到 native 以保证连通
+		mode := p.UdpRelayMode
+		if mode == "" || mode == "quic" {
+			mode = "native"
+		}
+		ob["udp_relay_mode"] = mode
 		if p.CongestionControl != "" {
 			ob["congestion_control"] = p.CongestionControl
-		}
-		if p.UdpRelayMode != "" {
-			ob["udp_relay_mode"] = p.UdpRelayMode
 		}
 		if p.Security != "" && p.Security != "none" {
 			tls := map[string]any{"enabled": true}
 			if p.SNI != "" {
 				tls["server_name"] = p.SNI
+			}
+			// tuic 需要 ALPN 协商 h3/h2，缺省注入 h3 否则服务端报 no application protocol
+			if len(p.ALPN) > 0 {
+				tls["alpn"] = p.ALPN
+			} else {
+				tls["alpn"] = []string{"h3"}
 			}
 			ob["tls"] = tls
 		}
@@ -832,7 +848,19 @@ func (p *ParsedLink) BuildSingBoxOutbound(tag string) map[string]any {
 		ob["username"] = p.Username
 		ob["password"] = p.Password
 		if p.Security != "" && p.Security != "none" {
-			ob["tls"] = map[string]any{"enabled": true}
+			tls := map[string]any{"enabled": true}
+			// naive 走 TLS 时必须校验证书，server_name 缺省用服务器地址兜底
+			sn := p.SNI
+			if sn == "" {
+				sn = p.Address
+			}
+			if sn != "" {
+				tls["server_name"] = sn
+			}
+			if p.AllowInsecure {
+				tls["insecure"] = true
+			}
+			ob["tls"] = tls
 		}
 	}
 	return ob

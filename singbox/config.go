@@ -14,6 +14,7 @@ type Config struct {
 	Log          json_util.RawMessage `json:"log"`
 	Inbounds     []map[string]any     `json:"inbounds"`
 	Outbounds    json_util.RawMessage `json:"outbounds"`
+	Route        json_util.RawMessage `json:"route,omitempty"`
 	Experimental json_util.RawMessage `json:"experimental,omitempty"`
 }
 

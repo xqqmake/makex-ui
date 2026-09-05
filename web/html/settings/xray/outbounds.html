@@ -56,6 +56,10 @@
                 <a-icon @click="e => e.preventDefault()" type="more"
                     :style="{ fontSize: '16px', textDecoration: 'bold' }"></a-icon>
                 <a-menu slot="overlay" :theme="themeSwitcher.currentTheme">
+                    <a-menu-item @click="openRouteModal(index)">
+                        <a-icon type="deployment-unit"></a-icon>
+                        <span>接管入站</span>
+                    </a-menu-item>
                     <a-menu-item v-if="index>0 && outbound.engine !== 'singbox'" @click="setFirstOutbound(index)">
                         <a-icon type="vertical-align-top"></a-icon>
                         <span>{{ i18n "pages.xray.rules.first"}}</span>
@@ -114,6 +118,47 @@
                 </span>
             </a-space>
         </template>
+        <template slot="route" slot-scope="text, outbound, index">
+            <a-popover v-if="routeCount(outbound) > 0" placement="bottom">
+                <template slot="content">
+                    <div v-for="l in routeLabels(outbound)" :key="l">[[ l ]]</div>
+                </template>
+                <a-tag :style="{ margin: '0', cursor: 'pointer' }" color="geekblue"
+                    @click="openRouteModal(index)">[[ routeCount(outbound) ]]</a-tag>
+            </a-popover>
+            <a-tag v-else :style="{ margin: '0', cursor: 'pointer' }" @click="openRouteModal(index)">未接管</a-tag>
+        </template>
     </a-table>
+    <a-modal v-model="routeModalVisible" title="接管入站（显式路由绑定）" ok-text="保存"
+        cancel-text='{{ i18n "cancel" }}' @ok="saveRoute()" :class="themeSwitcher.currentTheme">
+        <p :style="{ margin: '0 0 10px 0', fontSize: '13px', color: '#888' }">
+            勾选要导到出站 <b>[[ routeCurrent && routeCurrent.tag ]]</b>（[[ routeCurrent && routeCurrent.engine === 'singbox' ? 'sing-box' : 'xray' ]]）的入站。
+            默认零接管；跨引擎组合会自动建立本地回环桥。出站指向本机的节点会被跳过（防回环）。
+        </p>
+        <a-spin :spinning="loadingStates.spinning">
+            <div v-if="routeXrayInbounds().length > 0" :style="{ margin: '4px 0' }">
+                <a-divider orientation="left" :style="{ margin: '8px 0' }">Xray 入站</a-divider>
+                <a-checkbox-group v-model="routeChecked.xray" :style="{ width: '100%' }">
+                    <a-row>
+                        <a-col :span="12" v-for="t in routeXrayInbounds()" :key="t">
+                            <a-checkbox :value="t">[[ t ]]</a-checkbox>
+                        </a-col>
+                    </a-row>
+                </a-checkbox-group>
+            </div>
+            <div v-if="routeSboxInbounds().length > 0">
+                <a-divider orientation="left" :style="{ margin: '8px 0' }">Sing-box 入站</a-divider>
+                <a-checkbox-group v-model="routeChecked.singbox" :style="{ width: '100%' }">
+                    <a-row>
+                        <a-col :span="12" v-for="t in routeSboxInbounds()" :key="t">
+                            <a-checkbox :value="t">[[ t ]]</a-checkbox>
+                        </a-col>
+                    </a-row>
+                </a-checkbox-group>
+            </div>
+            <a-empty v-if="routeXrayInbounds().length === 0 && routeSboxInbounds().length === 0"
+                description="无已启用入站" />
+        </a-spin>
+    </a-modal>
 </a-space>
 {{end}}

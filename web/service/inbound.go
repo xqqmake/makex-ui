@@ -2759,7 +2759,7 @@ func (s *InboundService) OneClickCreateInbound(opts OneClickOptions) (*model.Inb
 				},
 			},
 			"congestionControl": "bbr",
-			"udpRelayMode":      "quic",
+			"udpRelayMode":      "native", // tuic v5 仅支持 native（quic 为 v4 遗留值，v2rayN 等解析会异常）
 		}
 		settingsJSON, err = json.MarshalIndent(tuicSettings, "", "  ")
 	case "naive":

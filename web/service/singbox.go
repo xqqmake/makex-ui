@@ -17,8 +17,8 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/singbox"
-	"x-ui/xray"
 	json_util "x-ui/util/json_util"
+	"x-ui/xray"
 
 	statsService "github.com/xtls/xray-core/app/stats/command"
 	"google.golang.org/grpc"
@@ -127,6 +127,161 @@ func (s *SingBoxService) GetSingBoxConfig() (*singbox.Config, error) {
 		sbConfig.Inbounds = append(sbConfig.Inbounds, sbInbound)
 		sbInboundTags = append(sbInboundTags, inbound.Tag)
 		sbUserEmails = append(sbUserEmails, s.collectUserEmails(inbound)...)
+	}
+
+	// =====================================================================
+	// 出站显式接管入站（老板拍板：默认零路由，绝不自动劫持）
+	// 读 outboundRoutes，只对用户显式勾选的 出站->入站 绑定生成路由。
+	//   同引擎  singbox入站 -> singbox出站 : 直接写 route 规则
+	//   跨引擎  xray入站   -> singbox出站 : 本内核建 socks 桥入站(bridge-x-*)
+	//                                         收 xray 侧桥出站转发来的流量再送目标出站
+	//   跨引擎  singbox入站 -> xray出站   : 本内核建 socks 桥出站(bridge-sb-*)
+	//                                         把入站流量经 127.0.0.1 送 xray 侧桥入站
+	// 桥端口统一走 allocBridgePort（bridgePortAlloc 键 x2sb:/sb2x:），对端内核
+	// (xray.go GetXrayConfig) 读同一分配表搭桥，天然对齐。
+	// 铁律：任何出站指向本机地址时跳过（防回环）。
+	// =====================================================================
+	routes := readOutboundRoutes(s.settingService)
+	if len(routes) > 0 {
+		sbInboundSet := make(map[string]bool, len(sbInboundTags))
+		for _, t := range sbInboundTags {
+			sbInboundSet[t] = true
+		}
+		sbObByTag := make(map[string]map[string]any, len(userOutbounds))
+		for _, ob := range userOutbounds {
+			if t, _ := ob["tag"].(string); t != "" {
+				sbObByTag[t] = ob
+			}
+		}
+		routeRules := []map[string]any{}
+		extraOutbounds := []map[string]any{}
+		seenRule := map[string]bool{}
+		addedBridgeIn := map[string]bool{}
+		addedBridgeOut := map[string]bool{}
+		var xrayObs map[string]map[string]any
+
+		for _, rt := range routes {
+			// ---- 出站属于 sing-box 内核 ----
+			if rt.Engine == "singbox" {
+				sbOb, ok := sbObByTag[rt.Outbound]
+				if !ok {
+					logger.Warningf("接管路由：sing-box 出站 %s 不存在，跳过", rt.Outbound)
+					continue
+				}
+				if svr, _ := sbOb["server"].(string); isSelfAddr(svr) {
+					logger.Warningf("接管路由：sing-box 出站 %s 指向本机(%s)，跳过防回环", rt.Outbound, svr)
+					continue
+				}
+				for _, ref := range rt.Inbounds {
+					switch ref.Engine {
+					case "singbox":
+						if !sbInboundSet[ref.Tag] {
+							logger.Warningf("接管路由：sing-box 入站 %s 不存在或未启用，跳过", ref.Tag)
+							continue
+						}
+						rk := "sb|" + ref.Tag + "|" + rt.Outbound
+						if seenRule[rk] {
+							continue
+						}
+						seenRule[rk] = true
+						routeRules = append(routeRules, map[string]any{
+							"inbound":  []string{ref.Tag},
+							"action":   "route",
+							"outbound": rt.Outbound,
+						})
+					case "xray":
+						// 跨引擎 xray入站->singbox出站：本内核建桥入站收流
+						btag := "bridge-x-" + rt.Outbound
+						if !addedBridgeIn[btag] {
+							bp := allocBridgePort(s.settingService, "x2sb:"+rt.Outbound)
+							if bp <= 0 {
+								continue
+							}
+							sbConfig.Inbounds = append(sbConfig.Inbounds, map[string]any{
+								"type":        "socks",
+								"tag":         btag,
+								"listen":      "127.0.0.1",
+								"listen_port": bp,
+							})
+							addedBridgeIn[btag] = true
+						}
+						rk := "bridge|" + btag + "|" + rt.Outbound
+						if seenRule[rk] {
+							continue
+						}
+						seenRule[rk] = true
+						routeRules = append(routeRules, map[string]any{
+							"inbound":  []string{btag},
+							"action":   "route",
+							"outbound": rt.Outbound,
+						})
+					}
+				}
+				continue
+			}
+			// ---- 出站属于 xray 内核（此处只处理跨引擎 singbox入站->xray出站 的桥出站+规则）----
+			if rt.Engine == "xray" {
+				if xrayObs == nil {
+					xrayObs = xrayTemplateOutboundMap(s.settingService)
+				}
+				xrayOb, ok := xrayObs[rt.Outbound]
+				if !ok {
+					logger.Warningf("接管路由：xray 出站 %s 不存在，跳过", rt.Outbound)
+					continue
+				}
+				if isSelfAddr(xrayOutboundServerAddr(xrayOb)) {
+					logger.Warningf("接管路由：xray 出站 %s 指向本机，跳过防回环", rt.Outbound)
+					continue
+				}
+				for _, ref := range rt.Inbounds {
+					if ref.Engine != "singbox" {
+						continue // xray 引擎入站由 xray.go 侧处理
+					}
+					if !sbInboundSet[ref.Tag] {
+						logger.Warningf("接管路由：sing-box 入站 %s 不存在或未启用，跳过", ref.Tag)
+						continue
+					}
+					btag := "bridge-sb-" + rt.Outbound
+					if !addedBridgeOut[btag] {
+						bp := allocBridgePort(s.settingService, "sb2x:"+rt.Outbound)
+						if bp <= 0 {
+							continue
+						}
+						extraOutbounds = append(extraOutbounds, map[string]any{
+							"type":        "socks",
+							"tag":         btag,
+							"server":      "127.0.0.1",
+							"server_port": bp,
+						})
+						addedBridgeOut[btag] = true
+					}
+					rk := "sbx|" + ref.Tag + "|" + btag
+					if seenRule[rk] {
+						continue
+					}
+					seenRule[rk] = true
+					routeRules = append(routeRules, map[string]any{
+						"inbound":  []string{ref.Tag},
+						"action":   "route",
+						"outbound": btag,
+					})
+				}
+			}
+		}
+
+		// 桥出站追加到 outbound 列表末尾（direct + 用户出站之后）
+		if len(extraOutbounds) > 0 {
+			combined := make([]map[string]any, 0, len(outboundList)+len(extraOutbounds))
+			combined = append(combined, outboundList...)
+			combined = append(combined, extraOutbounds...)
+			if outJSON, err := json.Marshal(combined); err == nil {
+				sbConfig.Outbounds = json_util.RawMessage(outJSON)
+			}
+		}
+		if len(routeRules) > 0 {
+			routeJSON, _ := json.Marshal(map[string]any{"rules": routeRules})
+			sbConfig.Route = json_util.RawMessage(routeJSON)
+		}
 	}
 
 	// 注入 experimental.v2ray_api 统计配置（端口固定，与 xray api 端口错开）。
@@ -467,8 +622,6 @@ func buildRealityBlock(stream map[string]any) (map[string]any, error) {
 	if len(ids) > 0 {
 		reality["short_id"] = ids
 	}
-
-
 
 	return reality, nil
 }

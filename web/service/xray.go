@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"runtime"
+	"strconv"
 	"sync"
-    "strconv"
 
 	"x-ui/logger"
-	"x-ui/xray"
 	json_util "x-ui/util/json_util"
+	"x-ui/xray"
 
-	"x-ui/database/model"
 	"go.uber.org/atomic"
+	"x-ui/database/model"
 )
 
 var (
@@ -31,7 +31,7 @@ type XrayService struct {
 
 // SetXrayAPI 用于从外部注入 XrayAPI 实例
 func (s *XrayService) SetXrayAPI(api xray.XrayAPI) {
-    s.xrayAPI = api
+	s.xrayAPI = api
 }
 
 // IsXrayRunning 检查 Xray 是否正在运行
@@ -50,7 +50,6 @@ func (s *XrayService) GetApiPort() int {
 	}
 	return p.GetAPIPort()
 }
-
 
 func (s *XrayService) GetXrayErr() error {
 	if p == nil {
@@ -112,16 +111,15 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 
-
 	inbounds, err := s.inboundService.GetAllInbounds()
 	if err != nil {
 		return nil, err
 	}
 
 	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值 
+	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值
 	// =================================================================
-    // 创建一个 map 用于存储所有出现过的、不为0的限速值
+	// 创建一个 map 用于存储所有出现过的、不为0的限速值
 	uniqueSpeeds := make(map[int]bool)
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
@@ -131,8 +129,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		if model.IsSingBoxProtocol(inbound.Protocol) {
 			continue
 		}
-		
-        // 获取该入站下的所有客户端设置
+
+		// 获取该入站下的所有客户端设置
 		dbClients, _ := s.inboundService.GetClients(inbound)
 		for _, dbClient := range dbClients {
 			if dbClient.SpeedLimit > 0 {
@@ -163,7 +161,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	} else {
 		policyLevels = make(map[string]interface{})
 	}
-	
+
 	// 3. 〔重要修改〕: 确保 level 0 策略的完整性，这是让设备限制和默认用户统计生效的关键
 	var level0 map[string]interface{}
 	if l0, ok := policyLevels["0"].(map[string]interface{}); ok {
@@ -182,11 +180,11 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	level0["uplinkOnly"] = 0
 	level0["downlinkOnly"] = 0
 	level0["statsUserUplink"] = true
-	level0["statsUserDownlink"] = true 
+	level0["statsUserDownlink"] = true
 	// 〔新增〕: 增加此关键选项以启用 Xray-core 的在线 IP 统计功能。
 	// 这是让【设备限制】功能正常工作的前提。
 	level0["statsUserOnline"] = true
-	
+
 	// 〔中文注释〕: 将完整配置好的 level 0 写回 policyLevels，确保最终生成的 config.json 是正确的。
 	policyLevels["0"] = level0
 
@@ -195,13 +193,13 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		// 为每个速率创建一个 level，level 的名字就是速率的字符串形式
 		// 例如，速率 1024 KB/s 对应 level "1024"
 		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
-			"downlinkOnly": speed,
-			"uplinkOnly":   speed,
+			"downlinkOnly":      speed,
+			"uplinkOnly":        speed,
 			"handshake":         4,
 			"connIdle":          300,
 			"statsUserUplink":   true,
 			"statsUserDownlink": true,
-			"statsUserOnline": true,
+			"statsUserOnline":   true,
 		}
 	}
 
@@ -214,8 +212,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	xrayConfig.Policy = json_util.RawMessage(policyJSON)
 
 	// =================================================================
-    // 中文注释: 在这里增加日志，打印最终生成的限速策略
-    // =================================================================
+	// 中文注释: 在这里增加日志，打印最终生成的限速策略
+	// =================================================================
 	if len(uniqueSpeeds) > 0 {
 		finalPolicyLog, _ := json.Marshal(policyLevels)
 		logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
@@ -224,9 +222,9 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level，逐个 inbound 构建 inboundConfig
 	// =================================================================
-    // 触发一次空调用以处理可能的残留任务	
-    s.inboundService.AddTraffic(nil, nil) 
-	
+	// 触发一次空调用以处理可能的残留任务
+	s.inboundService.AddTraffic(nil, nil)
+
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
@@ -279,20 +277,20 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			if model.Protocol(inbound.Protocol) == model.Shadowsocks {
 				ssMethod, _ := settings["method"].(string)
 				ssPass, _ := settings["password"].(string)
-					if ssMethod != "" || ssPass != "" {
-						for _, cr := range originalClients {
-							if cm, ok := cr.(map[string]interface{}); ok {
-								// method/password 字段存在但为空时也要用 settings 顶层值覆盖
-								// (面板前端可能写入 method="" + 随机 password 到 clients)
-								if m, ok := cm["method"].(string); (!ok || m == "") && ssMethod != "" {
-									cm["method"] = ssMethod
-								}
-								if p, ok := cm["password"].(string); (!ok || p == "") && ssPass != "" {
-									cm["password"] = ssPass
-								}
+				if ssMethod != "" || ssPass != "" {
+					for _, cr := range originalClients {
+						if cm, ok := cr.(map[string]interface{}); ok {
+							// method/password 字段存在但为空时也要用 settings 顶层值覆盖
+							// (面板前端可能写入 method="" + 随机 password 到 clients)
+							if m, ok := cm["method"].(string); (!ok || m == "") && ssMethod != "" {
+								cm["method"] = ssMethod
+							}
+							if p, ok := cm["password"].(string); (!ok || p == "") && ssPass != "" {
+								cm["password"] = ssPass
 							}
 						}
 					}
+				}
 			}
 			clientStats := inbound.ClientStats
 
@@ -338,8 +336,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				// 中文注释: 构建干净的 xrayClient（只保留白名单字段）
 				// -----------------------------------------------------------------
 				xrayClient := make(map[string]interface{})
-				if id, ok := c["id"]; ok { xrayClient["id"] = id }
-				if email != "" { xrayClient["email"] = email }
+				if id, ok := c["id"]; ok {
+					xrayClient["id"] = id
+				}
+				if email != "" {
+					xrayClient["email"] = email
+				}
 
 				// 规范化 flow
 				if flow, ok := c["flow"]; ok {
@@ -349,10 +351,16 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 						xrayClient["flow"] = flow
 					}
 				}
-				if password, ok := c["password"]; ok { xrayClient["password"] = password }
-				if method, ok := c["method"]; ok { xrayClient["method"] = method }
+				if password, ok := c["password"]; ok {
+					xrayClient["password"] = password
+				}
+				if method, ok := c["method"]; ok {
+					xrayClient["method"] = method
+				}
 				// hysteria: auth 是唯一认证凭据，必须透传给 xray
-				if auth, ok := c["auth"]; ok { xrayClient["auth"] = auth }
+				if auth, ok := c["auth"]; ok {
+					xrayClient["auth"] = auth
+				}
 
 				// ⚠️ security 字段已移除，不再加入到 xrayClient
 
@@ -439,13 +447,167 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			}
 			inboundConfig.StreamSettings = json_util.RawMessage(newStream)
 		}
-		
+
 		xrayConfig.InboundConfigs = append(xrayConfig.InboundConfigs, *inboundConfig)
+	}
+
+	// =====================================================================
+	// 出站显式接管入站（跨引擎路由绑定）- xray 侧
+	// 与 singbox.go GetSingBoxConfig 配对：读同一 outboundRoutes/bridgePortAlloc。
+	//   同引擎  xray入站 -> xray出站    : routing.rules 直接绑定
+	//   跨引擎  xray入站 -> singbox出站 : 本内核建 socks 桥出站(bridge-x-*) 指向
+	//                                      sing-box 侧桥入站(bridge-x-*)端口，
+	//                                      原入站 routing 绑到该桥出站
+	//   跨引擎  singbox入站 -> xray出站 : 本内核建 socks 桥入站(bridge-sb-*) 收
+	//                                      sing-box 侧桥出站流量，routing 转目标出站
+	// 铁律：出站指向本机一律跳过（防回环）；默认零路由（无显式绑定不注入任何规则）。
+	// =====================================================================
+	if routeItems := readOutboundRoutes(s.settingService); len(routeItems) > 0 {
+		xrayObs := xrayTemplateOutboundMap(s.settingService)
+		if xrayObs != nil {
+			routingMap := map[string]any{}
+			if len(xrayConfig.RouterConfig) > 0 {
+				_ = json.Unmarshal(xrayConfig.RouterConfig, &routingMap)
+			}
+			if routingMap == nil {
+				routingMap = map[string]any{}
+			}
+			rules := []map[string]any{}
+			if existing, ok := routingMap["rules"].([]any); ok {
+				for _, r := range existing {
+					if rm, ok := r.(map[string]any); ok {
+						rules = append(rules, rm)
+					}
+				}
+			}
+			outboundsArr := []map[string]any{}
+			if len(xrayConfig.OutboundConfigs) > 0 {
+				_ = json.Unmarshal(xrayConfig.OutboundConfigs, &outboundsArr)
+			}
+			if outboundsArr == nil {
+				outboundsArr = []map[string]any{}
+			}
+			obIndex := map[string]int{}
+			for i, ob := range outboundsArr {
+				if t, _ := ob["tag"].(string); t != "" {
+					obIndex[t] = i
+				}
+			}
+			seenRule := map[string]bool{}
+			// ---- 出站属于 xray 内核 ----
+			for _, rt := range routeItems {
+				if rt.Engine != "xray" {
+					continue
+				}
+				xob, ok := xrayObs[rt.Outbound]
+				if !ok {
+					logger.Warningf("接管路由：xray 出站 %s 不存在，跳过", rt.Outbound)
+					continue
+				}
+				if isSelfAddr(xrayOutboundServerAddr(xob)) {
+					logger.Warningf("接管路由：xray 出站 %s 指向本机，跳过防回环", rt.Outbound)
+					continue
+				}
+				for _, ref := range rt.Inbounds {
+					if ref.Engine == "xray" {
+						rk := "x|" + ref.Tag + "|" + rt.Outbound
+						if seenRule[rk] {
+							continue
+						}
+						seenRule[rk] = true
+						rules = append(rules, map[string]any{
+							"inboundTag":  []string{ref.Tag},
+							"outboundTag": rt.Outbound,
+						})
+					} else if ref.Engine == "singbox" {
+						// 跨引擎 singbox入站->xray出站：本内核建 socks 桥入站收流
+						btag := "bridge-sb-" + rt.Outbound
+						hasBridge := false
+						for _, inb := range xrayConfig.InboundConfigs {
+							if inb.Tag == btag {
+								hasBridge = true
+								break
+							}
+						}
+						if !hasBridge {
+							bp := allocBridgePort(s.settingService, "sb2x:"+rt.Outbound)
+							if bp <= 0 {
+								continue
+							}
+							settingsJSON, _ := json.Marshal(map[string]any{"auth": "noauth", "udp": true})
+							portJSON, _ := json.Marshal(bp)
+							xrayConfig.InboundConfigs = append(xrayConfig.InboundConfigs, xray.InboundConfig{
+								Listen:   json_util.RawMessage("\"127.0.0.1\""),
+								Port:     json_util.RawMessage(portJSON),
+								Protocol: "socks",
+								Settings: json_util.RawMessage(settingsJSON),
+								Tag:      btag,
+							})
+						}
+						rk := "bridge|" + btag + "|" + rt.Outbound
+						if seenRule[rk] {
+							continue
+						}
+						seenRule[rk] = true
+						rules = append(rules, map[string]any{
+							"inboundTag":  []string{btag},
+							"outboundTag": rt.Outbound,
+						})
+					}
+				}
+			}
+			// ---- 跨引擎 xray入站->singbox出站 的 xray 侧桥出站 + 入站绑定 ----
+			for _, rt := range routeItems {
+				if rt.Engine != "singbox" {
+					continue
+				}
+				for _, ref := range rt.Inbounds {
+					if ref.Engine != "xray" {
+						continue
+					}
+					btag := "bridge-x-" + rt.Outbound
+					if _, exists := obIndex[btag]; !exists {
+						bp := allocBridgePort(s.settingService, "x2sb:"+rt.Outbound)
+						if bp <= 0 {
+							continue
+						}
+						ob := map[string]any{
+							"protocol": "socks",
+							"tag":      btag,
+							"settings": map[string]any{
+								"servers": []map[string]any{{"address": "127.0.0.1", "port": bp}},
+							},
+						}
+						outboundsArr = append(outboundsArr, ob)
+						obIndex[btag] = len(outboundsArr) - 1
+					}
+					rk := "x2sb|" + ref.Tag + "|" + btag
+					if seenRule[rk] {
+						continue
+					}
+					seenRule[rk] = true
+					rules = append(rules, map[string]any{
+						"inboundTag":  []string{ref.Tag},
+						"outboundTag": btag,
+					})
+				}
+			}
+			if len(rules) > 0 {
+				routingMap["rules"] = rules
+				if rj, err := json.Marshal(routingMap); err == nil {
+					xrayConfig.RouterConfig = json_util.RawMessage(rj)
+				}
+			}
+			if len(outboundsArr) > 0 {
+				if oj, err := json.Marshal(outboundsArr); err == nil {
+					xrayConfig.OutboundConfigs = json_util.RawMessage(oj)
+				}
+			}
+		}
 	}
 
 	return xrayConfig, nil
 }
-
 
 func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
 	if !s.IsXrayRunning() {
@@ -476,14 +638,13 @@ func (s *XrayService) RestartXray(isForce bool) error {
 		return err
 	}
 
-	  // 【新功能】重启时，将完整配置打印到 Debug 日志以供验证
-    configBytes, jsonErr := json.MarshalIndent(xrayConfig, "", "  ")
-    if jsonErr == nil {
-        logger.Debugf("使用新配置重启 Xray：\n%s", string(configBytes))
-    } else {
-        logger.Warning("无法将 Xray 配置编组以进行日志记录：", jsonErr)
-    }
-
+	// 【新功能】重启时，将完整配置打印到 Debug 日志以供验证
+	configBytes, jsonErr := json.MarshalIndent(xrayConfig, "", "  ")
+	if jsonErr == nil {
+		logger.Debugf("使用新配置重启 Xray：\n%s", string(configBytes))
+	} else {
+		logger.Warning("无法将 Xray 配置编组以进行日志记录：", jsonErr)
+	}
 
 	if s.IsXrayRunning() {
 		if !isForce && p.GetConfig().Equals(xrayConfig) && !isNeedXrayRestart.Load() {

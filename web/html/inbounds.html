@@ -714,7 +714,7 @@
           <a-input v-model="oneClickEmail" placeholder="user@example.com"></a-input>
         </a-form-item>
         <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.protocolLabel" }}`">
-          <a-select v-model="oneClickProtocol" style="width: 100%" @change="applyOneClickDefaults">
+          <a-select v-model="oneClickProtocol" style="width: 100%" @change="onOneClickProtocolChange">
             <a-select-option value="vless">VLESS</a-select-option>
             <a-select-option value="vmess">VMess</a-select-option>
             <a-select-option value="trojan">Trojan</a-select-option>
@@ -1222,10 +1222,28 @@ async openPort(port) {
                 this.oneClickId = 0;
                 this.oneClickHysteriaAuth = '';
                 this.oneClickLoading = false;
+                // 【中文注释】: 每次打开弹窗必须清空表单，避免残留上一次创建的数据
+                this.oneClickRemark = '';
+                this.oneClickEmail = '';
+                this.oneClickTarget = '1.1.1.1:443';
+                this.oneClickSNI = 'www.yahu.com';
                 this.oneClickProtocol = 'vless';
                 this.oneClickSecurity = 'reality';
                 this.oneClickNetwork = 'tcp';
                 this.applyOneClickDefaults();
+            },
+
+            // 【中文注释】: 协议下拉变更：anytls 默认安全用 tls（reality 残留自 vless 会致 GUI 兼容问题），
+            // 其余协议沿用 applyOneClickDefaults 的合法保留逻辑；用户仍可在安全下拉中手动改选 reality
+            onOneClickProtocolChange() {
+                this.applyOneClickDefaults();
+                if (this.oneClickProtocol === 'anytls') {
+                    // anytls + reality 组合多数 GUI（v2rayN 等）解析支持差，默认走标准 tls
+                    this.oneClickSecurity = 'tls';
+                    if (this.oneClickNetworks().indexOf(this.oneClickNetwork) === -1) {
+                        this.oneClickNetwork = this.oneClickNetworks()[0];
+                    }
+                }
             },
 
             // 【中文注释】: 协议切换时自动设置合理的默认安全/传输，并保留用户已选但合法的值

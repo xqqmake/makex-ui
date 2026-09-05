@@ -26,6 +26,8 @@ var xrayTemplateConfig string
 var defaultValueMap = map[string]string{
 	"xrayTemplateConfig":          xrayTemplateConfig,
 	"singboxOutboundTemplate":     "[]",
+	"outboundRoutes":              "[]",
+	"bridgePortAlloc":             "{}",
 	"webListen":                   "",
 	"webDomain":                   "",
 	"webPort":                     "13688",

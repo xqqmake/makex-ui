@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"x-ui/web/global"
@@ -58,6 +59,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/restartXrayService", a.restartXrayService)
 	g.POST("/stopSingBoxService", a.stopSingBoxService)
 	g.POST("/restartSingBoxService", a.restartSingBoxService)
+	g.POST("/restartKernels", a.restartKernels)
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
@@ -160,6 +162,22 @@ func (a *ServerController) restartSingBoxService(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.xray.singboxRestartSuccess"), err)
+}
+
+// restartKernels 一键重启双内核：xray + sing-box 都重启
+func (a *ServerController) restartKernels(c *gin.Context) {
+	var errs []string
+	if err := a.serverService.RestartXrayService(); err != nil {
+		errs = append(errs, "xray: "+err.Error())
+	}
+	if err := a.serverService.RestartSingBoxService(); err != nil {
+		errs = append(errs, "sing-box: "+err.Error())
+	}
+	if len(errs) > 0 {
+		jsonMsg(c, I18nWeb(c, "pages.xray.restartKernelsError"), fmt.Errorf("%s", strings.Join(errs, "; ")))
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.xray.restartKernelsSuccess"), nil)
 }
 
 func (a *ServerController) getLogs(c *gin.Context) {
